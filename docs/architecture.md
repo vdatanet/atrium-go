@@ -225,16 +225,19 @@ binary that cannot state its version cannot be measured.
 
 ---
 
-## 6. State, and the boundary ADR-0003 still owes
+## 6. State, and the store boundary
 
 **The store is a port.** The domain declares the interfaces it needs; an implementation satisfies
 them. Above that line there is no SQL, no query builder, no transaction object and no vocabulary
 belonging to any particular store.
 
-This is worth the indirection here for a reason that will not last: **the store is undecided.**
-ADR-0003 is reserved and unwritten, and a plan written today must be writable without it. The
-boundary is what makes the eventual decision a choice of implementation rather than a rewrite of
-everything that named a table.
+[ADR-0003](decisions/0003-sqlite-as-the-store.md) implements those interfaces with an embedded
+SQLite database, and the boundary stays: no SQL, no query builder and no transaction object appears
+above it. **The store is also split in two** — a *derived* half rebuilt by a rescan and a *precious*
+half that is the only copy — and the rule that makes the split work belongs here rather than in the
+record, because it is a constraint on every feature: **no reference points from the precious half
+into the derived half.** User data names an item by its derived identifier string, so rebuilding the
+whole library leaves every favourite pointing at the right item.
 
 **Identity is derived, never stored as a sequence.** Principle VII, and
 [§1.4](compatibility/behaviours.md#14-item-identifiers-are-32-lowercase-hex-characters): a rescan

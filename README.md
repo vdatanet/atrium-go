@@ -122,10 +122,15 @@ it was chosen rather than argued from preference — the standard library's rout
 reject four of the 59 routes outright, and its JSON encoder gets field order and null-versus-absent
 exactly right while getting the reference's escape table wrong in four ways.
 
-The store and the password hashing scheme are still open. Their record numbers — `0003` and `0006`
-— are reserved and deliberately absent: they were withheld as decisions this project takes for
-itself. [docs/architecture.md](docs/architecture.md) gives the store a *boundary* so that
-implementation plans can be written before the decision is taken; it does not give it an answer.
+**The store was decided the same day**: an embedded SQLite database, the pure-Go driver so that
+`CGO_ENABLED=0` holds, hand-written SQL, and a schema split into a *derived* half that a rescan
+rebuilds and a *precious* half that is migrated
+([ADR-0003](docs/decisions/0003-sqlite-as-the-store.md)). The split is possible because item
+identity is derived from the path rather than stored as a sequence, so the library is
+reconstructible and only what a user did is not.
+
+The password hashing scheme is still open. Its record number — `0006` — is reserved and
+deliberately absent: it was withheld as a decision this project takes for itself.
 
 ## Relationship to Jellyfin
 

@@ -143,6 +143,24 @@ two rows is a bug that reads as a mystery.
   under the path they meant. One component under an existing parent makes a first start work and
   makes `--data-dir /var/lbi/atrium` fail while naming `/var/lbi`.
 
+**Amended 2026-09-03, at T4.** `setup_completed_at` says *"ticks"* and did not say ticks *since
+when*, which is half a unit. It is **.NET's `DateTime.Ticks`: 100-nanosecond intervals since
+`0001-01-01T00:00:00Z`** — the same origin the wire's dates have, because
+[§1.3](../../docs/compatibility/behaviours.md#13-durations-and-positions-are-net-ticks) makes the
+tick .NET's tick and every date the wire carries is a .NET `DateTime`. A column counting the same
+unit from a different origin would be a second unit wearing the first one's name, and the store test
+asserts the integer rather than only the boolean derived from it, because every candidate origin
+makes `StartupWizardCompleted` equally true.
+
+`MarkSetupComplete` lands with T4 rather than T3, which is the whole reason T3 left it off §5's
+interface: it takes a `units.Time`. That makes `internal/ports` import `internal/units`, and
+[architecture §2](../../docs/architecture.md#2-layers-and-the-direction-of-dependency)'s table says
+a port may import *"nothing of ours"*. The same section's prose is what settles it — the unit types
+are *"a leaf, imported by both"*, because §1.3 puts ticks in storage as well as on the wire *"so no
+conversion can be forgotten at a boundary"*. §5 above already wrote both `Clock` and
+`MarkSetupComplete` in terms of `units.Time`, so this is the plan's own contract rather than a
+deviation, and a port taking a bare integer would be precisely the forgotten conversion.
+
 ### The server identity is a file, not a row, and AC-4 is why
 
 AC-4 asks that `Id` be *"identical across a restart **and across a rebuild of the store from

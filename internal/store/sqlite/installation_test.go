@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/vdatanet/atrium-go/internal/units"
 )
 
 // TestASecondInstallationRowIsRefused is T3's third clause and plan 4's
@@ -64,22 +66,47 @@ func TestInstallationReportsAFreshInstallation(t *testing.T) {
 // StartupWizardCompleted is setup_completed_at IS NOT NULL, and the instant
 // itself never crosses the port.
 //
-// The column is written here in SQL rather than through a method because the
-// method that writes it takes a date, and the tick type it would take is T4's.
+// T3 wrote the column here in SQL, because the method that writes it takes a
+// date and the date type was T4's. T4 has it, so the write goes through the
+// method — and the SQL that was the test is now the assertion, because what the
+// column holds is a unit and a unit is not visible through a boolean.
 func TestSetupCompletedIsTheColumnBeingSet(t *testing.T) {
 	store := openForTest(t)
+	ctx := context.Background()
 
-	if _, err := store.writer.Exec(
-		`UPDATE installation SET setup_completed_at = ? WHERE id = 1`, int64(638000000000000000)); err != nil {
-		t.Fatalf("recording the completion: %v", err)
+	// 2025-06-19T00:00:00Z. Spelled as a date rather than as the tick count it
+	// becomes, so that the arithmetic under test is not also the arithmetic the
+	// expectation is built from.
+	at, err := units.ParseTime("2025-06-19T00:00:00.0000000Z")
+	if err != nil {
+		t.Fatalf("ParseTime returned %v", err)
 	}
 
-	installation, err := store.Installation(context.Background())
+	if err := store.MarkSetupComplete(ctx, at); err != nil {
+		t.Fatalf("MarkSetupComplete returned %v", err)
+	}
+
+	installation, err := store.Installation(ctx)
 	if err != nil {
 		t.Fatalf("Installation returned %v", err)
 	}
 	if !installation.SetupCompleted {
 		t.Error("SetupCompleted is false with the column set, want true")
+	}
+
+	// The column is ticks since 0001-01-01T00:00:00Z. That instant is
+	// 1750291200 seconds after the Unix epoch, which is itself 62135596800
+	// seconds after year one, so the tick count is (1750291200 + 62135596800)
+	// times ten million. A store that wrote Unix seconds, Unix ticks or
+	// nanoseconds would still make SetupCompleted true, which is exactly why the
+	// boolean cannot be the whole test.
+	var stored int64
+	if err := store.reader.QueryRow(
+		`SELECT setup_completed_at FROM installation WHERE id = 1`).Scan(&stored); err != nil {
+		t.Fatalf("reading the column back: %v", err)
+	}
+	if want := int64((1750291200 + 62135596800) * 10_000_000); stored != want {
+		t.Errorf("setup_completed_at is %d, want %d ticks since 0001-01-01T00:00:00Z", stored, want)
 	}
 }
 

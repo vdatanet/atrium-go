@@ -86,14 +86,29 @@ list is long for four routes.
 
 ## T4 — `internal/units`: the tick and the date
 
-- [ ] **Changes:** `internal/units` — a tick type marshalling as a JSON integer, and a date type
+- [x] **Changes:** `internal/units` — a tick type marshalling as a JSON integer, and a date type
   marshalling as seven fractional digits and a `Z`. Parsing accepts anything ISO-8601, with or
   without a timezone; a missing timezone reads as UTC.
+- **Amended 2026-09-03, on doing it:** three things, two of them measurements.
+  **The date is rounded to a whole tick and held in UTC at construction**, not at write time —
+  Go's own formatting truncates, so a value half a tick short of a second would be written as the
+  second before it, and a value carrying precision the wire cannot express compares unequal to the
+  bytes it serialises as. **A comma as the decimal separator is accepted**: it was written into the
+  rejection table and the table disagreed, because ISO-8601 permits it and Go's fractional layout
+  element already reads one `[measurement: Go 1.27.0, 2026-09-03]`. And **`IsTime` is one parse and
+  no re-format check**: the check was written first, on the assumption that `time.Parse` rolls an
+  out-of-range day forward the way `time.Date` does, and removing it made no test fail — Go refuses
+  `2025-02-30T00:00:00.0000000Z` itself `[measurement: Go 1.27.0, 2026-09-03]`. A guard no case can
+  reach has proved nothing.
+  **`MarkSetupComplete` lands here**, as T3 said it would: `internal/ports` gains the third method
+  of plan §5 taking a `units.Time`, and the store writes the column as .NET's `DateTime.Ticks`.
+  `plan.md` §4 carries that origin, which the migration had left unsaid.
 - **Depends on:** —
 - **Verified by:** a table test over the round trip, including a value whose fraction is zero
   (`.0000000Z`, not an omitted fraction) and one with sub-tick input that rounds rather than
   truncates.
-- **Spec reference:** behaviours §1.2, §1.3. 001 sends neither; plan §10 says why they are here.
+- **Spec reference:** behaviours §1.2, §1.3. 001 sends neither; plan §3's module table says why they
+  are here — the unit sweep of T19 needs a type to recognise, and §8 restates it.
 
 ## T5 — `internal/wire`: the encoder and the escape pass
 

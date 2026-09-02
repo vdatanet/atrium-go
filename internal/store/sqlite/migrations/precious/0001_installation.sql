@@ -18,10 +18,12 @@ CREATE TABLE installation (
     server_name        TEXT    NOT NULL,
 
     -- The instant initial configuration finished, in ticks — a count of
-    -- 100-nanosecond intervals, which is the unit the wire uses and therefore
-    -- the unit the store uses (ADR-0003, behaviours 1.3). NULL until setup is
-    -- done: StartupWizardCompleted is this column being non-NULL, which is why
-    -- the observable is a boolean and the column is not.
+    -- 100-nanosecond intervals since 0001-01-01T00:00:00Z, which is .NET's
+    -- DateTime.Ticks and therefore the unit the wire uses (ADR-0003,
+    -- behaviours 1.3). The origin is part of the unit and was left unsaid here
+    -- until T4 had a type for it; plan 4 records it. NULL until setup is done:
+    -- StartupWizardCompleted is this column being non-NULL, which is why the
+    -- observable is a boolean and the column is not.
     setup_completed_at INTEGER
 ) STRICT;
 

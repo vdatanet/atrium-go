@@ -2,7 +2,10 @@
 // it implements.
 //
 // architecture 2 puts this at the bottom of the diagram: it may import nothing
-// of ours, and everything above it may import it. That direction is what lets
+// of ours but internal/units, and everything above it may import it. The unit
+// types are the exception because architecture 2 makes them one — "a leaf,
+// imported by both" — and plan 5 writes this package's contracts in terms of
+// them. That direction is what lets
 // ADR-0003 be argued after a feature is planned rather than before — a plan
 // writes against the interface it needs, and the store that eventually arrives
 // implements an interface that already existed instead of rewriting the code
@@ -13,7 +16,11 @@
 // this package exists to keep open.
 package ports
 
-import "context"
+import (
+	"context"
+
+	"github.com/vdatanet/atrium-go/internal/units"
+)
 
 // Installation is what the domain knows about this installation, and it is
 // deliberately not what the store holds.
@@ -44,17 +51,25 @@ type Installation struct {
 // this, not the other way round, so a method nothing calls is a method nothing
 // should have to implement.
 //
-// plan 5 names a third method, MarkSetupComplete, which records the instant
-// setup finished. It is not here yet: its parameter is a date, dates are ticks
-// project-wide (ADR-0003, behaviours 1.3), and the tick type is internal/units
-// — which T4 delivers. Declaring it now would mean either inventing a second
-// spelling for a tick or giving the port a plain integer, and a port that takes
-// a bare number is how the unit gets lost. The column it writes exists, and the
-// method lands with the type it needs.
+// It takes units.Time, which is the one import in this package that is not the
+// standard library. architecture 2's table says a port may import "nothing of
+// ours", and its own prose says why the unit types are the exception: they are
+// "a leaf, imported by both", because behaviours 1.3 puts ticks in storage as
+// well as on the wire "so no conversion can be forgotten at a boundary". A port
+// that took a bare integer would be exactly that forgotten conversion, and
+// plan 5 writes the contract with the type rather than the number.
 type InstallationStore interface {
 	// Installation returns this installation's name and setup state.
 	Installation(ctx context.Context) (Installation, error)
 
 	// SetServerName replaces the friendly name.
 	SetServerName(ctx context.Context, name string) error
+
+	// MarkSetupComplete records the instant initial configuration finished,
+	// which is what makes StartupWizardCompleted true (spec 4, plan 4).
+	//
+	// It takes the instant rather than deriving one, because architecture 2
+	// makes the wall clock a port: a store that called time.Now would put a
+	// value in a golden body that no test could hold still.
+	MarkSetupComplete(ctx context.Context, at units.Time) error
 }

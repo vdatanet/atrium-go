@@ -46,11 +46,11 @@ type (
 // Every assertion below is on those bytes (Principle VIII). A property name
 // survives a round trip through a decoder in whatever case it arrived, so a
 // test that unmarshalled would agree with a server that had converted nothing.
-func writeUnder(t *testing.T, v any, naming wire.Naming) string {
+func writeUnder(t *testing.T, v any, profile wire.Profile) string {
 	t.Helper()
 
 	recorder := httptest.NewRecorder()
-	if err := wire.Write(recorder, http.StatusOK, v, naming); err != nil {
+	if err := wire.Write(recorder, http.StatusOK, v, profile); err != nil {
 		t.Fatalf("Write(...) = %v, want no error", err)
 	}
 	return recorder.Body.String()
@@ -196,10 +196,10 @@ func TestWriteConvertsPropertyNamesAndLeavesDictionaryKeys(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := writeUnder(t, c.value, wire.NamingPascal); got != c.pascal {
+			if got := writeUnder(t, c.value, wire.ProfilePlain); got != c.pascal {
 				t.Errorf("PascalCase body =\n\t%s\nwant\n\t%s", got, c.pascal)
 			}
-			if got := writeUnder(t, c.value, wire.NamingCamel); got != c.camel {
+			if got := writeUnder(t, c.value, wire.ProfileCamel); got != c.camel {
 				t.Errorf("camelCase body =\n\t%s\nwant\n\t%s", got, c.camel)
 			}
 		})
@@ -241,30 +241,34 @@ func TestWriteConvertsPromotedPropertyNames(t *testing.T) {
 	// convert `Id`, because every key of a struct's object is a property name —
 	// but it could not say what `ProviderIds` was written from, and the keys
 	// under it are the ones that must not move.
-	if got, want := writeUnder(t, value, wire.NamingPascal),
+	if got, want := writeUnder(t, value, wire.ProfilePlain),
 		`{"Id":"3f9c","ProviderIds":{"Imdb":"tt1"},"ImageTags":{"Primary":"p"},`+
 			`"OperatingSystem":""}`; got != want {
 		t.Errorf("PascalCase body =\n\t%s\nwant\n\t%s", got, want)
 	}
-	if got, want := writeUnder(t, value, wire.NamingCamel),
+	if got, want := writeUnder(t, value, wire.ProfileCamel),
 		`{"id":"3f9c","providerIds":{"Imdb":"tt1"},"imageTags":{"Primary":"p"},`+
 			`"operatingSystem":""}`; got != want {
 		t.Errorf("camelCase body =\n\t%s\nwant\n\t%s", got, want)
 	}
 }
 
-// TestWriteRefusesANamingPolicyItDoesNotHave is the other half of T5's argument
-// for leaving NamingCamel undeclared until there was a policy behind it. A
-// Naming this package does not know must not fall through to PascalCase: that
-// is exactly the answer behaviours 1.13 says leaves a camelCase client with an
-// empty object, and it would be invisible.
-func TestWriteRefusesANamingPolicyItDoesNotHave(t *testing.T) {
+// TestWriteRefusesAContentProfileItDoesNotHave is the other half of T5's
+// argument for leaving NamingCamel undeclared until there was a policy behind
+// it, moved up one level to where a caller now chooses.
+//
+// A Profile this package does not know must not fall through to the plain type:
+// that is exactly the answer behaviours 1.13 says leaves a camelCase client
+// with an empty object, and it would be invisible. The refusal one level down —
+// a Naming marshal does not know — is asserted in the internal test, because
+// negotiation is the only thing that produces a Naming now.
+func TestWriteRefusesAContentProfileItDoesNotHave(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	err := wire.Write(recorder, http.StatusOK, identified{Id: "3f9c"}, wire.Naming(7))
+	err := wire.Write(recorder, http.StatusOK, identified{Id: "3f9c"}, wire.Profile(7))
 
 	if err == nil {
-		t.Fatalf("Write(..., Naming(7)) = nil, want an error")
+		t.Fatalf("Write(..., Profile(7)) = nil, want an error")
 	}
 	if got := recorder.Body.Len(); got != 0 {
 		t.Errorf("body = %q, want nothing written", recorder.Body.String())
@@ -287,7 +291,7 @@ func TestWriteRefusesAnObjectItCannotAccountFor(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	err := wire.Write(recorder, http.StatusOK,
-		map[int]any{1: identified{Id: "3f9c"}}, wire.NamingCamel)
+		map[int]any{1: identified{Id: "3f9c"}}, wire.ProfileCamel)
 
 	if err == nil {
 		t.Fatalf("Write(...) = nil, want the walk to refuse a value it cannot type")
@@ -299,7 +303,7 @@ func TestWriteRefusesAnObjectItCannotAccountFor(t *testing.T) {
 	// The same value under the policy that renames nothing is answerable, which
 	// is what makes the refusal above about the conversion and not about the
 	// value.
-	if got, want := writeUnder(t, map[int]any{1: identified{Id: "3f9c"}}, wire.NamingPascal),
+	if got, want := writeUnder(t, map[int]any{1: identified{Id: "3f9c"}}, wire.ProfilePlain),
 		`{"1":{"Id":"3f9c","UICulture":""}}`; got != want {
 		t.Errorf("PascalCase body =\n\t%s\nwant\n\t%s", got, want)
 	}
@@ -329,7 +333,7 @@ func (ownJSON) MarshalJSON() ([]byte, error) {
 func TestWriteLeavesAValueThatWritesItsOwnJSON(t *testing.T) {
 	value := struct{ Nested ownJSON }{}
 
-	if got, want := writeUnder(t, value, wire.NamingCamel),
+	if got, want := writeUnder(t, value, wire.ProfileCamel),
 		`{"nested":{"WrittenByHand":1}}`; got != want {
 		t.Errorf("camelCase body =\n\t%s\nwant\n\t%s", got, want)
 	}

@@ -1,7 +1,7 @@
 // Package wire writes every response body this server sends.
 //
 // It exists so that three wire facts are decided in one place instead of at
-// fifty-nine handlers. Two of them are here already:
+// fifty-nine handlers, and all three are here now:
 //
 //   - Property names are PascalCase (spec 3.0.1), and a second, camelCase
 //     policy is chosen per request (spec 3.0.2). The policy is a parameter of
@@ -9,6 +9,8 @@
 //   - Every non-ASCII character and seven ASCII ones leave as an upper-case
 //     \uXXXX escape (behaviours 1.16), which no JSON encoder in the standard
 //     library does.
+//   - The response's content type names the profile that was matched, before
+//     the charset (behaviours 1.13).
 //
 // # Why the status, the value and the content type go out together
 //
@@ -24,11 +26,12 @@
 // gone through this package has not set a content type either, which is the
 // property the pipeline wants: the two are set by the same act or by neither.
 //
-// # What is not here yet
+// # Why the last argument is a Profile and not a Naming
 //
-// The Accept negotiation that chooses between the two policies is T7, and with
-// it the content type that echoes the profile it matched. Both policies are
-// here; nothing yet asks for the second one.
+// Three declared content types, two naming policies. A body written under
+// NamingPascal cannot say which of the two PascalCase content types asked for
+// it, so Naming alone could not carry the echo and the negotiation's single
+// winner had to arrive whole. See profile.go.
 package wire
 
 import (
@@ -38,16 +41,6 @@ import (
 	"net/http"
 	"reflect"
 )
-
-// ContentType is what a JSON body is sent as: `application/json`, with the
-// charset behaviours 1.10 measured on every response
-// `[probe: tools/probe_routing.py, Jellyfin 10.11.11, 2026-08-28]`.
-//
-// The negotiated profile is echoed inside this value when a request asked for
-// one — `application/json; profile="CamelCase"; charset=utf-8`, profile before
-// charset (spec 3.0.2) — which is T7's, and is why this is one constant rather
-// than three concatenated pieces today.
-const ContentType = "application/json; charset=utf-8"
 
 // Naming is the property-naming policy a body is written under.
 //
@@ -62,21 +55,33 @@ type Naming int
 // behaviours, and this is the one two of them share.
 const NamingPascal Naming = 0
 
-// Write serialises v as this server's JSON, sets the content type and the
-// status, and sends the body.
+// Write serialises v as this server's JSON, sets the content type the profile
+// echoes and the status, and sends the body.
 //
 // Nothing is written to w unless the whole body was produced. A model can fail
 // to serialise — units.Time refuses a year outside 1 to 9999, because the
 // layout behaviours 1.2 measured has room for four year digits — and a writer
 // that had already sent a 200 and half a body could only follow it with more
 // body. The caller gets the error while it can still send a refusal instead.
-func Write(w http.ResponseWriter, status int, v any, naming Naming) error {
+//
+// A profile this package does not know is such an error, and for the reason
+// marshal refuses an unknown naming policy: a fall-through to the plain type
+// would answer a client that asked for camelCase with PascalCase, which is an
+// empty object out of its decoder rather than a visible failure
+// (behaviours 1.13).
+func Write(w http.ResponseWriter, status int, v any, profile Profile) error {
+	naming, known := profile.Naming()
+	if !known {
+		return fmt.Errorf("wire: no content profile numbered %d", int(profile))
+	}
+	contentType, _ := profile.ContentType()
+
 	body, err := marshal(v, naming)
 	if err != nil {
 		return err
 	}
 
-	w.Header().Set("Content-Type", ContentType)
+	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 	_, err = w.Write(body)
 	return err

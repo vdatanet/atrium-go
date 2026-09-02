@@ -30,7 +30,7 @@ func write(t *testing.T, v any) *httptest.ResponseRecorder {
 	t.Helper()
 
 	recorder := httptest.NewRecorder()
-	if err := wire.Write(recorder, http.StatusOK, v, wire.NamingPascal); err != nil {
+	if err := wire.Write(recorder, http.StatusOK, v, wire.ProfilePlain); err != nil {
 		t.Fatalf("Write(...) = %v, want no error", err)
 	}
 	return recorder
@@ -253,7 +253,7 @@ func TestWriteEscapesExactlySevenPrintableASCIICharacters(t *testing.T) {
 func TestWriteSetsTheContentTypeAndTheStatusTogether(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	if err := wire.Write(recorder, http.StatusCreated, body{Value: "x"}, wire.NamingPascal); err != nil {
+	if err := wire.Write(recorder, http.StatusCreated, body{Value: "x"}, wire.ProfilePlain); err != nil {
 		t.Fatalf("Write(...) = %v, want no error", err)
 	}
 
@@ -292,7 +292,7 @@ func TestWriteSendsNothingWhenTheValueCannotBeSerialised(t *testing.T) {
 	unwritable := units.At(time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC))
 
 	recorder := httptest.NewRecorder()
-	err := wire.Write(recorder, http.StatusOK, dated{When: unwritable}, wire.NamingPascal)
+	err := wire.Write(recorder, http.StatusOK, dated{When: unwritable}, wire.ProfilePlain)
 
 	if err == nil {
 		t.Fatalf("Write(...) = nil, want the error units.Time raises for year 10000")

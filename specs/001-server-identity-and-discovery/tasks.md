@@ -153,10 +153,23 @@ list is long for four routes.
 
 ## T7 — Content negotiation for the profile
 
-- [ ] **Changes:** parse `Accept` into ranges with `q`; match `application/json` and compare
+- [x] **Changes:** parse `Accept` into ranges with `q`; match `application/json` and compare
   `profile` case-insensitively and unquoted; a `charset` parameter beside `profile` stops the
   profile match; an unknown profile falls back to plain; rank by `q`, ties keep the client's order.
   The winner sets both the naming policy and the echoed content type, profile before charset.
+- **Amended 2026-09-03, on doing it:** *"the winner sets both"* could not be said in the signature
+  the winner arrived through. Three declared content types over two naming policies means a body
+  written under `NamingPascal` cannot say which of the two PascalCase types asked for it, so
+  `Write`'s last argument became a **`Profile`** — the negotiation's whole answer — rather than a
+  `Naming`. A middleware stamping the header afterwards was the alternative and is the one
+  behaviours §1.10 rules out. `plan.md` §5 carries it.
+  Three cases the four rules leave open were decided and written into `plan.md` §6.3: a **wildcard
+  range is a candidate that names no profile** (the reference does not discard one before ranking
+  `[source: Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs:125-126 @ v10.11.11]`);
+  a parameter written **after `q`** is an accept-extension and selects nothing (RFC 9110 §12.5.1,
+  ⚠️ UNVERIFIED); and *"a charset falls back to the plain type"* has **two readings that no
+  measurement separates**, which differ only when a charset-bearing range precedes a bare profile
+  range in the same header. The plan's literal reading was taken and the probe is owed.
 - **Depends on:** T6
 - **Verified by:** a table test over the four rules, plus AC-9's three requests — plain and
   `PascalCase` byte-identical, `CamelCase` the same values under converted names, each response

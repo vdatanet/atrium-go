@@ -114,3 +114,22 @@ func lowerFirstLetter(name string) string {
 	}
 	return string(chars)
 }
+
+// TestMarshalRefusesANamingPolicyItDoesNotHave keeps T6's check alive after T7
+// moved the caller's choice up to a Profile.
+//
+// Write no longer takes a Naming, so nothing outside this package can reach the
+// arm any more. That is not a reason to drop it: marshal is where the two
+// policies are dispatched, and a third one arriving there — a policy added and
+// not wired into profileAnswers, say — must be a refusal rather than a silent
+// PascalCase body (behaviours 1.13).
+func TestMarshalRefusesANamingPolicyItDoesNotHave(t *testing.T) {
+	body, err := marshal(struct{ Id string }{Id: "3f9c"}, Naming(7))
+
+	if err == nil {
+		t.Fatalf("marshal(..., Naming(7)) = %s, want an error", body)
+	}
+	if body != nil {
+		t.Errorf("marshal(..., Naming(7)) body = %s, want nothing", body)
+	}
+}

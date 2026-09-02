@@ -224,6 +224,13 @@ func Write(w http.ResponseWriter, status int, v any, n Naming) error
 The status and the value go in together because [§1.10](../../docs/compatibility/behaviours.md)'s
 content type belongs to the thing that produced the body, not to a middleware bolted on after.
 
+**Amended 2026-09-03, at T5.** `NamingCamel` is **not declared yet**; T6 declares it with the
+policy behind it. An exported constant that a caller may pass and that silently writes PascalCase
+is worse than one that does not compile: the whole point of taking `naming` at T5 is that the
+policy is negotiated, and a value that names a policy the package has not got would make the one
+mistake this argument exists to prevent invisible. The signature above is otherwise exactly as
+written.
+
 ## 6. Algorithms
 
 ### 6.1 Path canonicalisation (§3.6, behaviours §1.14)
@@ -270,6 +277,23 @@ The encoder's own HTML escaping is switched off, and one pass rewrites the body:
 character and the seven ASCII ones as `\uXXXX` with upper-case hex. It **counts backslash parity**
 rather than searching for the escape prefix, so a value that genuinely contains those six
 characters survives while the encoder's own escapes are rewritten.
+
+**Amended 2026-09-03, at T5**, with two things the wording did not survive contact with.
+
+**The pass has to know where a string starts and ends.** §1.16's table escapes `"` as
+`\u0022` and notes that *"JSON's own escape is `\"`, and the reference does not use it"* — so a
+rewrite that treated every quote alike would escape the document's own delimiters and emit
+something that is not JSON. Tracking it is cheap and exact rather than a parse: the encoder never
+writes a raw quote inside a string, so every raw quote is a delimiter and every `\"` is a
+character of a value.
+
+**A character above U+FFFF has no `\uXXXX` spelling, and this is `⚠️ UNVERIFIED`.** §1.16
+was measured on accented Latin characters and seven printable ASCII ones, every one of which fits a
+single UTF-16 code unit. The pass writes a surrogate pair, because that is what a UTF-16 encoder
+emits and the only spelling that reads back as the same character — but it is an inference from the
+reference's stack and not a measurement, and it owes a probe that puts one such character into a
+body. Nothing in 001 can carry one; the first feature that puts a library's item names on the wire
+can.
 
 ### 6.5 `Allow` (§3.6)
 

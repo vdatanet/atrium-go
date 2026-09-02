@@ -112,9 +112,17 @@ list is long for four routes.
 
 ## T5 — `internal/wire`: the encoder and the escape pass
 
-- [ ] **Changes:** `internal/wire` — `Write(w, status, v, naming)`; the encoder's HTML escaping
+- [x] **Changes:** `internal/wire` — `Write(w, status, v, naming)`; the encoder's HTML escaping
   switched off; one pass applying behaviours §1.16's table, counting backslash parity; the content
   type set by the writer that produced the body, with `charset=utf-8`.
+- **Amended 2026-09-03, on doing it:** the pass tracks whether it is inside a string, because
+  §1.16 escapes `"` as `\u0022` and a rewrite that treated every quote alike would escape the
+  document's own delimiters. And a character above U+FFFF is written as a surrogate pair, which is
+  an inference from the reference's stack rather than a measurement and is marked
+  `⚠️ UNVERIFIED` — §1.16 was measured on characters that all fit one UTF-16 code unit.
+  `plan.md` §6.4 carries both. `NamingCamel` is deliberately **not** declared: T6 declares it with
+  the policy behind it, and a constant that names a policy the package has not got would write
+  PascalCase in silence. `plan.md` §5 carries that.
 - **Depends on:** T4
 - **Verified by:** a table test asserting **bytes**: every non-ASCII character and the seven ASCII
   ones as upper-case escapes, and the ten characters left literal. One case is the hard one — a

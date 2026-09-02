@@ -3,7 +3,7 @@ feature: 001-server-identity-and-discovery
 title: Server identity and discovery — tasks
 status: Draft
 created: 2026-09-02
-updated: 2026-09-02
+updated: 2026-09-03
 plan_status_required: Accepted
 ---
 
@@ -26,10 +26,15 @@ list is long for four routes.
 
 ## T1 — A binary that starts, serves nothing, and stops cleanly
 
-- [ ] **Changes:** `cmd/atrium` — flags for bind address, data directory and log level, with
+- [x] **Changes:** `cmd/atrium` — flags for bind address, data directory and log level, with
   environment fallback; `log/slog` to standard error; an `http.Server` on the bind address; a
   build-stamped version; graceful shutdown on `SIGINT`/`SIGTERM` that drains connections and waits
   for the process group.
+- **Amended 2026-09-03, on doing it:** all of that but `main` landed in **`internal/app`**, with the
+  version stamp in **`internal/build`**. `cmd/atrium` may hold no branch a test would want to reach
+  ([architecture §3](../../docs/architecture.md#3-repository-layout)), and the check below starts a
+  server in process and signals it, which needs a package a test can call. `plan.md` §3 carries the
+  same amendment.
 - **Depends on:** —
 - **Verified by:** a test that starts the server on a random port, issues one request, sends the
   shutdown signal and asserts `Shutdown` returns before a deadline with no goroutine left running.

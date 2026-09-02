@@ -58,6 +58,11 @@ the specification from leaving draft. **Marking it is the correct move; assertin
 Where a probe, a source line and the OpenAPI document disagree, **the running server wins**, and the
 disagreement is recorded rather than resolved silently.
 
+**Read a source citation at the pinned tag, not out of the working tree.** The sibling Jellyfin
+checkout is a git repository somebody may have left on any branch — it was on a `v12.0` release
+candidate on 2026-09-02 — and a line number read from it would be a citation to a version this
+project does not target. Use `git show v10.11.11:<path>`, and let the line number come from that.
+
 ### 1.4 Never commit to `main`
 
 Every change goes on a branch, opens a pull request, and reaches `main` by merge. The root commit

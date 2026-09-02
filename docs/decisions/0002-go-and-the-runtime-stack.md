@@ -97,6 +97,28 @@ Read against §1.7 and §1.16, that one line is four findings:
 - **Non-ASCII is passed through, and four of the seven ASCII characters are too.** `ñ`, `é`, `'`,
   `` ` `` and `+` all came out literal; §1.16 requires all five escaped.
 
+### The newest standard-library encoder cannot express it either
+
+Go 1.27 ships `encoding/json/v2` and `encoding/json/jsontext` in the standard library, importable
+with no `GOEXPERIMENT` set. It was checked rather than assumed, because a v2 encoder that could be
+told which characters to escape would remove the need for a pass of our own.
+
+It cannot be. `jsontext`'s entire escaping surface is two options — `EscapeForHTML` and
+`EscapeForJS` — and with **both** enabled the output is byte-identical to v1's:
+
+```
+v1                     : "\" \u0026 ' + \u003c \u003e ` ñ é / = : ! * ( ) - _"
+v2 default             : "\" & ' + < > ` ñ é / = : ! * ( ) - _"
+v2 EscapeForHTML+ForJS : "\" \u0026 ' + \u003c \u003e ` ñ é / = : ! * ( ) - _"
+```
+
+`[measurement: encoding/json, encoding/json/v2, encoding/json/jsontext, Go 1.27.0, 2026-09-02]`
+
+Against §1.16 that is still missing four of the seven ASCII characters, every non-ASCII character,
+and the case of the hex. **So the pass below is not a preference between two ways of escaping; it is
+the only way to emit these bytes from Go**, and that is a stronger reason than the one this record
+was first written with.
+
 ## Decision
 
 ### Go, with the language floor at 1.25

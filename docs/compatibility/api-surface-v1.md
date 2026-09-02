@@ -3,9 +3,17 @@
 **Last verified: 2026-09-01. Every path and method below was checked to exist in the Jellyfin
 10.11.11 OpenAPI document; the `Operation` column is that document's `operationId`.**
 
-Jellyfin exposes **322 paths**. v1 of Atrium serves **58**. This document explains which 58, and —
+Jellyfin exposes **322 paths**. v1 of Atrium serves **59**. This document explains which 59, and —
 more importantly — *how that set was chosen*, because Principle VI forbids adding an endpoint
 without a named consumer.
+
+> ⚠️ **This sentence said 58 until 2026-09-02.** The tables below have enumerated 59 rows since
+> [§8.1](#81-subtitle-delivery) landed, and its third row is the one the count never absorbed: 011
+> was sized at two routes and delivered three, because a negotiation's own `DeliveryUrl` names an
+> operation the trace had not. Three other documents had already caught up — `surface.yaml` carries
+> 59 rows, `request-cases.yaml` counts 59 operations and calls the next one the sixtieth, and
+> [conformance.md](conformance.md) states the same floor — so this document's own summary was the
+> last place the old number survived. Nothing in the tables changed.
 
 ## 1. How this set was derived
 
@@ -288,7 +296,7 @@ Growing the surface is a roadmap decision, not something an implementer does opp
 ## 11. Keeping this table honest
 
 The tables above have a machine-readable companion, [`surface.yaml`](surface.yaml), carrying the
-same 58 entries with their consumers, owning feature and required conformance level.
+same 59 entries with their consumers, owning feature and required conformance level.
 
 ```bash
 python3 tools/extract_v1_surface.py --spec reference/openapi.json --print-summary

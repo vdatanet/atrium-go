@@ -1,0 +1,715 @@
+# The differential allowlist: what may differ between Atrium and a real Jellyfin, and why.
+#
+# Read with docs/compatibility/conformance.md (L3) and specs/010-conformance-harness/spec.md
+# section 3.3, which carry the same list in prose. tests/unit/test_allowlist.py compares the two
+# prose tables against this file row for row, so the three cannot drift apart.
+#
+# Every entry declares one of exactly two kinds of reason (010 AC-6, refined 2026-09-01 by D-3):
+#
+#   * a behaviours.md section, written "behaviours §N" - where one of the two servers *chose*
+#     the difference, and somebody owed an argument for it;
+#   * one of four derivation classes - derived-identifier, wall-clock, content-hash,
+#     installation-path - where neither server chose it and it follows from the two being
+#     separate installations of separate software, scanned at different moments, over different
+#     mount points.
+#
+# A fifth class is not added without review, and a class is never the excuse for a value one of
+# the two servers decided. An entry with neither fails the load.
+#
+# AN ENTRY IS SCOPED, AND THAT IS THE WHOLE DISCIPLINE. It names an endpoint, a JSON Pointer into
+# the body, and - where the prose conditions it on the request rather than on the route - a
+# request case. ChildCount is the entry that decides it: the reference's number is excused on a
+# /UserViews row and nowhere else, because the same property on a series, a season or a multi-disc
+# album is a real computed subtree aggregate on both servers and is exactly what L2 checks
+# (behaviours §3.25). A row keyed on a bare field name would delete that check everywhere.
+#
+# Fields:
+#   kind      field | drawn | unordered (010 plan section 6.3)
+#   endpoint  "METHOD /path" from surface.yaml, or "*" for a genuinely global one
+#   pointer   JSON Pointer into the body, "header:<name>" for a header, or "status".
+#             "-" is RFC 6901's array-index wildcard: /Items/-/Id is "the Id of any row".
+#             A `field` pointer covers its subtree; a `drawn` or `unordered` pointer names the
+#             array itself and nothing under it.
+#   case      A request-case id from request-cases.yaml, or "*" for every case of the endpoint.
+#             The seventh field, added by 010 T3: two rows of spec section 3.3 are conditioned on
+#             the *request* and not on the route, and with six fields they could only be written
+#             wider than the prose they come from. It only ever narrows: "*" is what an entry
+#             without a condition says, and an id that no case declares matches nothing, so the
+#             failure direction is under-excusing.
+#   reason    One sentence, the prose the report prints beside the excused difference
+#   because   A behaviours.md section, or one of the four derivation classes
+#   since     The date the entry was added. The allowlist is a metric and a metric needs a clock.
+#
+# The allowlist should SHRINK over time as the derivations converge, and a run that grows it is
+# worth a second look. The excused arrays are the exception that proves it: none of the three is
+# Atrium's to converge with.
+
+entries:
+
+  # ------------------------------------------------------------------------------------------
+  # derived-identifier - the two servers derive these identifiers differently by design.
+  #
+  # behaviours §1.4: the reference's ids are an MD5 over the item's type name and its absolute
+  # path, laid out as a .NET GUID. Atrium derives its own, deterministically, from its own inputs.
+  # Neither derivation is wrong and neither can be made to agree with the other, so no run will
+  # ever compare these by value. The spelling below is the measured one: every field row lives
+  # inside a row of a list envelope, so the entry names /Items/-/Id and never a bare `Id`.
+  # ------------------------------------------------------------------------------------------
+
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/Id"
+    case: "*"
+    reason: "The item identifier a list row carries, derived from different inputs on each server (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/ServerId"
+    case: "*"
+    reason: "The installation's own identifier, generated once per installation"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/ParentId"
+    case: "*"
+    reason: "The containing item's identifier, derived the same way its own is (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/SeriesId"
+    case: "*"
+    reason: "The series an episode or season belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/SeasonId"
+    case: "*"
+    reason: "The season an episode belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/AlbumId"
+    case: "*"
+    reason: "The album a track belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/ParentThumbItemId"
+    case: "*"
+    reason: "The ancestor a row inherits its thumbnail from, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/ParentBackdropItemId"
+    case: "*"
+    reason: "The ancestor a row inherits its backdrop from, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/UserData/Key"
+    case: "*"
+    reason: "The user-data key is the item's own derived identity (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/UserData/ItemId"
+    case: "*"
+    reason: "The user-data item reference is the item's own derived identity (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Playlists/{playlistId}/Items"
+    pointer: "/Items/-/PlaylistItemId"
+    case: "*"
+    reason: "The entry identifier a playlist read carries, which 009's gate measured to be the item's own Id (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+
+  # The same properties on a bare item body: GET /Items/{itemId}, and anything else whose root is
+  # one item rather than an envelope.
+  - kind: field
+    endpoint: "*"
+    pointer: "/Id"
+    case: "*"
+    reason: "The identifier of the one thing a bare body describes - an item, a user, a created playlist, the installation (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/ServerId"
+    case: "*"
+    reason: "The installation's own identifier, generated once per installation"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/ParentId"
+    case: "*"
+    reason: "The containing item's identifier on a bare item body (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/SeriesId"
+    case: "*"
+    reason: "The series an episode or season belongs to, on a bare item body (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/SeasonId"
+    case: "*"
+    reason: "The season an episode belongs to, on a bare item body (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/AlbumId"
+    case: "*"
+    reason: "The album a track belongs to, on a bare item body (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/ParentThumbItemId"
+    case: "*"
+    reason: "The ancestor a bare item body inherits its thumbnail from (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/ParentBackdropItemId"
+    case: "*"
+    reason: "The ancestor a bare item body inherits its backdrop from (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/UserData/Key"
+    case: "*"
+    reason: "The user-data key on a bare item body is the item's own derived identity (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/UserData/ItemId"
+    case: "*"
+    reason: "The user-data item reference on a bare item body is the item's own derived identity (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/ItemId"
+    case: "*"
+    reason: "The item a bare user-data body describes, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Key"
+    case: "*"
+    reason: "The key of a bare user-data body is the item's own derived identity (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+
+  # Rows of a bare array: GET /Items/Latest, GET /Users/Public, GET /Sessions.
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/Id"
+    case: "*"
+    reason: "The identifier of a row in a bare array - a latest item, a public user, a session (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/ServerId"
+    case: "*"
+    reason: "The installation's own identifier on a bare-array row"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/ParentId"
+    case: "*"
+    reason: "The containing item's identifier on a bare-array row (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/SeriesId"
+    case: "*"
+    reason: "The series a bare-array row belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/SeasonId"
+    case: "*"
+    reason: "The season a bare-array row belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/AlbumId"
+    case: "*"
+    reason: "The album a bare-array row belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/ParentThumbItemId"
+    case: "*"
+    reason: "The ancestor a bare-array row inherits its thumbnail from (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/ParentBackdropItemId"
+    case: "*"
+    reason: "The ancestor a bare-array row inherits its backdrop from (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/UserData/Key"
+    case: "*"
+    reason: "The user-data key on a bare-array row is the item's own derived identity (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/UserData/ItemId"
+    case: "*"
+    reason: "The user-data item reference on a bare-array row is the item's own derived identity (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Sessions"
+    pointer: "/-/UserId"
+    case: "*"
+    reason: "The account a session belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Sessions"
+    pointer: "/-/DeviceId"
+    case: "*"
+    reason: "The device identifier a session was opened with, minted per authentication"
+    because: derived-identifier
+    since: 2026-09-02
+
+  # The search hints, which are a flattened shape of their own and not items.
+  - kind: field
+    endpoint: "GET /Search/Hints"
+    pointer: "/SearchHints/-/Id"
+    case: "*"
+    reason: "The identifier of the item a hint points at (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Search/Hints"
+    pointer: "/SearchHints/-/ItemId"
+    case: "*"
+    reason: "The same identifier under the hint's second spelling of it (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Search/Hints"
+    pointer: "/SearchHints/-/AlbumId"
+    case: "*"
+    reason: "The album a hint's track belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Search/Hints"
+    pointer: "/SearchHints/-/ThumbImageItemId"
+    case: "*"
+    reason: "The item a hint borrows its thumbnail from, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Search/Hints"
+    pointer: "/SearchHints/-/BackdropImageItemId"
+    case: "*"
+    reason: "The item a hint borrows its backdrop from, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+
+  # The authentication result, which nests a user and a session inside itself.
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/User/Id"
+    case: "*"
+    reason: "The authenticated account's identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/User/ServerId"
+    case: "*"
+    reason: "The installation's own identifier, nested in the authenticated user"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/SessionInfo/Id"
+    case: "*"
+    reason: "The session this authentication opened, by identifier"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/SessionInfo/UserId"
+    case: "*"
+    reason: "The account the opened session belongs to, by identifier (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/SessionInfo/ServerId"
+    case: "*"
+    reason: "The installation's own identifier, nested in the opened session"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/SessionInfo/DeviceId"
+    case: "*"
+    reason: "The device identifier the opened session was minted with"
+    because: derived-identifier
+    since: 2026-09-02
+
+  # A media source's identifier, which the negotiation hands back and the delivery routes take.
+  - kind: field
+    endpoint: "*"
+    pointer: "/MediaSources/-/Id"
+    case: "*"
+    reason: "A media source is identified by its item, so its identifier is derived too (behaviours §1.4)"
+    because: derived-identifier
+    since: 2026-09-02
+
+  # ------------------------------------------------------------------------------------------
+  # derived-identifier, second kind: minted once per session and per token rather than derived
+  # from the library at all. Two servers cannot agree on these even in principle.
+  # ------------------------------------------------------------------------------------------
+
+  - kind: field
+    endpoint: "*"
+    pointer: "/PlaySessionId"
+    case: "*"
+    reason: "Minted by each server for the play session it is itself running"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/AccessToken"
+    case: "*"
+    reason: "Minted by each server for the token it is itself issuing"
+    because: derived-identifier
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/ServerId"
+    case: "*"
+    reason: "The installation's own identifier, at the root of the authentication result"
+    because: derived-identifier
+    since: 2026-09-02
+
+  # ------------------------------------------------------------------------------------------
+  # wall-clock - the value is the moment something happened, and the two things happened at
+  # different moments. Neither server chose it and no argument is owed for it.
+  # ------------------------------------------------------------------------------------------
+
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/DateCreated"
+    case: "*"
+    reason: "The moment this server's scan first saw the item"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/DateCreated"
+    case: "*"
+    reason: "The moment this server's scan first saw a bare-array row"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/DateCreated"
+    case: "*"
+    reason: "The moment this server's scan first saw the item a bare body describes"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/DateLastMediaAdded"
+    case: "*"
+    reason: "The most recent moment this server's scan added something under the container"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/DateLastMediaAdded"
+    case: "*"
+    reason: "The same aggregate on a bare-array row"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/DateLastMediaAdded"
+    case: "*"
+    reason: "The same aggregate on a bare item body"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/LastActivityDate"
+    case: "*"
+    reason: "The moment this server last saw the session or the account act"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/LastActivityDate"
+    case: "*"
+    reason: "The moment this server last saw the account act, on a bare user body"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/User/LastActivityDate"
+    case: "*"
+    reason: "The moment this server last saw the authenticating account act"
+    because: wall-clock
+    since: 2026-09-02
+  - kind: field
+    endpoint: "POST /Users/AuthenticateByName"
+    pointer: "/SessionInfo/LastActivityDate"
+    case: "*"
+    reason: "The moment this server opened the session, which is the moment the run authenticated against it"
+    because: wall-clock
+    since: 2026-09-02
+
+  # ------------------------------------------------------------------------------------------
+  # content-hash - a hash over inputs that are themselves derived differently. Excusing the hash
+  # is not excusing the thing it stands for: the key's presence and its type are still compared,
+  # and ImageTags' own keys are still compared, because those are the image types the item has.
+  # ------------------------------------------------------------------------------------------
+
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/Etag"
+    case: "*"
+    reason: "A hash over the item's identity and its change clocks, both derived per server"
+    because: content-hash
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/Etag"
+    case: "*"
+    reason: "The same hash on a bare-array row"
+    because: content-hash
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Etag"
+    case: "*"
+    reason: "The same hash on a bare item body"
+    because: content-hash
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/MediaSources/-/ETag"
+    case: "*"
+    reason: "A media source's own hash, spelled with the uppercase T the reference gives it"
+    because: content-hash
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/ImageTags"
+    case: "*"
+    reason: "One cache-busting hash per image the row has, over files each server stored for itself"
+    because: content-hash
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/ImageTags"
+    case: "*"
+    reason: "The same hashes on a bare-array row"
+    because: content-hash
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/ImageTags"
+    case: "*"
+    reason: "The same hashes on a bare item body"
+    because: content-hash
+    since: 2026-09-02
+
+  # ------------------------------------------------------------------------------------------
+  # installation-path - the value names where this installation keeps its files.
+  # ------------------------------------------------------------------------------------------
+
+  - kind: field
+    endpoint: "*"
+    pointer: "/Items/-/Path"
+    case: "*"
+    reason: "Different mount points, and on a by-name row the reference's own data directory"
+    because: installation-path
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/-/Path"
+    case: "*"
+    reason: "The same, on a bare-array row"
+    because: installation-path
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/Path"
+    case: "*"
+    reason: "The same, on a bare item body"
+    because: installation-path
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "/MediaSources/-/Path"
+    case: "*"
+    reason: "The file a media source is served from, under each installation's own mount point"
+    because: installation-path
+    since: 2026-09-02
+
+  # ------------------------------------------------------------------------------------------
+  # Differences one of the two servers chose. Each names the behaviours.md section that carries
+  # the argument, and adding the entry meant having written that argument.
+  # ------------------------------------------------------------------------------------------
+
+  - kind: field
+    endpoint: "GET /System/Info"
+    pointer: "/LocalAddress"
+    case: "*"
+    reason: "Atrium reports the scheme it is actually reachable on; the reference rewrites it when a certificate is configured"
+    because: "behaviours §4.2"
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /System/Info/Public"
+    pointer: "/LocalAddress"
+    case: "*"
+    reason: "The same divergence on the unauthenticated half of the same pair of fields"
+    because: "behaviours §4.2"
+    since: 2026-09-02
+
+  - kind: field
+    endpoint: "GET /Artists"
+    pointer: "/TotalRecordCount"
+    case: by-name-without-limit
+    reason: "The reference disables counting on the shared by-name path when the request carries no limit and answers 0; Atrium answers the true count"
+    because: "behaviours §3.1"
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Artists/AlbumArtists"
+    pointer: "/TotalRecordCount"
+    case: by-name-without-limit
+    reason: "The same defect on the second of the five endpoints that share the reference's by-name path"
+    because: "behaviours §3.1"
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Genres"
+    pointer: "/TotalRecordCount"
+    case: by-name-without-limit
+    reason: "The same defect on the third of the five endpoints that share the reference's by-name path"
+    because: "behaviours §3.1"
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /MusicGenres"
+    pointer: "/TotalRecordCount"
+    case: by-name-without-limit
+    reason: "The same defect on the fourth of the five endpoints that share the reference's by-name path"
+    because: "behaviours §3.1"
+    since: 2026-09-02
+  - kind: field
+    endpoint: "GET /Years"
+    pointer: "/TotalRecordCount"
+    case: by-name-without-limit
+    reason: "The same family's other face: without a limit the reference answers a count that is neither zero nor the row count"
+    because: "behaviours §3.1"
+    since: 2026-09-02
+
+  - kind: field
+    endpoint: "*"
+    pointer: "header:X-Response-Time-ms"
+    case: "*"
+    reason: "The time the response took, which moves on every response by construction"
+    because: "behaviours §1.9"
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "header:Date"
+    case: "*"
+    reason: "The response clock, measured moving on 19 of 19 read cases"
+    because: "behaviours §1.9"
+    since: 2026-09-02
+  - kind: field
+    endpoint: "*"
+    pointer: "header:Server"
+    case: "*"
+    reason: "Atrium says Atrium/<version> where the reference says Kestrel - the one header where the honest answer costs nothing"
+    because: "behaviours §4.1"
+    since: 2026-09-02
+
+  - kind: field
+    endpoint: "GET /UserViews"
+    pointer: "/Items/-/ChildCount"
+    case: "*"
+    reason: "The reference's value is a fresh random integer between 1 and 9, redrawn on every request; Atrium emits the real count"
+    because: "behaviours §3.25"
+    since: 2026-09-02
+
+  # ------------------------------------------------------------------------------------------
+  # The excused arrays. A field is not the only unit a difference comes in: where the reference's
+  # whole answer is a draw, no field of it is comparable and excusing them one by one would
+  # excuse the response. `drawn` still compares the envelope, the row count, and every row's key
+  # set and types (AC-17); `unordered` still compares everything, as a multiset (AC-18).
+  #
+  # None of the three can ever be removed. None of them is Atrium's to converge with.
+  #
+  # AND NO FOURTH ENTRY EXCUSES THE ROW COUNT OF THE FIRST. The reference answers limit + 4 rows
+  # on a movie seed where Atrium answers exactly limit (behaviours §3.24), so the count of the
+  # Similar array differs on every single run - and it is reported every single time, on purpose
+  # (010 T4). The count is the only quantity of a drawn array a run can still check, so an entry
+  # excusing it would leave the endpoint with nothing measured at all, and the entry could not be
+  # written narrowly anyway: "excuse the count, keep the shape" is not something a pointer says.
+  # A line that repeats a known divergence is what notices the day it stops being + 4.
+  # ------------------------------------------------------------------------------------------
+
+  - kind: drawn
+    endpoint: "GET /Items/{itemId}/Similar"
+    pointer: "/Items"
+    case: "*"
+    reason: "A fresh draw per request over items sharing the seed's genres and tags - four identical requests shared no item"
+    because: "behaviours §3.23"
+    since: 2026-09-02
+  - kind: drawn
+    endpoint: "*"
+    pointer: "/Items"
+    case: listing-ordered-at-random
+    reason: "The caller asked for a random order, so the reference reshuffles per row on every request"
+    because: "behaviours §3.6"
+    since: 2026-09-02
+  - kind: unordered
+    endpoint: "*"
+    pointer: "/Items"
+    case: listing-ordered-by-a-key-with-ties
+    reason: "The reference adds no further key after most orderings, so its ties are engine-resolved and its order is not total"
+    because: "behaviours §3.6"
+    since: 2026-09-02

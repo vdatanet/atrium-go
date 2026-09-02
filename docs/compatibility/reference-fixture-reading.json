@@ -1,0 +1,599 @@
+{
+  "_": "The reference's own reading of this repository's fixture tree, written by the probe named below and compared against Atrium's scan by tests/library/test_reference_reading.py. Generated: edit it by re-running the probe against a reference instance, never by hand.",
+  "citation": "[probe: tools/probe_reference_scan.py, Jellyfin 10.11.11, 2026-09-02]",
+  "question": "Given the fixture tree, what does a reference server's library contain? (010 plan section 11, D-4)",
+  "finding": "the reference makes 74 items out of the fixture tree, 48 of them backed by a file and 36 of those over a file none of its probers can open - so a tree of paths and filler bytes is a library to it, and D-4's second branch is the measured one: both worlds go across as libraries of their own",
+  "jellyfin_version": "10.11.11",
+  "image": "jellyfin/jellyfin@sha256:aefb67e6a7ff1debdd154a78a7bbb780fd0c873d8639210a7f6a2016ad2b35db",
+  "fixture": {
+    "entry_point": "tests.fixtures.reference_tree:build",
+    "tree": "tests/fixtures/library (003's declared tree, paths and filler bytes)",
+    "mount": "/fixture"
+  },
+  "remote_metadata": {
+    "enabled": false,
+    "how": "LibraryOptions.TypeOptions, one entry per fetched type with an empty MetadataFetchers list. LibraryOptions.EnableInternetProviders is declared, stored and read by nothing in the reference",
+    "names_a_fetcher_supplied": [
+      {
+        "library": "Movies",
+        "path": "iRobot (2004).mkv",
+        "from_the_tree": "iRobot",
+        "from_a_fetcher": "I, Robot"
+      },
+      {
+        "library": "Movies",
+        "path": "Rock & Roll (1978).mkv",
+        "from_the_tree": "Rock & Roll",
+        "from_a_fetcher": "Rock 'n Roll"
+      },
+      {
+        "library": "Movies",
+        "path": "Wall-E (2008).mkv",
+        "from_the_tree": "Wall-E",
+        "from_a_fetcher": "WALL·E's Treasures & Trinkets"
+      },
+      {
+        "library": "Shows",
+        "path": "24/Season 01/24 - S01E01 - 12-00 AM.mkv",
+        "from_the_tree": "24 - S01E01 - 12-00 AM",
+        "from_a_fetcher": "12:00 A.M.-1:00 A.M."
+      },
+      {
+        "library": "Shows",
+        "path": "The Series/Season 01/The Series - S01E02-E03 - Two Parter.mkv",
+        "from_the_tree": "The Series - S01E02-E03 - Two Parter",
+        "from_a_fetcher": "Family Tree / Road Not Taken"
+      },
+      {
+        "library": "Shows",
+        "path": "The Series/Specials/The Series - S00E01 - A Special.mkv",
+        "from_the_tree": "The Series - S00E01 - A Special",
+        "from_a_fetcher": "Highlander: Reunion"
+      },
+      {
+        "library": "Shows",
+        "path": "The Series/Season 01/The Series - S01E04 - Old Transfer.avi",
+        "from_the_tree": "The Series - S01E04 - Old Transfer",
+        "from_a_fetcher": "Innocent Man"
+      },
+      {
+        "library": "Shows",
+        "path": "The Series/Season 01/The Series - S01E01 - Pilot.mkv",
+        "from_the_tree": "The Series - S01E01 - Pilot",
+        "from_a_fetcher": "The Gathering"
+      },
+      {
+        "library": "Shows",
+        "path": "The Series/The Series - S02E01 - No Season Directory.mkv",
+        "from_the_tree": "The Series - S02E01 - No Season Directory",
+        "from_a_fetcher": "The Watchers"
+      }
+    ],
+    "compared": false,
+    "carried_forward_from": "[probe: tools/probe_reference_scan.py, Jellyfin 10.11.11, 2026-09-02]"
+  },
+  "totals": {
+    "libraries": 6,
+    "items": 74
+  },
+  "libraries": [
+    {
+      "name": "Movies",
+      "collection_type": "movies",
+      "decodable": false,
+      "item_count": 18,
+      "counts_by_type": {
+        "Folder": 1,
+        "Movie": 17
+      },
+      "items": [
+        {
+          "type": "Folder",
+          "name": "Movies",
+          "file": null,
+          "path": null
+        },
+        {
+          "type": "Movie",
+          "name": "  Padded",
+          "file": "  Padded   (1999).mkv",
+          "path": "  Padded   (1999).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "10 Things I Hate About You",
+          "file": "10 Things I Hate About You (1999).mkv",
+          "path": "10 Things I Hate About You (1999).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "100% Wolf",
+          "file": "100% Wolf (2020).mkv",
+          "path": "100% Wolf (2020).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "2 Fast 2 Furious",
+          "file": "2 Fast 2 Furious (2003).mkv",
+          "path": "2 Fast 2 Furious (2003).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "A Bridge Too Far",
+          "file": "A Bridge Too Far (1977).mkv",
+          "path": "A Bridge Too Far (1977).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "A Broadcast Capture",
+          "file": "A Broadcast Capture (2011).ts",
+          "path": "A Broadcast Capture (2011).ts"
+        },
+        {
+          "type": "Movie",
+          "name": "A Newer Transfer",
+          "file": "A Newer Transfer (2015).mp4",
+          "path": "A Newer Transfer (2015).mp4"
+        },
+        {
+          "type": "Movie",
+          "name": "Amélie",
+          "file": "Amélie (2001).mkv",
+          "path": "Amélie (2001).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "An Incomplete Copy",
+          "file": "An Incomplete Copy (2000).mkv",
+          "path": "An Incomplete Copy (2000).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "An Old Transfer",
+          "file": "An Old Transfer (1985).avi",
+          "path": "An Old Transfer (1985).avi"
+        },
+        {
+          "type": "Movie",
+          "name": "Don't Look Up",
+          "file": "Don't Look Up (2021).mkv",
+          "path": "Don't Look Up (2021).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "Rock & Roll",
+          "file": "Rock & Roll (1978).mkv",
+          "path": "Rock & Roll (1978).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "S.W.A.T.",
+          "file": "S.W.A.T. (2003).mkv",
+          "path": "S.W.A.T. (2003).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "The Long Film (1998)",
+          "file": "The Long Film (1998)/The Long Film (1998) - part1.mkv",
+          "path": "The Long Film (1998)/The Long Film (1998) - part1.mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "The Matrix (1999)",
+          "file": "The Matrix (1999)/The Matrix (1999).mkv",
+          "path": "The Matrix (1999)/The Matrix (1999).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "Wall-E",
+          "file": "Wall-E (2008).mkv",
+          "path": "Wall-E (2008).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "iRobot",
+          "file": "iRobot (2004).mkv",
+          "path": "iRobot (2004).mkv"
+        }
+      ]
+    },
+    {
+      "name": "Shows",
+      "collection_type": "tvshows",
+      "decodable": false,
+      "item_count": 20,
+      "counts_by_type": {
+        "Episode": 9,
+        "Folder": 1,
+        "Season": 7,
+        "Series": 3
+      },
+      "items": [
+        {
+          "type": "Episode",
+          "name": "24 - S01E01 - 12-00 AM",
+          "file": "24/Season 01/24 - S01E01 - 12-00 AM.mkv",
+          "path": "24/Season 01/24 - S01E01 - 12-00 AM.mkv"
+        },
+        {
+          "type": "Episode",
+          "name": "The Daily Show - 2024-01-31",
+          "file": "The Daily Show/Season 2024/The Daily Show - 2024-01-31.mkv",
+          "path": "The Daily Show/Season 2024/The Daily Show - 2024-01-31.mkv"
+        },
+        {
+          "type": "Episode",
+          "name": "The Series - S00E01 - A Special",
+          "file": "The Series/Specials/The Series - S00E01 - A Special.mkv",
+          "path": "The Series/Specials/The Series - S00E01 - A Special.mkv"
+        },
+        {
+          "type": "Episode",
+          "name": "The Series - S01E01 - Pilot",
+          "file": "The Series/Season 01/The Series - S01E01 - Pilot.mkv",
+          "path": "The Series/Season 01/The Series - S01E01 - Pilot.mkv"
+        },
+        {
+          "type": "Episode",
+          "name": "The Series - S01E02-E03 - Two Parter",
+          "file": "The Series/Season 01/The Series - S01E02-E03 - Two Parter.mkv",
+          "path": "The Series/Season 01/The Series - S01E02-E03 - Two Parter.mkv"
+        },
+        {
+          "type": "Episode",
+          "name": "The Series - S01E04 - Old Transfer",
+          "file": "The Series/Season 01/The Series - S01E04 - Old Transfer.avi",
+          "path": "The Series/Season 01/The Series - S01E04 - Old Transfer.avi"
+        },
+        {
+          "type": "Episode",
+          "name": "The Series - S02E01 - No Season Directory",
+          "file": "The Series/The Series - S02E01 - No Season Directory.mkv",
+          "path": "The Series/The Series - S02E01 - No Season Directory.mkv"
+        },
+        {
+          "type": "Episode",
+          "name": "The Series - S02E99 - Beyond Any Real Count",
+          "file": "The Series/Season 02/The Series - S02E99 - Beyond Any Real Count.mp4",
+          "path": "The Series/Season 02/The Series - S02E99 - Beyond Any Real Count.mp4"
+        },
+        {
+          "type": "Episode",
+          "name": "blob",
+          "file": "The Series/Season 01/blob.mkv",
+          "path": "The Series/Season 01/blob.mkv"
+        },
+        {
+          "type": "Folder",
+          "name": "Shows",
+          "file": null,
+          "path": null
+        },
+        {
+          "type": "Season",
+          "name": "Season 1",
+          "file": null,
+          "path": "24/Season 01"
+        },
+        {
+          "type": "Season",
+          "name": "Season 1",
+          "file": null,
+          "path": "The Series/Season 01"
+        },
+        {
+          "type": "Season",
+          "name": "Season 2",
+          "file": null,
+          "path": "The Series/Season 02"
+        },
+        {
+          "type": "Season",
+          "name": "Season 2024",
+          "file": null,
+          "path": "The Daily Show/Season 2024"
+        },
+        {
+          "type": "Season",
+          "name": "Season 3",
+          "file": null,
+          "path": "The Series/Season 03"
+        },
+        {
+          "type": "Season",
+          "name": "Season Unknown",
+          "file": null,
+          "path": null
+        },
+        {
+          "type": "Season",
+          "name": "Specials",
+          "file": null,
+          "path": "The Series/Specials"
+        },
+        {
+          "type": "Series",
+          "name": "24",
+          "file": null,
+          "path": "24"
+        },
+        {
+          "type": "Series",
+          "name": "The Daily Show",
+          "file": null,
+          "path": "The Daily Show"
+        },
+        {
+          "type": "Series",
+          "name": "tvshow",
+          "file": null,
+          "path": "The Series"
+        }
+      ]
+    },
+    {
+      "name": "Music",
+      "collection_type": "music",
+      "decodable": false,
+      "item_count": 20,
+      "counts_by_type": {
+        "Audio": 10,
+        "Folder": 3,
+        "MusicAlbum": 5,
+        "MusicArtist": 2
+      },
+      "items": [
+        {
+          "type": "Audio",
+          "name": "01 - By One Artist",
+          "file": "Various Artists/A Compilation (1999)/01 - By One Artist.flac",
+          "path": "Various Artists/A Compilation (1999)/01 - By One Artist.flac"
+        },
+        {
+          "type": "Audio",
+          "name": "01 - First Disc",
+          "file": "The Artist/Double Album/CD1/01 - First Disc.flac",
+          "path": "The Artist/Double Album/CD1/01 - First Disc.flac"
+        },
+        {
+          "type": "Audio",
+          "name": "01 - In Another Container",
+          "file": "The Artist/Second Album/01 - In Another Container.m4a",
+          "path": "The Artist/Second Album/01 - In Another Container.m4a"
+        },
+        {
+          "type": "Audio",
+          "name": "01 - Opening",
+          "file": "The Artist/First Album (2001)/01 - Opening.flac",
+          "path": "The Artist/First Album (2001)/01 - Opening.flac"
+        },
+        {
+          "type": "Audio",
+          "name": "01 - Second Disc",
+          "file": "The Artist/Double Album/CD2/01 - Second Disc.flac",
+          "path": "The Artist/Double Album/CD2/01 - Second Disc.flac"
+        },
+        {
+          "type": "Audio",
+          "name": "01 - Tagged Differently",
+          "file": "The Artist/spandau_ballet-through_the_barricades/01 - Tagged Differently.flac",
+          "path": "The Artist/spandau_ballet-through_the_barricades/01 - Tagged Differently.flac"
+        },
+        {
+          "type": "Audio",
+          "name": "02 - And Another",
+          "file": "The Artist/Second Album/02 - And Another.dsf",
+          "path": "The Artist/Second Album/02 - And Another.dsf"
+        },
+        {
+          "type": "Audio",
+          "name": "02 - By Another",
+          "file": "Various Artists/A Compilation (1999)/02 - By Another.flac",
+          "path": "Various Artists/A Compilation (1999)/02 - By Another.flac"
+        },
+        {
+          "type": "Audio",
+          "name": "02 - Second",
+          "file": "The Artist/First Album (2001)/02 - Second.flac",
+          "path": "The Artist/First Album (2001)/02 - Second.flac"
+        },
+        {
+          "type": "Audio",
+          "name": "03 - By A Third",
+          "file": "Various Artists/A Compilation (1999)/03 - By A Third.flac",
+          "path": "Various Artists/A Compilation (1999)/03 - By A Third.flac"
+        },
+        {
+          "type": "Folder",
+          "name": "CD1",
+          "file": null,
+          "path": "The Artist/Double Album/CD1"
+        },
+        {
+          "type": "Folder",
+          "name": "CD2",
+          "file": null,
+          "path": "The Artist/Double Album/CD2"
+        },
+        {
+          "type": "Folder",
+          "name": "Music",
+          "file": null,
+          "path": null
+        },
+        {
+          "type": "MusicAlbum",
+          "name": "A Compilation (1999)",
+          "file": null,
+          "path": "Various Artists/A Compilation (1999)"
+        },
+        {
+          "type": "MusicAlbum",
+          "name": "Double Album",
+          "file": null,
+          "path": "The Artist/Double Album"
+        },
+        {
+          "type": "MusicAlbum",
+          "name": "First Album (2001)",
+          "file": null,
+          "path": "The Artist/First Album (2001)"
+        },
+        {
+          "type": "MusicAlbum",
+          "name": "Second Album",
+          "file": null,
+          "path": "The Artist/Second Album"
+        },
+        {
+          "type": "MusicAlbum",
+          "name": "spandau_ballet-through_the_barricades",
+          "file": null,
+          "path": "The Artist/spandau_ballet-through_the_barricades"
+        },
+        {
+          "type": "MusicArtist",
+          "name": "The Artist",
+          "file": null,
+          "path": "The Artist"
+        },
+        {
+          "type": "MusicArtist",
+          "name": "Various Artists",
+          "file": null,
+          "path": "Various Artists"
+        }
+      ]
+    },
+    {
+      "name": "Films",
+      "collection_type": "movies",
+      "decodable": true,
+      "item_count": 12,
+      "counts_by_type": {
+        "Folder": 1,
+        "Movie": 11
+      },
+      "items": [
+        {
+          "type": "Folder",
+          "name": "Movies",
+          "file": null,
+          "path": null
+        },
+        {
+          "type": "Movie",
+          "name": "Both Subtitle Kinds",
+          "file": "Both Subtitle Kinds (2008).mkv",
+          "path": "Both Subtitle Kinds (2008).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "Direct Play",
+          "file": "Direct Play (2001).mp4",
+          "path": "Direct Play (2001).mp4"
+        },
+        {
+          "type": "Movie",
+          "name": "Rejected Audio",
+          "file": "Rejected Audio (2004).mp4",
+          "path": "Rejected Audio (2004).mp4"
+        },
+        {
+          "type": "Movie",
+          "name": "Rejected Container",
+          "file": "Rejected Container (2002).mkv",
+          "path": "Rejected Container (2002).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "Rejected Video",
+          "file": "Rejected Video (2003).mkv",
+          "path": "Rejected Video (2003).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "The High Range",
+          "file": "The High Range (2007).mp4",
+          "path": "The High Range (2007).mp4"
+        },
+        {
+          "type": "Movie",
+          "name": "The Legacy Encoding (2010)",
+          "file": "The Legacy Encoding (2010)/The Legacy Encoding (2010).mkv",
+          "path": "The Legacy Encoding (2010)/The Legacy Encoding (2010).mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "The Long Take (2005)",
+          "file": "The Long Take (2005)/The Long Take (2005).mp4",
+          "path": "The Long Take (2005)/The Long Take (2005).mp4"
+        },
+        {
+          "type": "Movie",
+          "name": "The Planted Poster (2011)",
+          "file": "The Planted Poster (2011)/The Planted Poster (2011).mp4",
+          "path": "The Planted Poster (2011)/The Planted Poster (2011).mp4"
+        },
+        {
+          "type": "Movie",
+          "name": "The Two Parter (2006)",
+          "file": "The Two Parter (2006)/The Two Parter (2006) - part1.mkv",
+          "path": "The Two Parter (2006)/The Two Parter (2006) - part1.mkv"
+        },
+        {
+          "type": "Movie",
+          "name": "The Unconvertible (2009)",
+          "file": "The Unconvertible (2009)/The Unconvertible (2009).mkv",
+          "path": "The Unconvertible (2009)/The Unconvertible (2009).mkv"
+        }
+      ]
+    },
+    {
+      "name": "Tunes",
+      "collection_type": "music",
+      "decodable": true,
+      "item_count": 4,
+      "counts_by_type": {
+        "Audio": 1,
+        "Folder": 1,
+        "MusicAlbum": 1,
+        "MusicArtist": 1
+      },
+      "items": [
+        {
+          "type": "Audio",
+          "name": "Ninety Six Kilohertz",
+          "file": "Sounds/Untitled Folder/01 Ninety Six Kilohertz.flac",
+          "path": "Sounds/Untitled Folder/01 Ninety Six Kilohertz.flac"
+        },
+        {
+          "type": "Folder",
+          "name": "Music",
+          "file": null,
+          "path": null
+        },
+        {
+          "type": "MusicAlbum",
+          "name": "The Album",
+          "file": null,
+          "path": "Sounds/Untitled Folder"
+        },
+        {
+          "type": "MusicArtist",
+          "name": "Sounds",
+          "file": null,
+          "path": "Sounds"
+        }
+      ]
+    },
+    {
+      "name": "Empty",
+      "collection_type": "movies",
+      "decodable": false,
+      "item_count": 0,
+      "counts_by_type": {},
+      "items": []
+    }
+  ]
+}

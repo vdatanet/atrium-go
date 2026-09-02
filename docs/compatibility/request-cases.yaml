@@ -1,0 +1,1035 @@
+# The request cases: what a differential run actually sends, per endpoint and per identity.
+#
+# Read with specs/010-conformance-harness/spec.md sections 3.2 and 3.9, with plan sections 4.3 and
+# 6.1.1, and with docs/compatibility/surface.yaml, which is the list of endpoints this file must
+# cover. tests/unit/test_allowlist.py reads the surface through the surface validator's own parser
+# and fails on the sixtieth endpoint the day one is added with no case.
+#
+# AC-3's floor is ONE CASE PER ENDPOINT - 59 - and 010's own gate measured that floor to be not
+# enough: both differences that gate found on /Items/{itemId}/Similar are invisible to a bare
+# request, one of them appearing only when `limit` is sent and only for one seed type. So the file
+# is the floor, plus the eight L3 rows seeded first, plus the requests the two analysed clients are
+# documented as sending, and it grows by measurement rather than by combinatorics - 764 query
+# parameters are declared across these 59 operations, which is what makes "one case per parameter"
+# not a plan.
+#
+# THE EIGHT L3 ROWS COME FIRST, and they are the only rows in this repository whose DECLARED
+# conformance level nothing has ever checked. surface.yaml carries a `level` on all 59 rows - one
+# L1, 50 L2, eight L3 - and L3 is defined in conformance.md as "the response is byte-comparable to
+# a real Jellyfin's, modulo a documented allowlist", proven by the differential harness and by
+# nothing else. tools/extract_v1_surface.py validates only that the value is one of L0..L3;
+# tests/conformance/test_routes.py reads `feature` and `consumers` and never `level`. Meanwhile
+# every implemented feature's definition of done ticks "every endpoint reaches the conformance
+# level declared in spec section 6" with the differential half deferred to 010. These eight are
+# where that debt is paid, so each carries more than one case and every one of them names more
+# than one identity.
+#
+# A CASE THAT ONLY EVER NAMES ONE SEAT IS HOW THIS HARNESS PASSES GREEN WHILE PROVING NOTHING.
+# Twelve of the twenty-three reads of this surface answer differently to a restricted
+# non-administrator, and two of them differ as SHORTER LISTS rather than as refusals, so nothing
+# looks like an error [probe: tools/probe_restricted_surface.py, Jellyfin 10.11.11, 2026-09-01].
+# `identities` is where a case says which seats its answer is meaningful for, and the rows that
+# name one seat name it for a written reason, given in `what_it_is_for`.
+#
+# Fields:
+#   id            The case name. Unique per endpoint, because the report names a difference by
+#                 (endpoint, case, identity) and two cases under one name is one difference
+#                 nobody can reproduce. It is also what allowlist.yaml's `case` column narrows an
+#                 entry to, so three of the ids here are named by that file and not by this one:
+#                 by-name-without-limit, listing-ordered-at-random and
+#                 listing-ordered-by-a-key-with-ties. Until they were declared here, two of the
+#                 three excused arrays excused nothing on the wire.
+#   endpoint      "METHOD /path" from surface.yaml, spelled the way allowlist.yaml spells it.
+#   query         The query string, verbatim, or empty. AN EMPTY QUERY IS A VALUE and it is the
+#                 commonest one: the AC-3 floor case is a bare request.
+#   body          The RAW request body, sent verbatim, or `none`. Verbatim is what lets a
+#                 malformed one exist: the named-comparison register's body-binding-dollar-message
+#                 row is a case whose body is not JSON at all.
+#   content_type  The Content-Type header, or `none` for a case that sends the body WITHOUT ONE.
+#                 That is the second of the register's two "here to be recognised, not discovered"
+#                 rows: a body with no content type is 400 here and 415 there, on five routes, and
+#                 measured on one of them. The other four are cases in this file.
+#   anchors       How each path parameter is filled, per server, immediately before the case runs.
+#                 NEVER AN IDENTIFIER: the two servers derive those differently by design
+#                 (behaviours 1.4), so a case carrying one would compare two different items.
+#                 THREE KINDS, where plan 6.1.1 describes one:
+#                   listing:<METHOD> <path>#<case>@<position>  the row at that position of that
+#                                                              declared listing case - the plan's
+#                                                              anchor, and the only sound one over
+#                                                              a listing whose ordering is total
+#                   response:<METHOD> <path>#<case>@<pointer>  the value at that JSON Pointer of
+#                                                              that declared case's response, for
+#                                                              the things no listing carries: a
+#                                                              created playlist's Id, a negotiated
+#                                                              media source's Id
+#                   literal:<value>                            a parameter that does not name an
+#                                                              item at all - {container},
+#                                                              {routeFormat}, {imageType},
+#                                                              {imageIndex}, {newIndex}. These are
+#                                                              the caller's own choice and are the
+#                                                              same string on both servers
+#                 `userId` is never an anchor: it is the identity's own (plan 6.1.1).
+#   identities    The seats the case is meaningful for, out of administrator, restricted and
+#                 playback-denied. An empty list means every identity the run has, which is the
+#                 safe direction - the failure this feature is prone to is a case set that names
+#                 ONE seat, so the value that says nothing has to mean all of them.
+#   needs         What the run must have before the case is askable, from the same vocabulary the
+#                 named-comparison register uses. Only `fixture` is used here, and it means what
+#                 010 T6 says it means: the anchor wants a kind of item no reachable library has,
+#                 so the anchor is left unfilled and T11 fills it against the fixture world D-4
+#                 chooses.
+#   what_it_is_for  One sentence. It is what review reads when this file grows, and it is where a
+#                 case that names one identity says why.
+#
+# NOTHING HERE IS A WRITE TO AN ACCOUNT THIS PROJECT DOES NOT OWN. Every case that changes user
+# data - a configuration, a favourite, a played flag, a playstate report, a playlist - names
+# `restricted` alone, because the restricted seat is created and destroyed by the run (AC-15) and
+# the administrator's seat is whatever `.env` points at, which on the only reference this project
+# could reach before T9 is an operator's own account. Spec 3.5 asks a writing probe to remove what
+# it made; this asks the sweep not to make it on somebody else's account in the first place. The
+# one exception is the playlist rename, which the reference declares administrator-only, so it
+# runs as the administrator over a playlist the restricted seat made.
+
+cases:
+
+  # ==========================================================================================
+  # THE EIGHT `level: L3` ROWS OF surface.yaml, FIRST AND PER IDENTITY.
+  # ==========================================================================================
+
+  # ------------------------------------------------------------------------------------------
+  # GET /System/Info/Public - 001, L3. The one unauthenticated row of the eight.
+  # ------------------------------------------------------------------------------------------
+
+  - id: public-system-info
+    endpoint: "GET /System/Info/Public"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The unauthenticated identity document both clients read before anything else; the music client requires its Id to equal AuthenticateByName's ServerId"
+
+  # ------------------------------------------------------------------------------------------
+  # POST /Users/AuthenticateByName - 002, L3. The body is the seat's own credentials, which is
+  # why the substitution vocabulary exists at all: plan 6.1.1 says userId "is the identity's own"
+  # and gives no way to write that down, and no anchor can supply a password.
+  # ------------------------------------------------------------------------------------------
+
+  - id: username-and-pw
+    endpoint: "POST /Users/AuthenticateByName"
+    query: ""
+    body: '{"Username": "<identity.username>", "Pw": "<identity.password>"}'
+    content_type: application/json
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The two-field body the music client sends, run as each seat: the authentication result nests a user and a session and is the widest single object either server builds"
+
+  # ------------------------------------------------------------------------------------------
+  # GET /Items - 005, L3. The most-called endpoint in the surface and the one every anchor
+  # indexes, so its cases are both the comparison and the map the rest of the file reads.
+  # ------------------------------------------------------------------------------------------
+
+  - id: default
+    endpoint: "GET /Items"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The bare listing, which is AC-3's floor for this endpoint and the shape spec 3.9 measured as answering a SHORTER LIST to a restricted seat rather than a refusal"
+
+  - id: movies-by-sort-name
+    endpoint: "GET /Items"
+    query: "includeItemTypes=Movie&recursive=true&sortBy=SortName"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The listing every film anchor indexes: SortName is the one ordering the reference chains a second key after, so position means the same row on both servers"
+
+  - id: series-by-sort-name
+    endpoint: "GET /Items"
+    query: "includeItemTypes=Series&recursive=true&sortBy=SortName"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The listing every series anchor indexes, for the two /Shows routes and for the bare-item case that is not a film"
+
+  - id: albums-by-sort-name
+    endpoint: "GET /Items"
+    query: "includeItemTypes=MusicAlbum&recursive=true&sortBy=SortName"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The listing every album anchor indexes, for the instant mix and for the images the music client asks an album for"
+
+  - id: audio-by-sort-name
+    endpoint: "GET /Items"
+    query: "includeItemTypes=Audio&recursive=true&sortBy=SortName"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The listing every track anchor indexes, for the three audio delivery routes and the user-data routes the music client calls"
+
+  - id: fields-mediasources
+    endpoint: "GET /Items"
+    query: "Fields=MediaSources"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "What the music client sends on six listing routes, and the request 012's gate measured to be the whole of its negotiation: the listing IS the negotiation there, because that client never calls PlaybackInfo"
+
+  - id: search-term
+    endpoint: "GET /Items"
+    query: "SearchTerm=a&recursive=true"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "How the music client searches, deliberately instead of /Search/Hints; a relevance ranking goes ahead of every other key on both servers, so this is the one listing whose first key is not a column"
+
+  - id: listing-ordered-at-random
+    endpoint: "GET /Items"
+    query: "includeItemTypes=Movie&recursive=true&sortBy=Random"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The case allowlist.yaml's `drawn` entry for a randomly-ordered listing is keyed on; until it was declared that entry excused nothing on the wire. No analysed client sends it - it is declared because Atrium accepts the token and the reference reshuffles per row on every request (behaviours 3.6)"
+
+  - id: listing-ordered-by-a-key-with-ties
+    endpoint: "GET /Items"
+    query: "includeItemTypes=Audio&recursive=true&sortBy=AlbumArtist"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The case allowlist.yaml's `unordered` entry is keyed on, and the artist sort is the one behaviours 3.6 measured: the reference adds no key after it, so the concatenation of its pages is not its one-shot list - some rows twice and others never"
+
+  # --- the two listings that name a fixture film, added by 010 T11 --------------------------
+  #
+  # A GLOBAL LISTING'S FIRST ROW IS NOT A FIXTURE FILM, and until T11 five cases assumed it was.
+  # T6 wrote `itemId=listing:GET /Items#movies-by-sort-name@0` under "the fixture is what
+  # guarantees the anchored film HAS one", which was true of the world the plan defaulted to - one
+  # library, real media throughout. D-4's measurement chose the other branch (010 plan 6.6): BOTH
+  # worlds go across, so a movie listing sorted by SortName now spans the 003 tree as well, and
+  # its first row is a film of filler bytes with no image, no subtitle stream and nothing a
+  # prober can open. Those five cases would have compared two refusals and counted as coverage,
+  # which is the same shape as the placeholder item id T6 refused.
+  #
+  # `searchTerm` is what narrows them, and it is a request a client sends: the music client
+  # searches this way deliberately. Each of these names ONE film the fixture declares, so
+  # position 0 is that film on both servers.
+
+  - id: the-planted-film
+    endpoint: "GET /Items"
+    query: "searchTerm=The Planted Poster&includeItemTypes=Movie&recursive=true&sortBy=SortName"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "The film the artwork cases anchor on: `The Planted Poster (2011)` of tests/fixtures/media.py, which carries a poster with an EXIF orientation and the only Backdrop at index 0 either world has. One name, one row, so position 0 is the same film on both servers"
+
+  - id: the-subtitled-film
+    endpoint: "GET /Items"
+    query: "searchTerm=The Unconvertible&includeItemTypes=Movie&recursive=true&sortBy=SortName"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "The film the subtitle cases anchor on: `The Unconvertible (2009)` of tests/fixtures/media.py, which carries an `ass` track inside it and a subtitle file beside it. Without it a subtitle stream at index 0 is a refusal on both servers"
+
+  # ------------------------------------------------------------------------------------------
+  # GET /Items/{itemId} - 005, L3. A bare item body carries up to 39 properties a list row does
+  # not, so this is the widest per-item comparison in the sweep.
+  # ------------------------------------------------------------------------------------------
+
+  - id: a-movie
+    endpoint: "GET /Items/{itemId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The full item body of a film, which is the shape 005 T1 measured as being a third thing rather than a wider list row"
+
+  - id: a-series
+    endpoint: "GET /Items/{itemId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#series-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The same body on a container, where the aggregates a film has none of - ChildCount, RecursiveItemCount - are real counts on both servers and are exactly what the allowlist refuses to excuse by name"
+
+  # ------------------------------------------------------------------------------------------
+  # POST /Items/{itemId}/PlaybackInfo - 008, L3. Also the home of two of the register's last two
+  # rows: the malformed body, and the fourth of the four content-type refusals nobody has asked.
+  # ------------------------------------------------------------------------------------------
+
+  - id: no-body
+    endpoint: "POST /Items/{itemId}/PlaybackInfo"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The negotiation with nothing posted, which is a 200 and not a validation failure on both servers because the reference binds the parameter with EmptyBodyBehavior.Allow"
+
+  - id: a-device-profile
+    endpoint: "POST /Items/{itemId}/PlaybackInfo"
+    query: ""
+    body: '{"DeviceProfile": {"MaxStreamingBitrate": 8000000, "TranscodingProfiles": [{"Type": "Video", "Container": "ts", "Protocol": "hls", "VideoCodec": "h264", "AudioCodec": "aac", "EnableSubtitlesInManifest": true}], "DirectPlayProfiles": [{"Type": "Video", "Container": "mp4", "VideoCodec": "h264", "AudioCodec": "aac"}]}}'
+    content_type: application/json
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The video client's negotiation, with EnableSubtitlesInManifest on the transcoding profile - the switch 011's gate found the master playlist cannot read, so the delivery address is the only lever"
+
+  - id: malformed-body
+    endpoint: "POST /Items/{itemId}/PlaybackInfo"
+    query: ""
+    body: "not-json"
+    content_type: application/json
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The named-comparison register's body-binding-dollar-message row, made an ordinary case: the reference's binder names the whole body `$` in its errors map, and this is the first malformed body a run sends"
+
+  - id: body-with-no-content-type
+    endpoint: "POST /Items/{itemId}/PlaybackInfo"
+    query: ""
+    body: '{"MaxStreamingBitrate": 8000000}'
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The fourth of the five routes where a body with no Content-Type is 400 here and 415 there; 009 T13 measured the rename and named 010 as the feature that asks the other four"
+
+  # ------------------------------------------------------------------------------------------
+  # GET /Audio/{itemId}/stream - 008, L3. Both clients hand-build this URL, and neither sends a
+  # token on it: the four stream routes require none, which 008 T6 measured after the task list
+  # had said the opposite for three days.
+  # ------------------------------------------------------------------------------------------
+
+  - id: static
+    endpoint: "GET /Audio/{itemId}/stream"
+    query: "static=true"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The exact URL both analysed clients build by hand for a direct play; the comparison is status, Content-Type, Content-Length and Accept-Ranges, because spec 6 declines to byte-compare produced media"
+
+  - id: no-static
+    endpoint: "GET /Audio/{itemId}/stream"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The same route without the flag, which is the branch that decides a remux against a re-encode; a Range header would be the third reading and no field of a case can carry one yet, which T8 owes"
+
+  # ------------------------------------------------------------------------------------------
+  # GET /Audio/{itemId}/universal - 008, L3. The one delivery route that answers 401 without a
+  # token, where the four stream routes answer 200.
+  # ------------------------------------------------------------------------------------------
+
+  - id: progressive-mp3
+    endpoint: "GET /Audio/{itemId}/universal"
+    query: "container=mp3&transcodingContainer=mp3&transcodingProtocol=http&audioCodec=mp3&maxStreamingBitrate=192000&playSessionId=atrium-differential"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The progressive MP3 the music client asks for on every capped quality tier, with the deterministic playSessionId that client sends; its HLS variant has been dormant on the client side since 2026-08-03"
+
+  - id: no-parameters
+    endpoint: "GET /Audio/{itemId}/universal"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The bare call, where the container is inferred from a URL with no extension - the branch 008 T8 found a faithful profile transcription would have got wrong"
+
+  # ------------------------------------------------------------------------------------------
+  # GET /Videos/{itemId}/stream - 008, L3.
+  # ------------------------------------------------------------------------------------------
+
+  - id: static
+    endpoint: "GET /Videos/{itemId}/stream"
+    query: "static=true"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The URL the video client builds by hand for a direct play, with the lower-camel mediaSourceId and api_key spellings that client's contract fixes"
+
+  - id: a-wrong-container
+    endpoint: "GET /Videos/{itemId}/stream"
+    query: "static=true&container=mkv"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "static=true on a container the source is not, which 008's gate measured to be the original bytes behind a lying label rather than an error - a claim the spec's error table had made up"
+
+  # ==========================================================================================
+  # THE FLOOR: the other 51 endpoints of surface.yaml, in the file's own order, plus the cases
+  # the two analysed clients are documented as sending and the four the register owes.
+  # ==========================================================================================
+
+  # --- 001 ----------------------------------------------------------------------------------
+
+  - id: system-info
+    endpoint: "GET /System/Info"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The authenticated identity document, read by the music client for LocalAddress and for a ProductName that must contain jellyfin; seven of its installation paths differ on every run and are triage rather than allowlist rows"
+
+  - id: ping
+    endpoint: "GET /System/Ping"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The smallest body either server sends, and the one case where a difference can only be the serialisation itself"
+
+  - id: ping
+    endpoint: "POST /System/Ping"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The same answer under the other method, which is the pair that proves a method is routed rather than tolerated"
+
+  # --- 002 ----------------------------------------------------------------------------------
+
+  - id: public-users
+    endpoint: "GET /Users/Public"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The unauthenticated user list, which 002 T11 measured as sending every user's full policy and configuration to a caller with no token"
+
+  - id: me
+    endpoint: "GET /Users/Me"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The caller's own record, and the one read spec 3.9 measured as A NARROWER OBJECT rather than a shorter list: twelve properties to an administrator and ten to everybody else"
+
+  - id: the-identitys-own
+    endpoint: "GET /Users/{userId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "userId is never an anchor - it is the identity's own (plan 6.1.1). A case naming ANOTHER user's id belongs to a named comparison and not to the sweep, which is what 002's 2026-09-01 fix withdrew a 403 over"
+
+  - id: replace-configuration
+    endpoint: "POST /Users/Configuration"
+    query: ""
+    body: '{"PlayDefaultAudioTrack": true, "RememberAudioSelections": true, "SubtitleMode": "Default"}'
+    content_type: application/json
+    anchors: []
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The restricted seat alone: this route REPLACES the caller's configuration rather than merging it, and the only account a run may overwrite is the one it created and destroys"
+
+  - id: full-capabilities
+    endpoint: "POST /Sessions/Capabilities/Full"
+    query: ""
+    body: '{"PlayableMediaTypes": ["Audio", "Video"], "SupportsMediaControl": false, "SupportsPersistentIdentifier": false}'
+    content_type: application/json
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The capabilities a client posts once per session; it replaces rather than merges, but what it replaces is the run's own session and not an operator's account"
+
+  - id: own-sessions
+    endpoint: "GET /Sessions"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "One of the twelve reads that answers a SHORTER LIST to a restricted seat: an administrator sees every session and everybody else sees their own"
+
+  - id: video-client-device-id
+    endpoint: "GET /Sessions"
+    query: "deviceId=atrium-differential"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The one concrete query string the video client's contract gives, and a parameter neither server's route declares - so it is an ignored-parameter reading as well as a comparison"
+
+  # --- 004 ----------------------------------------------------------------------------------
+
+  - id: cultures
+    endpoint: "GET /Localization/Cultures"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The 192-row culture table 004 T15 rebuilt after the registry the plan named turned out to have 508 rows, a reversed code order and eight rows it cannot produce at all"
+
+  # --- 005 ----------------------------------------------------------------------------------
+
+  - id: views
+    endpoint: "GET /UserViews"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The endpoint whose ChildCount is a fresh random integer on every request on the reference, excused on this row and nowhere else; also one of the twelve reads that shortens for a restricted seat"
+
+  - id: latest
+    endpoint: "GET /Items/Latest"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "A bare array rather than an envelope, which is why the allowlist carries a whole second family of pointers spelled /-/Id"
+
+  - id: filters
+    endpoint: "GET /Items/Filters"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The legacy filter shape, whose arrays are the library's own vocabulary and therefore the sharpest fixture-driven comparison in the sweep"
+
+  - id: a-movie-seed
+    endpoint: "GET /Items/{itemId}/Similar"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The endpoint the `drawn` kind exists for: four identical requests to the reference shared NO item, so the rows are excused and the envelope, the key sets, the types and the count are not"
+
+  - id: a-movie-seed-with-a-limit
+    endpoint: "GET /Items/{itemId}/Similar"
+    query: "limit=5"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "OQ-2's demonstration that one case per endpoint is measurably not enough: the reference answers limit + 4 rows on a MOVIE seed and exactly limit on a series, an album and an artist, and neither half is visible to a bare request"
+
+  - id: an-album-seed
+    endpoint: "GET /Items/{itemId}/InstantMix"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#albums-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The mix both clients call, from the one seed type that always has one"
+
+  - id: resume
+    endpoint: "GET /UserItems/Resume"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "One of the twelve reads that shortens for a restricted seat, and one whose rows exist only because some other case wrote a playstate first"
+
+  - id: a-series
+    endpoint: "GET /Shows/{seriesId}/Seasons"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["seriesId=listing:GET /Items#series-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The ordering 005 T12 found reversed in its own acceptance criterion: season 0 arrives FIRST on the reference, in plain index order"
+
+  - id: a-series
+    endpoint: "GET /Shows/{seriesId}/Episodes"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["seriesId=listing:GET /Items#series-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "Every episode of one series, which is where a multi-episode file and an absolute-numbered season are visible as rows rather than as scanner behaviour"
+
+  - id: next-up
+    endpoint: "GET /Shows/NextUp"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The sweep's half of a question the named-comparison register owns the other half of: whether the reference excludes a pristine specials season needs a library no reachable server has"
+
+  - id: by-name-without-limit
+    endpoint: "GET /Artists"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The case allowlist.yaml's five TotalRecordCount entries are keyed on, and the request the music client actually sends: it maps Items and never reads the field, because the reference answers 0 without a limit"
+
+  - id: by-name-with-a-limit
+    endpoint: "GET /Artists"
+    query: "limit=1000"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The same route with the parameter that turns the reference's counting back on, which is the only request where TotalRecordCount is compared here rather than excused"
+
+  - id: by-name-without-limit
+    endpoint: "GET /Artists/AlbumArtists"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The second of the five endpoints sharing the reference's by-name path, and the one 004 owes 005 the credit distinction for"
+
+  - id: by-name-with-a-limit
+    endpoint: "GET /Artists/AlbumArtists"
+    query: "limit=1000"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The counted answer on the album-artist face of the same path"
+
+  - id: by-name-without-limit
+    endpoint: "GET /Genres"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The third of the five endpoints sharing the by-name path"
+
+  - id: by-name-with-a-limit
+    endpoint: "GET /Genres"
+    query: "limit=1000"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The counted answer, and the route where 004 T5's genre split on a slash is visible as two rows or one"
+
+  - id: by-name-without-limit
+    endpoint: "GET /MusicGenres"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The fourth of the five endpoints sharing the by-name path"
+
+  - id: by-name-with-a-limit
+    endpoint: "GET /MusicGenres"
+    query: "limit=1000"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The counted answer on the music face of the genre pair"
+
+  - id: by-name-without-limit
+    endpoint: "GET /Years"
+    query: ""
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The same family's other face: without a limit the reference answers a count that is neither zero nor the row count - 9754 beside 97 rows on the measured library"
+
+  - id: by-name-with-a-limit
+    endpoint: "GET /Years"
+    query: "limit=1000"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The counted answer, which is the only reading that says whether the two servers agree on how many years a library has"
+
+  - id: a-search-term
+    endpoint: "GET /Search/Hints"
+    query: "searchTerm=a"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "searchTerm has no default, so a bare request is the framework's refusal and not this route: the floor case for this endpoint carries one parameter because the route requires it"
+
+  # --- 006 ----------------------------------------------------------------------------------
+
+  - id: primary-at-quality-90
+    endpoint: "GET /Items/{itemId}/Images/{imageType}"
+    query: "quality=90"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#the-planted-film@0", "imageType=literal:Primary"]
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "The video client sends quality=90 on every image, and 006 T1 measured that a bare quality does not transform at all. imageType names a kind and not an item, so a literal fills it; the fixture is what guarantees the anchored film HAS one, without which this compares two 404s"
+
+  - id: backdrop-by-index
+    endpoint: "GET /Items/{itemId}/Images/{imageType}/{imageIndex}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#the-planted-film@0", "imageType=literal:Backdrop", "imageIndex=literal:0"]
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "The indexed form the video client builds for chapter images; both extra parameters are the caller's own choice, and the fixture is what guarantees a backdrop at index 0 exists to compare"
+
+  # --- 007 ----------------------------------------------------------------------------------
+
+  - id: mark
+    endpoint: "POST /UserFavoriteItems/{itemId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The restricted seat alone: a favourite is user data, and the seat the run created is the only account whose data a sweep may change"
+
+  - id: unmark
+    endpoint: "DELETE /UserFavoriteItems/{itemId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The other half of the pair, which is also how the sweep leaves the seat as it found it before it is destroyed"
+
+  - id: mark-played
+    endpoint: "POST /UserPlayedItems/{itemId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The played flag, on the run's own seat; its answer is a whole user-data object rather than a status, which is 007 T9's measured subtraction"
+
+  - id: mark-unplayed
+    endpoint: "DELETE /UserPlayedItems/{itemId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The other half of the pair, and what puts the aggregate PlayedPercentage 007 T11 found unimplemented back where it was"
+
+  - id: report-start
+    endpoint: "POST /Sessions/Playing"
+    query: ""
+    body: '{"ItemId": "<anchor.itemId>", "PlaySessionId": "atrium-differential", "PositionTicks": 0, "CanSeek": true}'
+    content_type: application/json
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The first of the three reporting routes. Its ItemId is in the BODY rather than the path, which no anchor could fill until T11 gave an anchor a name a query or a body can spell: <anchor.itemId> resolves through the same listing, per server, immediately before the case runs"
+
+  - id: body-with-no-content-type
+    endpoint: "POST /Sessions/Playing"
+    query: ""
+    body: '{"PlaySessionId": "atrium-differential"}'
+    content_type: none
+    anchors: []
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The first of the four content-type refusals nobody has asked: 400 here and 415 there, and it needs no item because the refusal happens before the body is read"
+
+  - id: report-progress
+    endpoint: "POST /Sessions/Playing/Progress"
+    query: ""
+    body: '{"ItemId": "<anchor.itemId>", "PlaySessionId": "atrium-differential", "PositionTicks": 100000000, "IsPaused": false}'
+    content_type: application/json
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The progress report, whose row-4 completion rule 007 T2 found had one clause that decides nothing. The same film as the start above, because a progress report about a session nothing started is a different question"
+
+  - id: body-with-no-content-type
+    endpoint: "POST /Sessions/Playing/Progress"
+    query: ""
+    body: '{"PlaySessionId": "atrium-differential"}'
+    content_type: none
+    anchors: []
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The second of the four"
+
+  - id: report-stopped
+    endpoint: "POST /Sessions/Playing/Stopped"
+    query: ""
+    body: '{"ItemId": "<anchor.itemId>", "PlaySessionId": "atrium-differential", "PositionTicks": 200000000}'
+    content_type: application/json
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The stop, which is the report that decides whether a resume row exists at all - and the third report of one session over one film, so the three read as a session rather than as three unrelated writes"
+
+  - id: body-with-no-content-type
+    endpoint: "POST /Sessions/Playing/Stopped"
+    query: ""
+    body: '{"PlaySessionId": "atrium-differential"}'
+    content_type: none
+    anchors: []
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The third of the four; the fourth is on POST /Items/{itemId}/PlaybackInfo above, and the fifth of the five routes is the rename 009 T13 already measured"
+
+  # --- 008 ----------------------------------------------------------------------------------
+
+  - id: profile-less
+    endpoint: "GET /Items/{itemId}/PlaybackInfo"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The variant with nothing to negotiate against, which still issues a PlaySessionId and does NOT consult the device's stored capabilities - measured on the same session that answered the POST with a transcode"
+
+  - id: music-client-capped-flac
+    endpoint: "GET /Audio/{itemId}/stream.{container}"
+    query: "audioCodec=flac&audioSampleRate=48000&playSessionId=atrium-differential"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#audio-by-sort-name@0", "container=literal:flac"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The capped-renderer path the music client's Jellyfin driver takes, which is FLAC where its Emby driver asks for PCM. The container is in the PATH, and a literal anchor is what fills a parameter that names a format rather than an item"
+
+  - id: a-container-suffix
+    endpoint: "GET /Videos/{itemId}/stream.{container}"
+    query: "static=true"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0", "container=literal:mp4"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The suffixed video form, whose {container} is likewise a format the caller chooses and a literal anchor fills"
+
+  - id: hls-master
+    endpoint: "GET /Videos/{itemId}/master.m3u8"
+    query: "videoCodec=h264&audioCodec=aac&segmentContainer=ts"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The master playlist, whose body is m3u8 rather than JSON, so the comparison is of headers and bytes; 008 T14 measured that this and the variant are the two delivery bodies with no Accept-Ranges"
+
+  - id: hls-variant
+    endpoint: "GET /Videos/{itemId}/main.m3u8"
+    query: "videoCodec=h264&audioCodec=aac&segmentContainer=ts"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#movies-by-sort-name@0"]
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "The variant playlist, which is where 011's #EXT-X-MEDIA block and the subtitle group on every variant live"
+
+  - id: first-segment
+    endpoint: "GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}"
+    query: "videoCodec=h264&audioCodec=aac"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#the-planted-film@0", "segmentId=literal:0", "container=literal:ts"]
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "The one route whose remaining path parameter is carried by a body that is NOT JSON: playlistId comes out of the variant playlist above, which is m3u8, and a response anchor addresses a JSON Pointer. T8 did not write that reader and T11 did not either - filling it needs a fourth anchor kind that addresses a text body, which is a mechanism and not a fixture. THIS IS THE ONE ANCHOR OF THIS FILE STILL UNFILLED, and it is recorded here rather than dressed up: the itemId anchor now names a film a prober can open, so the case is one reader away from running"
+
+  - id: stop-one-session
+    endpoint: "DELETE /Videos/ActiveEncodings"
+    query: "deviceId=atrium-differential&playSessionId=atrium-differential"
+    body: none
+    content_type: none
+    anchors: []
+    identities: [administrator, restricted]
+    needs: []
+    what_it_is_for: "Both parameters are required - a request omitting deviceId is a 400 naming it on both servers, although nothing reads it - so the floor case for this endpoint carries two"
+
+  # --- 011 ----------------------------------------------------------------------------------
+
+  - id: one-tracks-windows
+    endpoint: "GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8"
+    query: "segmentLength=10"
+    body: none
+    content_type: none
+    anchors: ["itemId=listing:GET /Items#the-subtitled-film@0", "mediaSourceId=response:POST /Items/{itemId}/PlaybackInfo#no-body@/MediaSources/0/Id", "index=literal:0"]
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "segmentLength is required and has no default. index names a subtitle stream of a film the fixture owes (spec 3.1), so the case waits on T11 for a film that HAS one; the decimal point in its window durations is a named comparison because a parser normalises it away"
+
+  - id: stream-vtt
+    endpoint: "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["routeItemId=listing:GET /Items#the-subtitled-film@0", "routeMediaSourceId=response:POST /Items/{itemId}/PlaybackInfo#no-body@/MediaSources/0/Id", "routeIndex=literal:0", "routeFormat=literal:vtt"]
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "The fetch the video client builds, in the lower-case stream.vtt spelling it uses inside a playlist. routeFormat is a format and routeIndex a stream number, so both are literals; the fixture is the film with a subtitle file beside it, without which index 0 is a refusal on both servers"
+
+  - id: stream-vtt-from-a-position
+    endpoint: "GET /Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["routeItemId=listing:GET /Items#the-subtitled-film@0", "routeMediaSourceId=response:POST /Items/{itemId}/PlaybackInfo#no-body@/MediaSources/0/Id", "routeIndex=literal:0", "routeStartPositionTicks=literal:0", "routeFormat=literal:vtt"]
+    identities: [administrator, restricted]
+    needs: [fixture]
+    what_it_is_for: "The same fetch from a start position, which is the route a subtitle playlist's window entries address"
+
+  # --- 009 ----------------------------------------------------------------------------------
+
+  - id: create-with-a-name
+    endpoint: "POST /Playlists"
+    query: ""
+    body: '{"Name": "atrium-differential", "Ids": [], "MediaType": "Audio"}'
+    content_type: application/json
+    anchors: []
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The only thing a client WRITES structure to, and the case every playlist anchor below resolves against. The restricted seat alone, because the playlist it makes is destroyed with that seat"
+
+  - id: read-entries
+    endpoint: "GET /Playlists/{playlistId}/Items"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["playlistId=response:POST /Playlists#create-with-a-name@/Id"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The read whose PlaylistItemId 009's gate measured to BE the item's own Id; the response anchor exists for this route, because a created playlist is carried by a response and by no listing"
+
+  - id: add-one-item
+    endpoint: "POST /Playlists/{playlistId}/Items"
+    query: "ids=<anchor.itemId>"
+    body: none
+    content_type: none
+    anchors: ["playlistId=response:POST /Playlists#create-with-a-name@/Id", "itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The add. Its `ids` names items in the QUERY rather than in the path, which is the second shape T11's <anchor.itemId> spelling covers. A track and not a film, because the playlist above is created with MediaType Audio"
+
+  - id: remove-one-entry
+    endpoint: "DELETE /Playlists/{playlistId}/Items"
+    query: "entryIds=<anchor.itemId>"
+    body: none
+    content_type: none
+    anchors: ["playlistId=response:POST /Playlists#create-with-a-name@/Id", "itemId=listing:GET /Items#audio-by-sort-name@0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The removal, on the entry the add above made. `entryIds` takes a PlaylistItemId, and 009's gate measured that a PlaylistItemId IS the item's own Id - which is why the same anchor as the add fills it, and why an entry identity the wire does not make cannot be anchored on. An entry that is not there is a silent success on the reference"
+
+  - id: move-to-the-front
+    endpoint: "POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["playlistId=response:POST /Playlists#create-with-a-name@/Id", "itemId=listing:GET /Items#audio-by-sort-name@0", "newIndex=literal:0"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The route whose thirty measured boundary pairs were every one of them wrong in 009's plan - a clamp exactly one position wide and a 500 past it. newIndex is a number the caller chooses; itemId is the entry the add above put there, which is the item's own Id"
+
+  - id: delete-a-playlist
+    endpoint: "DELETE /Items/{itemId}"
+    query: ""
+    body: none
+    content_type: none
+    anchors: ["itemId=response:POST /Playlists#create-with-a-name@/Id"]
+    identities: [restricted]
+    needs: []
+    what_it_is_for: "The music client deletes playlists with this, and it is also how the sweep removes the one thing it created. A refusal here is 401 and not 403, which is a divergence a run should find nothing on"
+
+  - id: rename-a-playlist
+    endpoint: "POST /Items/{itemId}"
+    query: ""
+    body: '{"Name": "atrium-differential-renamed", "Genres": [], "Tags": [], "ProviderIds": {}}'
+    content_type: application/json
+    anchors: ["itemId=response:POST /Playlists#create-with-a-name@/Id"]
+    identities: [administrator]
+    needs: []
+    what_it_is_for: "The one write that names the administrator: the reference declares this controller elevated, so the seat that owns the playlist is refused 403 on a stock server. The body carries Genres, Tags and ProviderIds because the reference refuses one that omits them"

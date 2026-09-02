@@ -1,0 +1,249 @@
+# The named comparisons: the differences a differential sweep cannot raise on its own.
+#
+# Read with specs/010-conformance-harness/spec.md section 3.10, which carries the same twenty rows
+# in prose, and with docs/compatibility/conformance.md's L3 section, which says why they exist.
+# tests/unit/test_allowlist.py compares this file against that table row for row, so the two
+# cannot drift apart.
+#
+# A sweep finds only what a request under comparison exposes. Twenty differences are outside that:
+# they need a caller the run does not have, a library the reference cannot be given, a library
+# changed between two scans, a deliberate wait, or a comparison of something that is not in a body.
+# Each one is run deliberately, and AN UNRUN ROW KEEPS A RUN FROM BEING CALLED CLEAN (010 AC-16).
+# A green run that quietly dropped nine comparisons is the failure this feature exists to prevent.
+#
+# Sixteen rows when 010's spec was accepted on 2026-09-01, twenty since 2026-09-02 and the decision
+# 010's task list reserved as D-6: behaviours 5.2, behaviours 5.6, 005's OQ-7 and 007's
+# paused-session ticker are rows here rather than debts beside the count.
+#
+# Fields:
+#   id            A stable name for the row. It is what the report prints, so it outlives the
+#                 wording of `what`.
+#   what          The difference, verbatim from spec section 3.10's first column, less its
+#                 emphasis. The test compares the two, so an edit to either fails until both move.
+#   why_the_sweep_misses_it
+#                 Why no request under comparison raises it. Condensed from the same table's
+#                 second column.
+#   needs         What the run must have before the row is even askable, as a list of:
+#                   identity:restricted        a created non-administrator, narrower than the
+#                                              library (spec section 3.9)
+#                   identity:playback-denied   a created seat with a playback-processing
+#                                              permission denied (behaviours 2.21)
+#                   fixture                    the fixture tree on both servers, which means the
+#                                              single-use reference instance of spec section 3.1
+#                   rescan                     the library changed between two scans of it
+#                   wait                       a deliberate silence, held open for minutes
+#                   latency                    the elapsed time of the two answers, not the payload
+#                   bytes                      the produced bytes or frames, not the decoded body
+#                   twice                      the same request issued twice against each server
+#                 AN EMPTY LIST IS A REAL VALUE and two rows carry it: the last two of the table
+#                 are ordinary request cases, listed so a run counts them rather than triaging
+#                 them twice (spec section 3.10, "here to be recognised, not discovered").
+#                 `needs` is the field that earns this file: it is what lets a report say "four
+#                 outstanding, and three of them because no fixture instance was available"
+#                 rather than "four outstanding", and what a run consults to decide whether a row
+#                 is askable before it counts it as a miss (010 plan section 4.2).
+#   behaviours    The behaviours.md section that is the answer, or `none`. FIVE ROWS SAY `none`,
+#                 and that is a measurement rather than an omission: five of the twenty differences
+#                 have no behaviours.md entry at all, because an entry there records what the
+#                 reference does and nobody has yet watched it do these. FOUR MORE CITE A WHOLE
+#                 CHAPTER, `behaviours 5`, because their answer is a row of that section's table
+#                 rather than a numbered subsection and those rows have no anchors of their own -
+#                 `what` says which row.
+#   written_at    The document this row was collected from: one of the six "what this feature owes
+#                 the next ones" lists spec section 3.10 collects, or the compatibility document
+#                 that carries the question where no list does. Nineteen of the twenty came from a
+#                 list; behaviours 5.2 is the one that did not, which is what 010's task list meant
+#                 by "the six lists AND the compatibility documents".
+#   runner        The callable in tools/differential.py that runs the comparison, or `none` while
+#                 it is outstanding. All twenty name one since 2026-09-02 (010 T12), in the six
+#                 runner shapes of 010 plan section 6.4, and every name is resolved against that
+#                 module's own RUNNERS mapping rather than by getattr - a register that could
+#                 reach any callable in a module by writing its name is a register that can call
+#                 something which is not a runner. NAMING A RUNNER IS NOT RUNNING IT: a row whose
+#                 `needs` this run cannot meet, and a row whose runner raises, are both
+#                 outstanding with the reason, and both keep the run from being clean.
+#
+# THIS REGISTER IS NOT A LIST OF NAMES, AND `needs` IS WHAT STOPS IT BEING ONE. Two of the rows
+# are invisible to a run that authenticates the way every probe in this repository did before
+# 2026-09-01. The named reader (behaviours 3.16) only differs when the caller is a restricted
+# non-administrator, because an administrator lacks no permission. The entries a reader cannot
+# reach (behaviours 3.17) only differ when the reader is restricted to one library and the playlist
+# holds items from two - what the reference hides there is hidden by a parental-rating check and
+# never by library access, so two servers whose test user can open everything AGREE, and the row
+# count is the whole signal.
+
+comparisons:
+
+  # ------------------------------------------------------------------------------------------
+  # The eighteen that are this feature's real inheritance, in spec section 3.10's own order,
+  # which is the order the report prints them in. `needs` is what says which of 010 plan section
+  # 6.4's six runner shapes each one takes: a second seat, the same request twice, something that
+  # is not in a body, a library the reference has to be given, the library changed underneath a
+  # rescan, or a reading after a deliberate wait.
+  # ------------------------------------------------------------------------------------------
+
+  - id: playlist-read-names-its-reader
+    what: A playlist read that names its own reader (behaviours §3.16)
+    why_the_sweep_misses_it: "It needs a caller the run does not have: the reference honours userId from any caller and Atrium honours it for an administrator only, so two administrators agree"
+    needs: [identity:restricted]
+    behaviours: "behaviours §3.16"
+    written_at: "specs/009-playlists/tasks.md"
+    runner: named_playlist_read_names_its_reader
+
+  - id: playlist-entries-a-reader-cannot-reach
+    what: Entries a reader cannot reach (behaviours §3.17)
+    why_the_sweep_misses_it: "Over a stock library the two servers agree: what the reference hides is hidden by a parental-rating check, never by library access. It needs a reader restricted to one library and a playlist holding items from two, and the row count is the whole signal"
+    needs: [identity:restricted, fixture]
+    behaviours: "behaviours §3.17"
+    written_at: "specs/009-playlists/tasks.md"
+    runner: named_playlist_entries_a_reader_cannot_reach
+
+  - id: playlist-de-duplication-misses
+    what: The de-duplication that misses (behaviours §3.18)
+    why_the_sweep_misses_it: "The reference disagrees with itself - 6 of 8 identical requests behaved differently - so one run of the add proves nothing either way"
+    needs: [twice]
+    behaviours: "behaviours §3.18"
+    written_at: "specs/009-playlists/tasks.md"
+    runner: named_playlist_de_duplication_misses
+
+  - id: progressive-re-encode-header-frame
+    what: A progressive re-encode's missing self-description (behaviours §3.3)
+    why_the_sweep_misses_it: "Spec §6 declines to byte-compare produced media, so nothing looks at the header frame a piped encode never writes"
+    needs: [bytes]
+    behaviours: "behaviours §3.3"
+    written_at: "specs/008-playback-negotiation-and-delivery/tasks.md"
+    runner: named_progressive_re_encode_header_frame
+
+  - id: subtitle-burn-in
+    what: Burn-in (behaviours §5, subtitle row)
+    why_the_sweep_misses_it: "The difference is in the pixels: spec §6 declines to byte-compare produced media, and the two responses agree on status, headers and shape"
+    needs: [bytes]
+    behaviours: "behaviours §5"
+    written_at: "specs/011-subtitle-delivery/tasks.md"
+    runner: named_subtitle_burn_in
+
+  - id: manifest-announced-track-name
+    what: The manifest's announced track name (011 §6)
+    why_the_sweep_misses_it: "It differs by the reference host's culture rather than by the server, so a comparison of the attribute is a comparison of where the reference is installed"
+    needs: [bytes]
+    behaviours: "behaviours §5"
+    written_at: "specs/011-subtitle-delivery/tasks.md"
+    runner: named_manifest_announced_track_name
+
+  - id: subtitle-playlist-decimal-point
+    what: A subtitle playlist's decimal point (behaviours §3.12)
+    why_the_sweep_misses_it: "A parser normalises it away, so only the bytes carry it"
+    needs: [bytes]
+    behaviours: "behaviours §3.12"
+    written_at: "specs/011-subtitle-delivery/tasks.md"
+    runner: named_subtitle_playlist_decimal_point
+
+  - id: delivery-time-policy-refusal
+    what: The delivery-time policy refusal (behaviours §2.21)
+    why_the_sweep_misses_it: "It needs an account with a denied playback-processing permission, which no administrator has and no run has yet created"
+    needs: [identity:playback-denied]
+    behaviours: "behaviours §2.21"
+    written_at: "specs/008-playback-negotiation-and-delivery/tasks.md"
+    runner: named_delivery_time_policy_refusal
+
+  - id: image-subtitle-track-latency
+    what: An image track's `400` arriving without twenty seconds of waiting (011)
+    why_the_sweep_misses_it: "Nothing in a body carries elapsed time, and the status and the twenty-five bytes are identical on both servers"
+    needs: [latency]
+    behaviours: none
+    written_at: "specs/011-subtitle-delivery/tasks.md"
+    runner: named_image_subtitle_track_latency
+
+  - id: multi-part-film-media-sources
+    what: A multi-part film's media sources (008)
+    why_the_sweep_misses_it: "No reachable library has one, so no request can be made that distinguishes the two answers"
+    needs: [fixture]
+    behaviours: "behaviours §5"
+    written_at: "specs/008-playback-negotiation-and-delivery/tasks.md"
+    runner: named_multi_part_film_media_sources
+
+  - id: media-source-no-runtime-and-zero-length-cue
+    what: A media source stating no runtime, and a zero-length cue's millisecond (011)
+    why_the_sweep_misses_it: "No reference library can be put into either state from outside, so each is reported as a miss by its own probe on every run rather than inferred"
+    needs: [fixture]
+    behaviours: none
+    written_at: "specs/011-subtitle-delivery/tasks.md"
+    runner: named_media_source_no_runtime_and_zero_length_cue
+
+  - id: legacy-encoded-subtitle-file
+    what: A subtitle file in a legacy encoding (behaviours §5.11)
+    why_the_sweep_misses_it: "An all-UTF-8 library never raises it, and every reachable library is one"
+    needs: [fixture]
+    behaviours: "behaviours §5.11"
+    written_at: "specs/011-subtitle-delivery/tasks.md"
+    runner: named_legacy_encoded_subtitle_file
+
+  - id: exif-orientation-on-resize
+    what: EXIF orientation on resize (006)
+    why_the_sweep_misses_it: "No remote request reaches the edge; it needs a planted file in a controlled library"
+    needs: [fixture]
+    behaviours: none
+    written_at: "specs/006-images/tasks.md"
+    runner: named_exif_orientation_on_resize
+
+  - id: empty-library-played-state
+    what: An empty library's played state (behaviours §5.7)
+    why_the_sweep_misses_it: "A library with nothing in it is the only shape where the question is askable, and no reachable server has one"
+    needs: [fixture]
+    behaviours: "behaviours §5.7"
+    written_at: "specs/007-user-data-and-playstate/tasks.md"
+    runner: named_empty_library_played_state
+
+  - id: container-that-lost-every-file
+    what: A container that has lost every file (behaviours §5.2)
+    why_the_sweep_misses_it: "The library has to change underneath a rescan, which no read of a stock server performs - and the entry carries the only surviving UNVERIFIED marker in the compatibility documents, unmeasured because emptying a directory out of somebody else's library is not a measurement anybody may take"
+    needs: [fixture, rescan]
+    behaviours: "behaviours §5.2"
+    written_at: "docs/compatibility/behaviours.md"
+    runner: named_container_that_lost_every_file
+
+  - id: replaced-poster-default-rescan
+    what: A replaced poster a default rescan does not notice (behaviours §5.6)
+    why_the_sweep_misses_it: "The difference lies between two scans rather than inside one answer, so no single request raises it"
+    needs: [fixture, rescan]
+    behaviours: "behaviours §5.6"
+    written_at: "specs/006-images/tasks.md"
+    runner: named_replaced_poster_default_rescan
+
+  - id: next-up-pristine-specials-season
+    what: Whether Next Up excludes a pristine specials season (005 §7 OQ-7)
+    why_the_sweep_misses_it: "No reachable library holds a series whose only unplayed episodes are season 0's - the one measured on 2026-08-28 had none, and the probe says so in its own output - so the library has to be made rather than found"
+    needs: [fixture]
+    behaviours: none
+    written_at: "specs/005-item-query-api/tasks.md"
+    runner: named_next_up_pristine_specials_season
+
+  - id: paused-session-ticker-freeze
+    what: The paused-session ticker freeze (007's list)
+    why_the_sweep_misses_it: "Nothing in a body carries ten minutes of silence, and the claim is a source reading and not a measurement"
+    needs: [wait]
+    behaviours: none
+    written_at: "specs/007-user-data-and-playstate/tasks.md"
+    runner: named_paused_session_ticker_freeze
+
+  # ------------------------------------------------------------------------------------------
+  # Here to be recognised, not discovered. The last two rows of spec section 3.10 are ordinary
+  # request cases: the sweep is what finds them, and the register is what makes them countable so
+  # nobody triages them a second time. Their `needs` is empty, which is a real value.
+  # ------------------------------------------------------------------------------------------
+
+  - id: body-binding-dollar-message
+    what: The `"$"` message in a body-binding refusal (behaviours §1.11)
+    why_the_sweep_misses_it: "Nothing; it will be found on the first malformed body. Listed so it is recognised rather than triaged twice"
+    needs: []
+    behaviours: "behaviours §1.11"
+    written_at: "specs/007-user-data-and-playstate/tasks.md"
+    runner: named_body_binding_dollar_message
+
+  - id: body-with-no-content-type
+    what: A body with no content type on five routes (009)
+    why_the_sweep_misses_it: "Measured on one of the five; the other four are one request each and have never been asked"
+    needs: []
+    behaviours: "behaviours §5"
+    written_at: "specs/009-playlists/tasks.md"
+    runner: named_body_with_no_content_type

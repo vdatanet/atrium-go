@@ -1,0 +1,376 @@
+# Machine-readable v1 API surface.
+#
+# Generated companion to docs/compatibility/api-surface-v1.md. Every entry is validated
+# against the pinned Jellyfin OpenAPI document by tools/extract_v1_surface.py, and the
+# route-registration test asserts that the server exposes exactly the entries of implemented
+# features, and no others (Principle VI) — entries belonging to features whose specs are still
+# draft are listed here and not yet served.
+#
+# consumers: the real clients observed calling this endpoint. An empty list means the
+#            endpoint is included by design; see the Notes column in the prose document.
+# level:     required conformance level, defined in docs/compatibility/conformance.md
+# feature:   the specs/ directory that owns it
+
+reference:
+  jellyfin_openapi_version: "10.11.11"
+  jellyfin_source_tag: "v10.11.11"
+
+endpoints:
+  - path: "/System/Info/Public"
+    method: GET
+    operation: GetPublicSystemInfo
+    consumers: [music-client, video-client]
+    feature: "001"
+    level: L3
+  - path: "/System/Info"
+    method: GET
+    operation: GetSystemInfo
+    consumers: [music-client]
+    feature: "001"
+    level: L2
+  - path: "/System/Ping"
+    method: GET
+    operation: GetPingSystem
+    consumers: []
+    feature: "001"
+    level: L2
+  - path: "/System/Ping"
+    method: POST
+    operation: PostPingSystem
+    consumers: []
+    feature: "001"
+    level: L2
+  - path: "/Users/Public"
+    method: GET
+    operation: GetPublicUsers
+    consumers: [video-client]
+    feature: "002"
+    level: L2
+  - path: "/Users/AuthenticateByName"
+    method: POST
+    operation: AuthenticateUserByName
+    consumers: [music-client, video-client]
+    feature: "002"
+    level: L3
+  - path: "/Users/Me"
+    method: GET
+    operation: GetCurrentUser
+    consumers: [video-client]
+    feature: "002"
+    level: L2
+  - path: "/Users/{userId}"
+    method: GET
+    operation: GetUserById
+    consumers: [music-client]
+    feature: "002"
+    level: L2
+  - path: "/Users/Configuration"
+    method: POST
+    operation: UpdateUserConfiguration
+    consumers: [video-client]
+    feature: "002"
+    level: L2
+  - path: "/Sessions/Capabilities/Full"
+    method: POST
+    operation: PostFullCapabilities
+    consumers: []
+    feature: "002"
+    level: L1
+  - path: "/Sessions"
+    method: GET
+    operation: GetSessions
+    consumers: [video-client]
+    feature: "002"
+    level: L2
+  - path: "/Localization/Cultures"
+    method: GET
+    operation: GetCultures
+    consumers: [video-client]
+    feature: "004"
+    level: L2
+  - path: "/UserViews"
+    method: GET
+    operation: GetUserViews
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Items"
+    method: GET
+    operation: GetItems
+    consumers: [music-client, video-client]
+    feature: "005"
+    level: L3
+  - path: "/Items/{itemId}"
+    method: GET
+    operation: GetItem
+    consumers: [music-client, video-client]
+    feature: "005"
+    level: L3
+  - path: "/Items/Latest"
+    method: GET
+    operation: GetLatestMedia
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Items/Filters"
+    method: GET
+    operation: GetQueryFiltersLegacy
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Items/{itemId}/Similar"
+    method: GET
+    operation: GetSimilarItems
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Items/{itemId}/InstantMix"
+    method: GET
+    operation: GetInstantMixFromItem
+    consumers: [music-client, video-client]
+    feature: "005"
+    level: L2
+  - path: "/UserItems/Resume"
+    method: GET
+    operation: GetResumeItems
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Shows/{seriesId}/Seasons"
+    method: GET
+    operation: GetSeasons
+    consumers: []
+    feature: "005"
+    level: L2
+  - path: "/Shows/{seriesId}/Episodes"
+    method: GET
+    operation: GetEpisodes
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Shows/NextUp"
+    method: GET
+    operation: GetNextUp
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Artists"
+    method: GET
+    operation: GetArtists
+    consumers: [music-client]
+    feature: "005"
+    level: L2
+  - path: "/Artists/AlbumArtists"
+    method: GET
+    operation: GetAlbumArtists
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Genres"
+    method: GET
+    operation: GetGenres
+    consumers: [music-client, video-client]
+    feature: "005"
+    level: L2
+  - path: "/MusicGenres"
+    method: GET
+    operation: GetMusicGenres
+    consumers: [music-client]
+    feature: "005"
+    level: L2
+  - path: "/Years"
+    method: GET
+    operation: GetYears
+    consumers: [video-client]
+    feature: "005"
+    level: L2
+  - path: "/Search/Hints"
+    method: GET
+    operation: GetSearchHints
+    consumers: []
+    feature: "005"
+    level: L2
+  - path: "/Items/{itemId}/Images/{imageType}"
+    method: GET
+    operation: GetItemImage
+    consumers: [music-client, video-client]
+    feature: "006"
+    level: L2
+  - path: "/Items/{itemId}/Images/{imageType}/{imageIndex}"
+    method: GET
+    operation: GetItemImageByIndex
+    consumers: [video-client]
+    feature: "006"
+    level: L2
+  - path: "/UserFavoriteItems/{itemId}"
+    method: POST
+    operation: MarkFavoriteItem
+    consumers: [music-client, video-client]
+    feature: "007"
+    level: L2
+  - path: "/UserFavoriteItems/{itemId}"
+    method: DELETE
+    operation: UnmarkFavoriteItem
+    consumers: [music-client, video-client]
+    feature: "007"
+    level: L2
+  - path: "/UserPlayedItems/{itemId}"
+    method: POST
+    operation: MarkPlayedItem
+    consumers: [music-client, video-client]
+    feature: "007"
+    level: L2
+  - path: "/UserPlayedItems/{itemId}"
+    method: DELETE
+    operation: MarkUnplayedItem
+    consumers: [music-client, video-client]
+    feature: "007"
+    level: L2
+  - path: "/Sessions/Playing"
+    method: POST
+    operation: ReportPlaybackStart
+    consumers: [music-client, video-client]
+    feature: "007"
+    level: L2
+  - path: "/Sessions/Playing/Progress"
+    method: POST
+    operation: ReportPlaybackProgress
+    consumers: [music-client, video-client]
+    feature: "007"
+    level: L2
+  - path: "/Sessions/Playing/Stopped"
+    method: POST
+    operation: ReportPlaybackStopped
+    consumers: [music-client, video-client]
+    feature: "007"
+    level: L2
+  - path: "/Items/{itemId}/PlaybackInfo"
+    method: POST
+    operation: GetPostedPlaybackInfo
+    consumers: [video-client]
+    feature: "008"
+    level: L3
+  - path: "/Items/{itemId}/PlaybackInfo"
+    method: GET
+    operation: GetPlaybackInfo
+    consumers: []
+    feature: "008"
+    level: L2
+  - path: "/Audio/{itemId}/stream"
+    method: GET
+    operation: GetAudioStream
+    consumers: [music-client, video-client]
+    feature: "008"
+    level: L3
+  - path: "/Audio/{itemId}/stream.{container}"
+    method: GET
+    operation: GetAudioStreamByContainer
+    consumers: [music-client]
+    feature: "008"
+    level: L2
+  - path: "/Audio/{itemId}/universal"
+    method: GET
+    operation: GetUniversalAudioStream
+    consumers: [music-client]
+    feature: "008"
+    level: L3
+  - path: "/Videos/{itemId}/stream"
+    method: GET
+    operation: GetVideoStream
+    consumers: [video-client]
+    feature: "008"
+    level: L3
+  - path: "/Videos/{itemId}/stream.{container}"
+    method: GET
+    operation: GetVideoStreamByContainer
+    consumers: []
+    feature: "008"
+    level: L2
+  - path: "/Videos/{itemId}/master.m3u8"
+    method: GET
+    operation: GetMasterHlsVideoPlaylist
+    consumers: []
+    feature: "008"
+    level: L2
+  - path: "/Videos/{itemId}/main.m3u8"
+    method: GET
+    operation: GetVariantHlsVideoPlaylist
+    consumers: []
+    feature: "008"
+    level: L2
+  - path: "/Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}"
+    method: GET
+    operation: GetHlsVideoSegment
+    consumers: []
+    feature: "008"
+    level: L2
+  - path: "/Videos/ActiveEncodings"
+    method: DELETE
+    operation: StopEncodingProcess
+    consumers: [video-client]
+    feature: "008"
+    level: L2
+  - path: "/Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8"
+    method: GET
+    operation: GetSubtitlePlaylist
+    consumers: []
+    feature: "011"
+    level: L2
+  - path: "/Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/Stream.{routeFormat}"
+    method: GET
+    operation: GetSubtitle
+    consumers: [video-client]
+    feature: "011"
+    level: L2
+  - path: "/Videos/{routeItemId}/{routeMediaSourceId}/Subtitles/{routeIndex}/{routeStartPositionTicks}/Stream.{routeFormat}"
+    method: GET
+    operation: GetSubtitleWithTicks
+    consumers: []
+    feature: "011"
+    level: L2
+  - path: "/Playlists"
+    method: POST
+    operation: CreatePlaylist
+    consumers: [music-client]
+    feature: "009"
+    level: L2
+  - path: "/Playlists/{playlistId}/Items"
+    method: GET
+    operation: GetPlaylistItems
+    consumers: [music-client, video-client]
+    feature: "009"
+    level: L2
+  - path: "/Playlists/{playlistId}/Items"
+    method: POST
+    operation: AddItemToPlaylist
+    consumers: [music-client]
+    feature: "009"
+    level: L2
+  - path: "/Playlists/{playlistId}/Items"
+    method: DELETE
+    operation: RemoveItemFromPlaylist
+    consumers: [music-client]
+    feature: "009"
+    level: L2
+  - path: "/Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}"
+    method: POST
+    operation: MoveItem
+    consumers: [music-client]
+    feature: "009"
+    level: L2
+  - path: "/Items/{itemId}"
+    method: DELETE
+    operation: DeleteItem
+    consumers: [music-client]
+    feature: "009"
+    level: L2
+  # Added at 009's spec review on 2026-08-31: the music client renames a playlist with it, which
+  # made it the one operation that client calls with no owning feature. Routed for playlists;
+  # the reference declares the whole controller elevated, so a non-administrator owner is
+  # refused - 009 section 3.8.
+  - path: "/Items/{itemId}"
+    method: POST
+    operation: UpdateItem
+    consumers: [music-client]
+    feature: "009"
+    level: L2

@@ -4,10 +4,10 @@ An independent implementation of the **Jellyfin API**, written in Go from specif
 
 > **Status: there is no code here yet, and that is deliberate.**
 >
-> This repository currently holds twelve specifications, a constitution, seven architecture
-> decision records and a set of measured compatibility documents. Nothing is implemented. No
-> compatibility claim on this page has been measured against this server, because this server does
-> not exist yet.
+> This repository currently holds twelve specifications, a constitution, the project architecture
+> and roadmap, seven numbered architecture decision records — five of them written — and a set of
+> measured compatibility documents. Nothing is implemented. No compatibility claim on this page has
+> been measured against this server, because this server does not exist yet.
 
 ## What this is
 
@@ -105,6 +105,8 @@ that do not bend are the [constitution](docs/constitution.md).
 | [docs/constitution.md](docs/constitution.md) | Ten principles, each stating what it forbids |
 | [specs/](specs/) | Twelve feature specifications — WHAT and WHY, no technology |
 | [docs/compatibility/behaviours.md](docs/compatibility/behaviours.md) | Every measured behaviour, replicated defect and deliberate divergence |
+| [docs/architecture.md](docs/architecture.md) | The project-level shape every implementation plan inherits |
+| [docs/roadmap.md](docs/roadmap.md) | Where v1 stops, why, and in what order the twelve features are built |
 | [docs/decisions/](docs/decisions/) | Architecture decision records |
 | [PROVENANCE.md](PROVENANCE.md) | Where these documents came from and what did not come with them |
 
@@ -113,9 +115,17 @@ Eleven say `Implemented`. Nothing is implemented here.
 
 ## Not yet decided
 
-The runtime stack, the store and the password hashing scheme are open. Their record numbers —
-`0002`, `0003` and `0006` — are reserved and deliberately absent: they were withheld as decisions
-this project takes for itself, and no implementation plan can be written until they are taken.
+**The runtime stack was decided on 2026-09-02**: Go, `chi` over `net/http`, `encoding/json`
+behind a single serialisation package, and no cgo
+([ADR-0002](docs/decisions/0002-go-and-the-runtime-stack.md)). Each half of it was measured before
+it was chosen rather than argued from preference — the standard library's router turns out to
+reject four of the 59 routes outright, and its JSON encoder gets field order and null-versus-absent
+exactly right while getting the reference's escape table wrong in four ways.
+
+The store and the password hashing scheme are still open. Their record numbers — `0003` and `0006`
+— are reserved and deliberately absent: they were withheld as decisions this project takes for
+itself. [docs/architecture.md](docs/architecture.md) gives the store a *boundary* so that
+implementation plans can be written before the decision is taken; it does not give it an answer.
 
 ## Relationship to Jellyfin
 

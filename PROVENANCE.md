@@ -17,6 +17,16 @@ are the committed ones at the ref above, so those changes are *not* in this expo
 
 - `specs/010-conformance-harness/spec.md`
 - `specs/README.md`
+
+> **Both were refreshed on 2026-09-02, and this repository is no longer at one ref.** Those changes
+> had been committed at the source as `681b083` — *"010 D-7: AC-2 states the comparison it turned
+> out to be, and 010 is Implemented"* — one commit after the export ref, so the two files here now
+> carry `681b083` and the other 35 carry `531c172`. Nothing withheld came with them: both are in
+> the exported set, and the refresh took the same documents at newer bytes. What it changes is a
+> status and a criterion — 010 becomes `Implemented` at the source, and AC-2 stops claiming the two
+> servers produce the same library, which its own measurement contradicts in forty-seven declared
+> places.
+
 ## What was withheld, and why
 
 | Reason | Files |

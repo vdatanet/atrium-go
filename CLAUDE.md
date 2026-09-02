@@ -181,12 +181,21 @@ Writing them is the work, and they must be written in Go's terms, not Python's.
 
 Withheld because they belong to the receiving project:
 
-- **ADR-0002** the runtime stack, **ADR-0003** the store, **ADR-0006** password hashing. The
-  numbers are reserved; `docs/decisions/README.md` still indexes them. Kept in the index because
-  ADRs are numbered immutably and a gap would be a lie about the history.
-- `docs/architecture.md` — the project-level shape that every `plan.md` inherits from. Nine
-  documents link to it; it does not exist yet.
-- `docs/roadmap.md`, `AGENTS.md`, `docs/README.md`, `tools/README.md`.
+- **ADR-0006** password hashing. The number is reserved; `docs/decisions/README.md` still indexes
+  it. Kept in the index because ADRs are numbered immutably and a gap would be a lie about the
+  history.
+- `tools/README.md`.
+
+**Five of these have been taken, on 2026-09-02.** [ADR-0002](docs/decisions/0002-go-and-the-runtime-stack.md)
+decides the runtime stack — Go, chi over `net/http`, `encoding/json` behind one wire package, and
+no cgo — after measuring the three things that decide it rather than assuming them.
+[docs/architecture.md](docs/architecture.md) is the project-level shape every `plan.md` inherits
+from; **three** documents cite it (`specs/README.md`, the plan template, and ADR-0007 twice by
+anchor), and this list said nine, which is `docs/roadmap.md`'s count one row above it in
+PROVENANCE's table. [ADR-0003](docs/decisions/0003-sqlite-as-the-store.md) decides the store — embedded SQLite, pure
+Go, hand-written SQL, split into a derived half a rescan rebuilds and a precious half that is
+migrated. [docs/roadmap.md](docs/roadmap.md), [docs/README.md](docs/README.md) and
+[AGENTS.md](AGENTS.md) are written too.
 
 **Dangling links are intentional.** PROVENANCE.md §"Links with nothing to point at" enumerates
 them: *"retargeting one is an edit to a specification, and that is this project's decision rather

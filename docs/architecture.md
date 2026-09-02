@@ -185,6 +185,17 @@ the first thing built and the first thing tested, before any route uses it.
 declares literally, and only the *names* of query parameters. §1.14 says why: lowercasing an
 identifier is invisible until something case-sensitive reads one.
 
+**`Range` is the standard library's, and its conditional handling is not.** `http.ServeContent`
+answers `Range`, `206`, `Content-Range`, `Accept-Ranges` and an unsatisfiable range for any
+`io.ReadSeeker`, which is most of what [api-surface §8](compatibility/api-surface-v1.md)'s
+*"range support is not optional"* asks for, and it uses `sendfile` for an `*os.File`. But it also
+*"handles If-Match, If-Unmodified-Since, If-None-Match, If-Modified-Since, and If-Range"* and emits
+`Last-Modified` from the `modtime` it is given
+`[measurement: net/http documentation, Go 1.27.0, 2026-09-02]` — so it can answer a `304` on a route
+where the reference does not, and [§2.17](compatibility/behaviours.md) has already measured that no
+item and no media source carries a modification time here. **The mechanics are free; the conditional
+behaviour is a contract question**, and 008's plan owns it rather than inheriting a default.
+
 ---
 
 ## 5. Deployment shape
@@ -256,8 +267,35 @@ reports happens once, at ingestion, and rounds rather than truncates.
 
 One package owns every subprocess, and nothing else in the tree calls `os/exec`.
 
-**Every child is context-bound.** A cancelled request, a timeout and a shutdown are the same
-mechanism, so there is one way for work to stop and one place it is implemented.
+**Every child is bound to a session's context, never to a request's.** This is the correction an
+external review of the Go stack earned, and it would have been an expensive bug: an HLS transcode
+**must outlive the request that started it**. A client fetches `master.m3u8`, that request completes,
+and the segments it named are fetched afterwards — so `exec.CommandContext(r.Context(), ...)` kills
+the transcode the instant the manifest is delivered, and every segment request that follows finds
+nothing. The context is the playback session's, held in a registry, cancelled by an explicit stop,
+by an inactivity timer, or by shutdown.
+
+**A cancelled context must terminate the child gracefully, and by default it does not.**
+`CommandContext` *"sets the command's Cancel function to invoke the Kill method on its Process, and
+leaves its WaitDelay unset"* `[measurement: os/exec documentation, Go 1.27.0, 2026-09-02]` — so the
+default is `SIGKILL`, which ffmpeg cannot trap and therefore cannot flush. `Cmd.Cancel` is set to
+stop it the way the reference does, and `Cmd.WaitDelay` gives the grace period after which it is
+killed anyway. **The reference writes `q` to ffmpeg's standard input**
+`[source: MediaBrowser.Controller/MediaEncoding/TranscodingJob.cs:255 @ v10.11.11]`, which is worth
+copying because a half-written segment is a segment a client will fetch.
+
+`WaitDelay` earns its place twice: it also bounds *"a child process that exits but leaves its I/O
+pipes unclosed"*, which is how an orphaned grandchild of ffmpeg blocks `Wait` forever.
+
+**Pipes are a deadlock, not an inconvenience.** A child blocks once the operating system's pipe
+buffer fills, so anything written to `StdoutPipe` or `StderrPipe` must be drained by a goroutine for
+as long as the process lives. Where output is a file anyway — every HLS segment is — it is written
+straight to an `*os.File` and there is no pipe to drain.
+
+**Concurrent work is capped.** Unbounded transcoding is a denial of service against the machine
+rather than a performance question: a handful of clients each asking for a re-encode will take a
+small host down. The registry holds the cap, because it is the thing that knows how much work is
+running.
 
 **A transcode registry is a project-level component, not 008's private detail.** `DELETE
 /Videos/ActiveEncodings` has to find and terminate work that a *different* request started, keyed by

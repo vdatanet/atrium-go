@@ -288,6 +288,36 @@ name**, since `DateCreated` does not end in `Date`
 **Fixtures:** none. 001 answers before any user exists and before any library is configured, which
 is precisely what makes it testable with nothing on disk but a data directory.
 
+### 8.5 Routes against `surface.yaml`
+
+*The number is the one [conformance.md](../../docs/compatibility/conformance.md#l0--routed) already
+cites, from before this plan existed; §8 has no other numbered subsection because nothing else is
+cited by number.*
+
+L0 asks that the router expose **exactly** the surface file's rows and nothing else, and
+conformance.md asks for it to be checked against **two views** of what the application serves,
+because *"each view has a blind spot the other covers"*.
+
+**The two views it names do not both survive the crossing.** They were the OpenAPI document a
+framework generates and the route table a factory builds — and this server generates no OpenAPI
+document, so the blind spot *"a route hidden from the document"* cannot exist here because the
+document does not. Half the argument goes with it.
+
+**The other half survives, and Go offers a better second view than the one it replaces.**
+
+| View | What it sees | The blind spot it covers |
+|---|---|---|
+| **Registration** — `chi.Walk` over the built router, which enumerates every method and pattern including the partial-segment ones `[measurement: github.com/go-chi/chi/v5 v5.3.2, Go 1.27.0, 2026-09-02]` | What the router was *told* | A route registered without a `surface.yaml` row, and a row nothing registers |
+| **Reachability** — a real request issued to every row's path from `conformance`, asserting it is not a `404` | What a client actually *gets* | A route registered correctly and made unreachable by something above it: a canonicalisation bug, a middleware that swallows it, a gate that never opens |
+
+The second is the stronger of the two and has no analogue in the arrangement conformance.md
+describes: a document generated from the application agrees with the application by construction,
+where a request that has been through the whole pipeline agrees with nothing unless the pipeline
+works. It is also the only one of the two that would catch T9 or T14 being wrong.
+
+**What neither view covers** is a route that is registered, reachable, and answers the wrong thing.
+That is what the golden tests are for, and it is why T20 is not the last task.
+
 **L3 is deferred, not skipped**, on the spec's own terms: what is met now is L2, and the gap closes
 the first time 010 runs.
 

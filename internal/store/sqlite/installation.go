@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/vdatanet/atrium-go/internal/ports"
+	"github.com/vdatanet/atrium-go/internal/units"
 )
 
 // Installation reads the single row of the installation table.
@@ -59,6 +60,39 @@ func (s *Store) SetServerName(ctx context.Context, name string) error {
 	}
 	if affected != 1 {
 		return fmt.Errorf("%s: setting the server name changed %d rows, want 1", s.path, affected)
+	}
+	return nil
+}
+
+// MarkSetupComplete records the instant initial configuration finished.
+//
+// The column holds .NET's DateTime.Ticks — 100-nanosecond intervals since
+// 0001-01-01T00:00:00Z — which is what units.Time.Ticks returns. The unit was
+// already the migration's ("in ticks", 0001_installation.sql); the origin is
+// what this method pins, and it is pinned to .NET's because behaviours 1.3
+// makes the tick .NET's tick and every date the wire carries is a .NET
+// DateTime. A column holding ticks since some other epoch would be a second
+// unit wearing the first one's name.
+//
+// It does not refuse a second call. Whether setup may be completed twice is a
+// question about the wizard, which 002 owns, and a store that answered it here
+// would be deciding it for a caller that has not been written.
+func (s *Store) MarkSetupComplete(ctx context.Context, at units.Time) error {
+	result, err := s.writer.ExecContext(ctx,
+		`UPDATE installation SET setup_completed_at = ? WHERE id = 1`, int64(at.Ticks()))
+	if err != nil {
+		return fmt.Errorf("%s: recording that setup completed: %w", s.path, err)
+	}
+
+	// The same guard SetServerName carries, for the same reason: an UPDATE that
+	// matched nothing succeeds, and a setup that completed against no row would
+	// look exactly like one that completed.
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: recording that setup completed: %w", s.path, err)
+	}
+	if affected != 1 {
+		return fmt.Errorf("%s: recording that setup completed changed %d rows, want 1", s.path, affected)
 	}
 	return nil
 }

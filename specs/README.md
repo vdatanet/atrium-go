@@ -121,13 +121,14 @@ say how it will be proven is not finished.
 | [007](007-user-data-and-playstate/) | User data and playstate | **Implemented** | **Implemented** | **Implemented** |
 | [008](008-playback-negotiation-and-delivery/) | Playback negotiation and delivery | **Implemented** | **Implemented** | **Implemented** |
 | [009](009-playlists/) | Playlists | **Implemented** | **Implemented** | **Implemented** |
-| [010](010-conformance-harness/) | Conformance harness | **Accepted** | **Accepted** | **Accepted** — all fifteen tasks done, [blocked on D-7](010-conformance-harness/tasks.md) |
+| [010](010-conformance-harness/) | Conformance harness | **Implemented** | **Implemented** | **Implemented** — fifteen of fifteen tasks, [D-7 taken 2026-09-02](010-conformance-harness/tasks.md) |
 | [011](011-subtitle-delivery/) | Subtitle delivery | **Implemented** | **Implemented** | **Implemented** |
 | [012](012-negotiation-inputs/) | Negotiation inputs | **Accepted** | — | — |
 
-**001 through 009 are implemented, and 011 with them** — 008 on 2026-08-29 across fourteen tasks,
-011 on 2026-08-31 across twelve, 009 on 2026-09-01 across fourteen. Its spec and plan
-were accepted the same day, at a review that wrote and ran the five probes its open questions had
+**001 through 011 are implemented** — 008 on 2026-08-29 across fourteen tasks,
+011 on 2026-08-31 across twelve, 009 on 2026-09-01 across fourteen, and 010 on 2026-09-02 across
+fifteen, which leaves **012 the only feature that is `Accepted` and not built**. **008's** spec and
+plan were accepted the same day, at a review that wrote and ran the five probes its open questions had
 been citing prospectively — all twelve OQs answered, five claims overturned (the policy story, the
 body's `EnableTranscoding` switch, `static=true` as an error, `enableRedirection`'s `302`, and the
 HLS half of the §3.5 divergence, which measured as parity), and two defects found that nobody was
@@ -175,22 +176,26 @@ register is stale in four rows — three of its eight open debts have in fact be
 script's name — and AC-6, applied literally, failed the very allowlist the spec ships — which is what D-3 then refined it out of. **011's spec was accepted on the same day as 008's**, at its
 own measurement gate, its plan and task list on 2026-08-30, and the twelve tasks ran from
 2026-08-30 to 2026-08-31; **012 was opened on 2026-08-29 and accepted at its own gate the same
-day**. The lowest-numbered feature that is not implemented is
-**010**, whose spec, plan and task list were all accepted by 2026-09-02 and whose **fifteen tasks
-all ran between 2026-09-02 and the same day** — the harness, the allowlist, the three registers, the
+day**. **010 landed on 2026-09-02**: its spec, plan and task list were all accepted by that date and
+its **fifteen tasks all ran the same day** — the harness, the allowlist, the three registers, the
 identities, the single-use reference instance, the fixture composed into six libraries, the twenty
-named comparisons, the probe convention and the version-bump command. **It is still `Accepted` and
-not `Implemented`, deliberately, and its closing task is the reason.** T15 found the class 008 T14,
-011 T12 and 009 T14 each found: **AC-11 had no test at all** — plan §8 mapped it to *"CI,
-unchanged"*, a claim about a workflow file and a fixture with nothing asserting either, in the one
-feature whose whole value is a second server; **AC-7 had a half with no test**, the citation a probe
-prints, which is what turns a finding into provenance; and **AC-2 says something its own measurement
-contradicts**. AC-2 claims the two servers *"produce libraries with the same item count and the same
-structure"*, and the recorded comparison declares **forty-seven differences** over the six fixture
-libraries — every one of them 003's or 004's, which [spec §2](010-conformance-harness/spec.md) puts
-outside this feature. Amending it is **D-7**, reserved for its owner rather than improvised, and
-until it is taken every document says `Accepted`: *a status line that overstates the work is the one
-thing this feature exists to prevent in others.* Code does not start until a list is `Accepted`
+named comparisons, the probe convention and the version-bump command. **Its closing task found the
+class 008 T14, 011 T12 and 009 T14 each found, and it refused to flip a status line over it**:
+**AC-11 had no test at all** — plan §8 mapped it to *"CI, unchanged"*, a claim about a workflow file
+and a fixture with nothing asserting either, in the one feature whose whole value is a second
+server; **AC-7 had a half with no test**, the citation a probe prints, which is what turns a finding
+into provenance; and **AC-2 said something its own measurement contradicts**. AC-2 claimed the two
+servers *"produce libraries with the same item count and the same structure"*, and the recorded
+comparison declares **forty-seven differences** over the six fixture libraries — every one of them
+003's or 004's, which [spec §2](010-conformance-harness/spec.md) puts outside this feature. Amending
+it was **D-7**, reserved for its owner rather than improvised and **taken on 2026-09-02**: the
+criterion now states the comparison that exists and runs — the reference's reading recorded,
+Atrium's scan compared against it in the default job, every difference declared with its reason and
+its owning feature, an undeclared difference failing and a declared one that has gone away failing
+too. **`Implemented` there means fifteen of fifteen tasks and eighteen of eighteen criteria, and
+nothing wider**: six of the twenty named comparisons are outstanding with their owners and no
+`level: L3` row has yet been shown to reach L3, both on 010's own owes list. The lowest-numbered
+feature that is not implemented is **012**. Code does not start until a list is `Accepted`
 (Principle III). Both
 those lists were inputs to the plan. Each of 009's own two gates found something, which
 is the rate this project expects: the plan gate found §8 budgeting a fixture task for a second

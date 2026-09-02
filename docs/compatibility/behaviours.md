@@ -370,6 +370,47 @@ v10.11.11]` — a configuration change validates the new path and asks for a res
 `[source: Emby.Server.Implementations/ApplicationHost.cs:761-764, 779-797 @ v10.11.11]`, so a
 server configured in place goes on advertising the scheme it started with until it comes back.
 
+> ⚠️ **The override is the last of four branches, and this entry described it as the rule —
+> corrected 2026-09-02.** An operator's server with `EnableHttps` on and a valid public certificate
+> answers `LocalAddress: http://192.168.1.39:7096` on `/System/Info/Public`, plain HTTP, against a
+> request that arrived over TLS `[probe: manual request against an operator's server, Jellyfin
+> 10.11.11, 2026-09-02]`. The rule as written says that cannot happen. Read at the pinned tag, four
+> things can produce this value and only the last consults `ListenWithHttps`:
+>
+> | # | Condition | Produces | `ListenWithHttps`? |
+> |---|---|---|---|
+> | 1 | `PublishedServerUrl` is set | that value, verbatim | **No** |
+> | 2 | `EnablePublishedServerUriByRequest` is on | the **request's own** scheme and host | **No** |
+> | 3 | `PublishedServerUriBySubnet` has an entry matching **the caller's** subnet | that URI, verbatim | **No** |
+> | 4 | otherwise | the bind address, with the scheme defaulted | **Yes** |
+>
+> `[source: Emby.Server.Implementations/ApplicationHost.cs:871-901, 929-947 @ v10.11.11;
+> src/Jellyfin.Networking/Manager/NetworkManager.cs:830-855, 995-1031 @ v10.11.11]`
+>
+> **Two separate short-circuits, and the second is the subtle one.** `GetLocalApiUrl` defaults the
+> scheme with `scheme ??= ListenWithHttps ? Uri.UriSchemeHttps : Uri.UriSchemeHttp`, so a scheme
+> **passed in** is never overridden — that is branch 2. But branch 3 never reaches that line at all:
+> `MatchesPublishedServerUrl` returns a **whole URI**, and `GetLocalApiUrl` opens with
+> *"If the smartAPI doesn't start with http then treat it as a host or ip"* and returns it
+> untouched. A configured override is not merged with the server's scheme; it replaces the answer.
+>
+> **Branch 3 is per-caller, which makes `LocalAddress` a function of who is asking.** Overrides are
+> split into internal and external sets and filtered to those whose subnet contains the caller,
+> most-specific prefix first. The observed server carries `192.168.1.0/24=http://192.168.1.39:7096`,
+> and the request came from that subnet — **so this is branch 3, established rather than inferred**,
+> and the same server answers something else to a caller from outside it.
+>
+> **The 2026-09-02 reproduction is not withdrawn.** It measured branch 4, on an instance this project
+> stood up with none of the other three configured, and for that branch it holds exactly. What a
+> default instance cannot show is that it is one branch of four.
+>
+> **And the footgun in the next paragraph is not hypothetical.** The operator of that server set the
+> override *because DLNA streaming did not work*: Jellyfin handed a renderer an address it could not
+> use, where Emby had handed over a usable one `[client-author: 2026-09-02]`. The subnet override is
+> the workaround that cost them the debugging time this entry mentions — which is direct evidence for
+> [§4.2](#42-localaddress-does-not-get-an-https-override), where Atrium returns the scheme it is
+> actually reachable on and no operator has to discover this setting to make a renderer work.
+
 **Depends on it:** clients that hand this address to a device without a TLS stack (a DLNA renderer)
 break when it is HTTPS. This is a genuine footgun that has cost real debugging time.
 

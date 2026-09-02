@@ -26,17 +26,17 @@
 //
 // # What is not here yet
 //
-// The camelCase policy is T6 and the Accept negotiation that chooses between
-// the two is T7. Naming therefore has one value today. Declaring the second one
-// early would export a constant that silently writes PascalCase, which is worse
-// than one that does not exist: a caller cannot ask for a policy the package
-// has not got, and the compiler says so.
+// The Accept negotiation that chooses between the two policies is T7, and with
+// it the content type that echoes the profile it matched. Both policies are
+// here; nothing yet asks for the second one.
 package wire
 
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"reflect"
 )
 
 // ContentType is what a JSON body is sent as: `application/json`, with the
@@ -82,21 +82,51 @@ func Write(w http.ResponseWriter, status int, v any, naming Naming) error {
 	return err
 }
 
-// marshal produces the bytes Write sends: the encoder's output, with the
-// escape pass applied.
+// marshal produces the bytes Write sends: the encoder's output, renamed under
+// the requested policy, with the escape pass applied.
 //
-// naming is carried and not yet consulted. One policy exists (T6 adds the
-// second), and PascalCase is what the models already declare, so the policy has
-// nothing to do here — but the seam is the point: the conversion has to happen
-// where a property name is still a property name and not bytes, because
-// dictionary keys are never converted (spec 3.0.2).
+// The order is the one thing about this function that is not free. The rename
+// walks the document beside the value it came from, because that is the only
+// place a property name can be told from a dictionary key (plan 10); the escape
+// pass works on the finished document, because behaviours 1.16 applies to every
+// string in it, keys included. So the rename runs first, on bytes the encoder
+// wrote, and the escape pass last, over both halves of every member.
+//
+// An unrecognised policy is an error. A Naming this package does not know would
+// otherwise fall through to PascalCase, which is the one failure the argument
+// exists to prevent: a client that asked for camelCase and was answered in
+// PascalCase gets an empty object out of its decoder (behaviours 1.13).
 func marshal(v any, naming Naming) ([]byte, error) {
+	body, err := encodeCompact(v)
+	if err != nil {
+		return nil, err
+	}
+
+	switch naming {
+	case NamingPascal:
+		// The models already declare PascalCase names (spec 3.0.1), so the
+		// policy has nothing to do and the document is the encoder's own.
+	case NamingCamel:
+		body, err = renameProperties(body, reflect.ValueOf(v))
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("wire: no naming policy numbered %d", int(naming))
+	}
+
+	return escape(body), nil
+}
+
+// encodeCompact encodes one value with this package's encoder settings, and
+// without the newline Encode appends.
+func encodeCompact(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 
 	// The encoder's own HTML escaping is switched off (plan 6.4). Left on it
 	// writes three of behaviours 1.16's seven characters — < > & — as
-	// lower-case escapes and none of the other four, so the pass below would
+	// lower-case escapes and none of the other four, so the escape pass would
 	// have to undo its casing as well as do its own job. Off, the pass sees
 	// them raw and treats all seven alike.
 	encoder.SetEscapeHTML(false)
@@ -109,7 +139,5 @@ func marshal(v any, naming Naming) ([]byte, error) {
 	// has no way to switch the HTML escaping off. The reference sends no
 	// trailing newline, so it is dropped here rather than tolerated by every
 	// golden.
-	body := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
-
-	return escape(body), nil
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }

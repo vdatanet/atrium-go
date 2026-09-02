@@ -231,6 +231,13 @@ policy is negotiated, and a value that names a policy the package has not got wo
 mistake this argument exists to prevent invisible. The signature above is otherwise exactly as
 written.
 
+**Amended 2026-09-03, at T6.** `NamingCamel` is declared, and with it the rule the argument was
+being kept honest for. The same argument then applies once more to the *unknown* value: a `Naming`
+this package does not recognise is an **error**, not a fall-through to PascalCase. A caller that
+asked for camelCase and was answered in PascalCase is §1.13's failure mode exactly — an empty
+object out of the client's decoder — and a silent fall-through is that failure with no way to see
+it.
+
 ## 6. Algorithms
 
 ### 6.1 Path canonicalisation (§3.6, behaviours §1.14)
@@ -270,6 +277,31 @@ leading run of capitals lowers all but the last, so `UICulture` becomes `uiCultu
 becomes `id`. It applies to **property names at every depth** and never to **dictionary keys** —
 which is why it happens at the point where the encoder still knows which is which, and not as a
 pass over finished bytes.
+
+**Amended 2026-09-03, at T6**, with where that point is in Go.
+
+`encoding/json` has no seam at which a property name is still a property name: its encoder emits
+struct fields and map keys through the same call, and a `MarshalJSON` hook sees a whole value
+rather than one name. Re-implementing the encoder to get that seam would put this project's models
+at the mercy of a second reading of tag rules, embedding and `omitempty`.
+
+So the rename **walks the encoded document beside the value it was encoded from**. The bytes decide
+the structure — they are the encoder's own, and every number, string and escape is copied out of
+them unchanged — and the value answers the one question the bytes cannot: whether this object's
+keys came from a struct's fields or from a map's keys. That keeps `encoding/json` as the single
+authority on what a body contains, and confines this package to what it is named after.
+
+Two consequences worth stating rather than discovering:
+
+- **A value that writes its own JSON is not renamed**, because its names are not fields by the time
+  they exist. This is the reference's behaviour too — its naming policy is applied by the object
+  converter from a type's property metadata, and a custom converter that writes members never
+  consults it `[source: src/Jellyfin.Extensions/Json/JsonDefaults.cs:34-45,55-58 @ v10.11.11]`. A
+  model that needs both policies must therefore not write its own members. `units.Time` is safe: it
+  writes a string.
+- **A shape the walk cannot account for is a refusal, not a copy.** Half a body converted is the
+  same wrong answer as none of it, and it would be invisible; `Write` has already promised to send
+  nothing when it returns an error, so the caller can still refuse.
 
 ### 6.4 The escape pass (behaviours §1.16)
 

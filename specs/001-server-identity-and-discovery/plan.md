@@ -105,6 +105,33 @@ same table — the router, the `Allow` computation and the L0 test that asserts 
 exactly `surface.yaml` and nothing else. A table that lives inside the router cannot be used to
 check the router.
 
+**Amended 2026-09-03, at T8.** This table said `internal/surface` is "loaded from `surface.yaml`"
+and left open the two things loading it actually turns on.
+
+- **How the file reaches the binary: it is embedded, from a derived copy beside the package.**
+  The document stays under `docs/`, where its prose twin is and where
+  [docs/README.md](../../docs/README.md#paired-files-edit-both-halves-or-neither) governs it. But
+  `go:embed` cannot name a path outside its own package directory, and reading
+  `docs/compatibility/surface.yaml` off disk at run time would make the working directory part of
+  the deployment — which contradicts ADR-0002's one static binary as directly as a system library
+  would. So `internal/surface/surface.yaml` is a copy, and a test compares it to the document byte
+  for byte. The alternative, generating a Go source file from the document, was not taken: it moves
+  the refusals this task exists to ship out of the package and into a generator, and the task's
+  wording puts them in the loader.
+- **No YAML dependency.** ADR-0002 puts the standard library first and argues a further dependency
+  "where it is needed, in the plan that needs it"; this plan does not name one, and the document
+  does not need one. It is generated, and every line in it is a comment, a top-level key, a
+  `key: value` or a flow sequence of scalars. The reader written here is strict where a general
+  parser is lenient — an unknown key, a missing key, a repeated key, an unexpected indent and a
+  value it cannot read are each an error naming the line — which is the property the surface file
+  wants: a row that does not say what level it must reach is a row nobody decided about, not a row
+  with a default.
+
+Two refusals beyond the task's own pair fell out of writing it and are cheap enough to keep: an
+`operation` declared on two rows, and two paths that differ only in casing. The second is the one
+worth naming, because canonicalisation (T9) folds a request's literal segments case-insensitively
+and would have no rule for choosing between two spellings that fold together.
+
 ## 4. Data model
 
 **Precious half.** One table, and it is the only state 001 owns that a user would miss.

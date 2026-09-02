@@ -1,0 +1,22 @@
+# testdata/valid.yaml with the second row's method changed to GET, so that the
+# document declares GET /System/Ping twice. The operations still differ, which
+# is what makes the refusal evidence about the duplicate route rather than
+# about the duplicate operation beside it.
+
+reference:
+  jellyfin_openapi_version: "10.11.11"
+  jellyfin_source_tag: "v10.11.11"
+
+endpoints:
+  - path: "/System/Ping"
+    method: GET
+    operation: GetPingSystem
+    consumers: []
+    feature: "001"
+    level: L2
+  - path: "/System/Ping"
+    method: GET
+    operation: PostPingSystem
+    consumers: [music-client]
+    feature: "001"
+    level: L2

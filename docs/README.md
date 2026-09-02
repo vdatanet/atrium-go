@@ -62,6 +62,17 @@ cannot drift:
 [reference-fixture-reading.json](compatibility/reference-fixture-reading.json) are **generated**.
 Never edit them by hand.
 
+`internal/surface/surface.yaml` is a **derived copy** of
+[surface.yaml](compatibility/surface.yaml), not a third opinion about the surface: the server
+embeds its own route table so that a binary started from any directory finds one
+([ADR-0002](decisions/0002-go-and-the-runtime-stack.md) wants one static binary, and `go:embed`
+cannot reach outside its package), and a test asserts the two are byte-identical. Edit the file
+above and copy it across:
+
+```bash
+cp docs/compatibility/surface.yaml internal/surface/surface.yaml
+```
+
 The same rule holds for two prose documents that split one decision:
 [roadmap §"Out of scope, and why"](roadmap.md#out-of-scope-and-why) and
 [api-surface §10](compatibility/api-surface-v1.md#10-deliberately-excluded-from-v1).

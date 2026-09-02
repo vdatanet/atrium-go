@@ -1,3 +1,9 @@
 # Reference material fetched at development time, never vendored (ADR-0005).
 # Jellyfin source, the pinned OpenAPI document, differential reports.
 /reference/
+
+# Credentials for the differential harness and the probes, which are pointed at
+# this server over HTTP (conformance.md, L3). Never committed; .env.example is
+# the tracked template.
+/.env
+/.env.local

@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/vdatanet/atrium-go/internal/build"
+	"github.com/vdatanet/atrium-go/internal/store/sqlite"
 	"github.com/vdatanet/atrium-go/internal/system"
 )
 
@@ -28,6 +29,14 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 
 	logger := NewLogger(stderr, cfg.LogLevel)
 
+	// Before anything reads or writes in it. The identity file is read next
+	// and the store is opened after that, and both would fail on a directory
+	// that is not there with a message about their own file rather than about
+	// the directory.
+	if err := EnsureDataDirectory(cfg.DataDirectory); err != nil {
+		return err
+	}
+
 	// Before the listener, because a refusal here is a refusal to start. An
 	// identity file that cannot be read is answered by stopping and naming it
 	// (plan 7): generating a fresh identity over it would make every client
@@ -42,6 +51,32 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		"version", build.Version(),
 		"data-directory", cfg.DataDirectory,
 		"installation-id", installationID,
+	)
+
+	// Also before the listener: a store that cannot be opened, or a migration
+	// that fails, is a refusal to start (plan 7). Opening it applies every
+	// pending migration, so this is where "migrations are applied at start"
+	// (plan 4) actually happens.
+	//
+	// Deliberately not ctx. ctx is the shutdown signal, and a start is not
+	// something this process abandons half-way: a signal arriving during the
+	// start would turn a clean stop into a failure to start, which is what the
+	// exit status and the log would then say. The identity above takes no
+	// context at all for the same reason. Open still takes one so that a caller
+	// with a long migration and a real deadline has somewhere to put it.
+	store, err := sqlite.Open(context.WithoutCancel(ctx), cfg.DataDirectory)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	// What a start did to the schema, at debug because on every start after
+	// the first it did nothing. The versions are per half, because a rescan
+	// rebuilds one of them without touching the other (ADR-0003).
+	logger.Debug("store opened",
+		"path", store.Path(),
+		"precious-migrations-applied", store.AppliedMigrations(sqlite.Precious),
+		"derived-migrations-applied", store.AppliedMigrations(sqlite.Derived),
 	)
 
 	server, err := NewServer(cfg, logger, NoRoutes())

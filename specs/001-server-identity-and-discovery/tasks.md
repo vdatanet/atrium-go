@@ -43,9 +43,18 @@ list is long for four routes.
 
 ## T2 — The installation identity, as a file beside the store
 
-- [ ] **Changes:** `internal/system` — read `installation-id` from the data directory; create it
+- [x] **Changes:** `internal/system` — read `installation-id` from the data directory; create it
   with `O_EXCL` from 16 cryptographically random bytes rendered as 32 lowercase hex when absent;
   **refuse to start** on a file that is unreadable or not 32 lowercase hex.
+- **Amended 2026-09-03, on doing it:** two things the wording did not survive contact with.
+  `O_EXCL` on the destination leaves the file existing and empty until the write lands, and a
+  concurrent start that reads in that window refuses to boot on an identity it watched being
+  written — measured on round five of sixty-four rounds of eight starts. The line is written to a
+  temporary file and published with a **hard link**, which refuses an existing name the way
+  `O_EXCL` does and never exposes a half-written file; `plan.md` §4 carries the same amendment.
+  And the store rebuild below is performed as *"remove everything in the data directory except the
+  identity file"* rather than by name: the store's file names are T3's to choose, and a test that
+  named one would pass for the wrong reason on the day it changed.
 - **Depends on:** T1
 - **Verified by:** four tests — a fresh directory produces a 32-hex id; a second start returns the
   same one; **deleting the database and starting again returns the same one** (AC-4's second

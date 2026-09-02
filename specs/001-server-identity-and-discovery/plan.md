@@ -138,6 +138,15 @@ Two ways out, and the second is chosen:
   `O_EXCL` so two starts cannot race, read thereafter. A store rebuild does not touch it; moving
   the data directory carries it along.
 
+**Amended 2026-09-03, at T2.** `O_EXCL` alone does not buy what the paragraph above claims. Creating
+the file exclusively and writing to it afterwards leaves a window in which the file exists and is
+empty, and a second start that reads inside that window finds a malformed identity and — by §7,
+correctly — refuses to boot. Sixty-four rounds of eight concurrent starts hit it on round five. The
+guarantee is kept by writing the line to a temporary file in the same directory and publishing it
+with a **hard link**, which fails with `EEXIST` exactly as `O_EXCL` does and never exposes a
+half-written file. *"Two starts cannot race"* is unchanged; the mechanism that delivers it is not
+`O_EXCL` on the destination.
+
 The file is **precious** in ADR-0003's sense even though it is not in the database, and §7 says what
 happens when it cannot be read.
 

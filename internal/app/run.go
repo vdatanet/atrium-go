@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/vdatanet/atrium-go/internal/build"
+	"github.com/vdatanet/atrium-go/internal/system"
 )
 
 // Run is the whole process: configuration, logging, the server, and its stop.
@@ -26,9 +27,21 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	}
 
 	logger := NewLogger(stderr, cfg.LogLevel)
+
+	// Before the listener, because a refusal here is a refusal to start. An
+	// identity file that cannot be read is answered by stopping and naming it
+	// (plan 7): generating a fresh identity over it would make every client
+	// treat this as a new server and re-authenticate, which is the same
+	// failure, silently and expensively.
+	installationID, err := system.InstallationID(cfg.DataDirectory)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("starting",
 		"version", build.Version(),
 		"data-directory", cfg.DataDirectory,
+		"installation-id", installationID,
 	)
 
 	server, err := NewServer(cfg, logger, NoRoutes())

@@ -2,14 +2,19 @@
 
 An independent implementation of the **Jellyfin API**, written in Go from specifications alone.
 
-> **Status: no server yet, and that is deliberate.**
+> **Status: a binary that serves nothing, and that is deliberate.**
 >
 > This repository holds twelve specifications, a constitution, the project architecture and roadmap,
 > seven numbered architecture decision records — six of them written — and a set of measured
 > compatibility documents. **No endpoint is implemented**, and no compatibility claim on this page
-> has been measured against this server, because this server does not exist yet.
+> has been measured against this server.
 >
-> The one exception is `tools/`: two Go programs that measure **the reference**, written on
+> Since 2026-09-03 there is a binary. `atrium --data-dir <directory>` starts, listens, answers every
+> path with the empty `404` a reference server sends for a path matching no route, and stops cleanly
+> on `SIGINT` or `SIGTERM`. That is the first of 001's twenty-one tasks: the four endpoints come
+> last, because the request pipeline they hang on is the twenty in between.
+>
+> The other code here is `tools/`: two Go programs that measure **the reference**, written on
 > 2026-09-02 to discharge the last two probe debts in
 > [reference-target.md](docs/compatibility/reference-target.md) that a read-only run could settle.
 > Both moved the claim they were sent to check.

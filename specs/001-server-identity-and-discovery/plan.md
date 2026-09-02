@@ -3,7 +3,7 @@ feature: 001-server-identity-and-discovery
 title: Server identity and discovery — implementation plan
 status: Accepted
 created: 2026-09-02
-updated: 2026-09-02
+updated: 2026-09-03
 spec_status_required: Accepted
 ---
 
@@ -79,7 +79,9 @@ the one place this plan adds a mechanism the ADR did not anticipate.
 
 | Module | Change | Responsibility |
 |---|---|---|
-| `cmd/atrium` | new | Flags and environment, configuration, wiring, start, graceful stop. No behaviour. |
+| `cmd/atrium` | new | The `main` that calls `internal/app` and turns an error into an exit status. No behaviour, no branch a test would want to reach. |
+| `internal/app` | new | The entry layer: flags and their environment fallback, the logger, and the HTTP server's lifecycle — bind, serve, drain, stop. |
+| `internal/build` | new | The link-time version stamp, read by the entry layer for a startup line and by the edge for `Server: Atrium/<version>`. A leaf, because both hold it. |
 | `internal/units` | new | The tick and the date types. 001 sends neither — it is here because 001 delivers the unit sweep (§6 of the spec) and the sweep needs a type to recognise. |
 | `internal/wire` | new | Every response body is written here. Encoder, the §1.16 escape pass, the two naming policies, the content type that names the one it used. |
 | `internal/surface` | new | The route table: method, path, operation, owning feature, level — loaded from `surface.yaml` and the single source for routing, for `Allow`, and for the L0 registration check. |
@@ -88,6 +90,15 @@ the one place this plan adds a mechanism the ADR did not anticipate.
 | `internal/ports` | new | `Clock`, and the narrow store interface `system` needs. |
 | `internal/store/sqlite` | new | The precious half's first table and its migration runner. |
 | `conformance` | new | L0, L1 and L2 over a server started in process. Imports nothing of ours. |
+
+**Amended 2026-09-03, at T1.** This table gave `cmd/atrium` the start and the stop, and that
+cannot be where they live: [architecture §3](../../docs/architecture.md#3-repository-layout) says
+`cmd/atrium` is wiring and nothing else, *"if something there is worth testing, it is in the wrong
+place"* — and a server that binds, drains and stops on a signal is worth testing. T1's check starts
+one in process and signals it, which needs a package a test can call. So the entry layer is
+`internal/app`, `cmd/atrium` is a `main` that calls it, and the build stamp is `internal/build`
+because the edge needs it for `Server` (behaviours §4.1) and the entry layer needs it for a startup
+line, so it may live in neither.
 
 **Why `surface` is its own package and not a slice in `httpapi`.** Three unrelated things read the
 same table — the router, the `Allow` computation and the L0 test that asserts the server exposes

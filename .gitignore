@@ -7,3 +7,7 @@
 # the tracked template.
 /.env
 /.env.local
+
+# A binary built in the working tree by `go build ./cmd/atrium`. The name is the
+# command's, so it is the one file a plain build leaves behind.
+/atrium

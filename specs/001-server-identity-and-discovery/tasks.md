@@ -63,10 +63,21 @@ list is long for four routes.
 
 ## T3 — The store: a migration runner and the installation row
 
-- [ ] **Changes:** `internal/store/sqlite` — open with WAL, `synchronous=NORMAL`, foreign keys on
+- [x] **Changes:** `internal/store/sqlite` — open with WAL, `synchronous=NORMAL`, foreign keys on
   and a busy timeout; one writer handle and a reader pool; a forward-only numbered migration runner
   with a schema-version table per half; `0001_installation.sql` creating the single-row table of
   plan §4 with its `CHECK (id = 1)`.
+- **Amended 2026-09-03, on doing it:** three decisions the wording left open, all recorded in
+  `plan.md` §4. The database is **one file** for both halves, `atrium.db`, with `schema_version`
+  holding a row per half. **The entry layer creates the data directory** — T2 left this to T3, and
+  the store cannot be where it happens, because the identity file is read first and would fail
+  first; it creates the final component only, so a mistyped `--data-dir` is a refusal naming the
+  missing parent rather than an empty installation that looks like a fresh one. And the reader pool
+  is opened `query_only`, which makes *"one writer handle and a pool of readers"* something the
+  engine refuses to break rather than a convention this package asks callers to keep.
+  `internal/ports` carries `InstallationStore` with two of plan §5's three methods:
+  `MarkSetupComplete` takes a date, dates are ticks, and the tick type is T4's — the column it
+  writes exists and the method lands with the type it needs.
 - **Depends on:** T1
 - **Verified by:** a migration on an empty directory creates the row with `server_name = 'atrium'`;
   a second start applies nothing; an attempted second row is refused by the constraint; the

@@ -121,6 +121,28 @@ two rows is a bug that reads as a mystery.
 
 **Migrations:** forward-only, numbered, applied at start. `0001_installation.sql` creates the above.
 
+**Amended 2026-09-03, at T3.** Three things this section left open, and the answers T3 took:
+
+- **One file, `atrium.db`, for both halves.** The halves are two migration lineages and two rebuild
+  policies, not two databases. ADR-0003 wants a backup to be one file, and a precious row naming a
+  derived item by its identifier is an ordinary join that two files would need `ATTACH` for. What
+  keeps them apart is architecture §6's rule that no reference points from the precious half into
+  the derived one, which a second file would not enforce either. The runner keeps its own state in
+  a `schema_version` table with **one row per half**, so the derived half sits at `0` here while the
+  precious half is at `1` — the state a single lineage could not represent.
+- **The runner takes a half.** Both lineages are loaded and applied at every start, and the derived
+  one is empty rather than absent. The first feature with a derived table adds a file; it does not
+  also change the runner. ADR-0003's *"a derived-version mismatch at startup is a rescan rather than
+  an error"* is **not** implemented: rescanning needs a scanner, which is 003's, so today both
+  halves refuse a version higher than the build knows. That refusal is owed a replacement in 003.
+- **The entry layer creates the data directory**, and creates its **final component only**. T2 left
+  this open and it could not stay open: the store cannot create the directory it lives in, because
+  the identity file is read first and would fail before the store was reached. `os.MkdirAll` was
+  rejected — a server that invents every directory on a mistyped `--data-dir` answers a typo with an
+  empty installation that looks exactly like a fresh one, while the operator's data sits untouched
+  under the path they meant. One component under an existing parent makes a first start work and
+  makes `--data-dir /var/lbi/atrium` fail while naming `/var/lbi`.
+
 ### The server identity is a file, not a row, and AC-4 is why
 
 AC-4 asks that `Id` be *"identical across a restart **and across a rebuild of the store from

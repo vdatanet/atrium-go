@@ -1,0 +1,20 @@
+# testdata/valid.yaml with the second row's level changed to L9, which
+# docs/compatibility/conformance.md does not define.
+
+reference:
+  jellyfin_openapi_version: "10.11.11"
+  jellyfin_source_tag: "v10.11.11"
+
+endpoints:
+  - path: "/System/Ping"
+    method: GET
+    operation: GetPingSystem
+    consumers: []
+    feature: "001"
+    level: L2
+  - path: "/System/Ping"
+    method: POST
+    operation: PostPingSystem
+    consumers: [music-client]
+    feature: "001"
+    level: L9

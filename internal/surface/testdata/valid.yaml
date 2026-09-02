@@ -1,0 +1,21 @@
+# A minimal well-formed surface document. The two rejection fixtures beside it
+# are this file with one thing changed, so that a refusal is evidence about
+# that one thing rather than about the fixture.
+
+reference:
+  jellyfin_openapi_version: "10.11.11"
+  jellyfin_source_tag: "v10.11.11"
+
+endpoints:
+  - path: "/System/Ping"
+    method: GET
+    operation: GetPingSystem
+    consumers: []
+    feature: "001"
+    level: L2
+  - path: "/System/Ping"
+    method: POST
+    operation: PostPingSystem
+    consumers: [music-client]
+    feature: "001"
+    level: L2

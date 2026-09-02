@@ -178,9 +178,19 @@ list is long for four routes.
 
 ## T8 — `internal/surface`: the route table
 
-- [ ] **Changes:** `internal/surface` — load `docs/compatibility/surface.yaml`; expose the canonical
+- [x] **Changes:** `internal/surface` — load `docs/compatibility/surface.yaml`; expose the canonical
   spelling per path, the methods registered on each path, and the owning feature and level. Refuse
   to load a row with an unknown level or a duplicate method-and-path.
+- **Amended 2026-09-03, on doing it:** two things the wording left open, both recorded in
+  `plan.md` §3. The file **reaches the binary embedded, from a derived copy beside the package**,
+  with a test asserting it is the document byte for byte: `go:embed` cannot name a path outside its
+  own package directory, and reading the document off disk at run time would make the working
+  directory part of the deployment, against ADR-0002's one static binary. And the document is read
+  **without a YAML dependency**, because ADR-0002 argues one "in the plan that needs it" and this
+  plan names none — the reader is strict where a general parser is lenient, so a key nobody
+  consumes, a missing key and an unexpected indent are refusals naming a line rather than a table
+  that loads with a hole in it. `Methods` sorts, because that ordering is T11's `Allow` header and
+  one place that sorts is one place to be wrong.
 - **Depends on:** —
 - **Verified by:** the table loads all 59 rows; 001's four are present with their operations; a
   fixture with a duplicate row and one with `level: L9` are both rejected.

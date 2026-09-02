@@ -56,6 +56,24 @@ breaks everything:
 - **Unit sweep** — every field whose name ends in `Ticks` must be an integer, and every field whose
   name ends in `Date` must serialise with seven fractional digits and a `Z`.
 
+  > ⚠️ **Both halves of that sentence were measured on 2026-09-02 and both need qualifying**
+  > `[probe: tools/probe_wire_format, Jellyfin 10.11.11, 2026-09-02]`.
+  >
+  > **The suffix does not reach every date.** Of nine date-valued fields observed, three do not end
+  > in `Date` — `DateCreated`, `DateLastMediaAdded` and `LastPlaybackCheckIn` — so a sweep keyed on
+  > the suffix alone checks six of nine. The rule the sweep needs is *a value that is a date*, and
+  > the field name is a heuristic for finding one.
+  >
+  > **Seven digits is not universal in the reference**, which is [behaviours §1.2](behaviours.md#12-dates-carry-up-to-seven-fractional-digits)'s
+  > own correction: `LastPlayedDate` and `LastActivityDate` were observed with three and six. The
+  > sweep is still right as a rule for **Atrium** — it is what Atrium emits — but it is a statement
+  > about this server, not a shared fact, and an L3 comparison of those two fields will differ.
+  >
+  > **And the casing sweep has a trap beside it.** A dictionary's *keys* are data, not schema:
+  > `ImageBlurHashes` is keyed by image tag, and a sweep that treats every JSON object key as a
+  > property name reported **688 of 899 keys** as casing failures in the same run. The sweep must
+  > walk the registered response models, not an arbitrary decoded body.
+
 ## L2 — Semantic
 
 A fixture library with known content, checked into the repository as **metadata only**: directory

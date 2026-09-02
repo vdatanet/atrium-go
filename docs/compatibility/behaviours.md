@@ -340,6 +340,41 @@ v10.11.11]` — a configuration change validates the new path and asks for a res
 `[source: Emby.Server.Implementations/ApplicationHost.cs:761-764, 779-797 @ v10.11.11]`, so a
 server configured in place goes on advertising the scheme it started with until it comes back.
 
+> ⚠️ **The override is one of three branches, and this entry described it as the rule — corrected
+> 2026-09-02.** A third party's server, `EnableHttps` on with a valid public certificate and
+> therefore `ListenWithHttps` true, answers `LocalAddress: http://<lan address>:<http port>` on
+> `/System/Info/Public` — plain HTTP, against a request that arrived over TLS
+> `[probe: manual request against an operator's server, Jellyfin 10.11.11, 2026-09-02]`. The rule as
+> written says that cannot happen. Read at the pinned tag, it can:
+>
+> | Branch | Produces | Is `ListenWithHttps` consulted? |
+> |---|---|---|
+> | `PublishedServerUrl` is set | that value, verbatim and trimmed | **No** |
+> | `EnablePublishedServerUriByRequest` is on | `GetLocalApiUrl(request.Host.Host, request.Scheme, requestPort)` | **No** — the request's own scheme is passed in |
+> | otherwise | `GetLocalApiUrl(smart, null, port)` | **Yes** |
+>
+> `[source: Emby.Server.Implementations/ApplicationHost.cs:871-901 @ v10.11.11]`
+>
+> The hinge is one operator. `GetLocalApiUrl` defaults the scheme with
+> `scheme ??= ListenWithHttps ? Uri.UriSchemeHttps : Uri.UriSchemeHttp`
+> `[source: Emby.Server.Implementations/ApplicationHost.cs:939 @ v10.11.11]`, so a scheme that was
+> **passed in** is never overridden. *"Regardless of the scheme the request came in on"* is therefore
+> true of the third branch and **false of the second**, where the answer is the request's own scheme
+> and host.
+>
+> **The 2026-09-02 reproduction is not withdrawn.** It measured the third branch, on an instance this
+> project stood up with neither of the other two settings, and for that branch it holds exactly. What
+> it could not see is that it was one branch of three — which is what a default instance cannot show
+> and a configured one can. **Which branch the observed server is in is not established**: the second
+> would answer with the request's host, and it answered with a LAN address, so either
+> `PublishedServerUrl` names that address or the certificate was not loaded in that process
+> (§2.3's own restart caveat). Both are settings only its operator can read.
+>
+> **Consequence for [§4.2](#42-localaddress-does-not-get-an-https-override):** the divergence argued
+> there is against the third branch. It is unaffected — Atrium reflects the scheme it is reachable
+> on either way — but the argument should not be read as covering a behaviour with two more paths
+> through it than it described.
+
 **Depends on it:** clients that hand this address to a device without a TLS stack (a DLNA renderer)
 break when it is HTTPS. This is a genuine footgun that has cost real debugging time.
 

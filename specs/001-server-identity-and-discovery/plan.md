@@ -238,6 +238,27 @@ asked for camelCase and was answered in PascalCase is §1.13's failure mode exac
 object out of the client's decoder — and a silent fall-through is that failure with no way to see
 it.
 
+**Amended 2026-09-03, at T7.** `Write`'s last argument is a **`Profile`**, not a `Naming`:
+
+```
+// internal/wire
+Profile int  // ProfilePlain | ProfilePascal | ProfileCamel
+func Negotiate(accept string) Profile
+func Write(w http.ResponseWriter, status int, v any, p Profile) error
+```
+
+Three declared content types over two naming policies (spec §3.0.2) is the whole reason. A body
+written under `NamingPascal` cannot say which of `application/json` and
+`application/json; profile="PascalCase"` asked for it, so the argument that was carrying the naming
+policy could not also carry the echo, and §1.10's rule — *the content type belongs to the thing
+that produced the body* — forbids the obvious repair of stamping the header in a middleware
+afterwards. The negotiation therefore hands `Write` its single winner whole, and the winner's two
+halves are read from one table.
+
+`Naming` survives as the policy `marshal` dispatches on, and nothing outside the package produces
+one any more. The T6 amendment's rule holds at both levels: an unknown `Profile` and an unknown
+`Naming` are each an error rather than a fall-through to PascalCase.
+
 ## 6. Algorithms
 
 ### 6.1 Path canonicalisation (§3.6, behaviours §1.14)
@@ -302,6 +323,39 @@ Two consequences worth stating rather than discovering:
 - **A shape the walk cannot account for is a refusal, not a copy.** Half a body converted is the
   same wrong answer as none of it, and it would be invisible; `Write` has already promised to send
   nothing when it returns an error, so the caller can still refuse.
+
+**Amended 2026-09-03, at T7**, with three things the four rules did not settle and one that the
+measurement behind them does not reach.
+
+**Where it lives.** `wire.Negotiate(accept string) Profile`, beside the writer, because §3's module
+table already puts *"the content type that names the one it used"* there and the parse has no other
+consumer. It takes the header value rather than a request: where a request carries more than one
+`Accept` field line, the caller joins them with a comma first (RFC 9110 §5.3 makes that the same
+header), and that is T14's to do.
+
+**A wildcard range is a candidate, and it names no profile.** `*/*` and `application/*` rank as
+ordinary ranges answered with the plain type, so `*/*, application/json; profile="CamelCase"`
+answers **plain** on the tie. The reference does not discard a wildcard before ranking: it sets
+`RespectBrowserAcceptHeader`, under the comment *"Allow requester to change between camelCase and
+PascalCase"* `[source: Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs:125-126 @ v10.11.11]`.
+
+**Parameters written after `q` do not select a profile.** They are accept-extensions and belong to
+the negotiation rather than to the media type (RFC 9110 §12.5.1), so
+`application/json;q=0.9;profile="CamelCase"` asks for plain JSON. ⚠️ UNVERIFIED: no probe has sent
+one, and this is the RFC's reading rather than a measurement.
+
+**And the rule that a `charset` "falls back to the plain type" has two readings, which no
+measurement separates.** Either the range becomes a candidate *for the plain type* and keeps its
+place in the ranking, or it matches nothing and the next range is tried. Every measured case is a
+single-range `Accept`, where both readings answer plain and agree. They differ on one shape:
+
+```
+Accept: application/json; profile="CamelCase"; charset=utf-8, application/json; profile="CamelCase"
+```
+
+— plain under the first reading, camelCase under the second. This implementation takes the **first**,
+because it is what this plan and spec §3.0.2 say in as many words. It is one request to settle, and
+it is owed a probe.
 
 ### 6.4 The escape pass (behaviours §1.16)
 

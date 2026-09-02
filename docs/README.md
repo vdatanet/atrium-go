@@ -87,5 +87,4 @@ cites from it.
 |---|---|
 | **ADR-0003** — the store | Reserved and unwritten. [architecture §6](architecture.md#6-state-and-the-boundary-adr-0003-still-owes) gives it a boundary, not an answer. |
 | **ADR-0006** — password hashing | Reserved and unwritten. |
-| `AGENTS.md` | The contributor and agent rules, including the *no CI job contacts a Jellyfin* rule that [ADR-0007](decisions/0007-a-container-runtime-for-the-reference-instance.md) cites. |
 | `tools/README.md` | Waiting for there to be a `tools/`. |

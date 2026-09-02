@@ -184,7 +184,7 @@ Withheld because they belong to the receiving project:
 - **ADR-0003** the store and **ADR-0006** password hashing. The numbers are reserved;
   `docs/decisions/README.md` still indexes them. Kept in the index because ADRs are numbered
   immutably and a gap would be a lie about the history.
-- `AGENTS.md` and `tools/README.md`.
+- `tools/README.md`.
 
 **Four of these have been taken, on 2026-09-02.** [ADR-0002](docs/decisions/0002-go-and-the-runtime-stack.md)
 decides the runtime stack — Go, chi over `net/http`, `encoding/json` behind one wire package, and
@@ -192,8 +192,8 @@ no cgo — after measuring the three things that decide it rather than assuming 
 [docs/architecture.md](docs/architecture.md) is the project-level shape every `plan.md` inherits
 from; **three** documents cite it (`specs/README.md`, the plan template, and ADR-0007 twice by
 anchor), and this list said nine, which is `docs/roadmap.md`'s count one row above it in
-PROVENANCE's table. [docs/roadmap.md](docs/roadmap.md) and [docs/README.md](docs/README.md) are
-written too.
+PROVENANCE's table. [docs/roadmap.md](docs/roadmap.md), [docs/README.md](docs/README.md) and
+[AGENTS.md](AGENTS.md) are written too.
 
 **Dangling links are intentional.** PROVENANCE.md §"Links with nothing to point at" enumerates
 them: *"retargeting one is an edit to a specification, and that is this project's decision rather

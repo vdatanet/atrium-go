@@ -1,7 +1,7 @@
 ---
 feature: 001-server-identity-and-discovery
 title: Server identity and discovery — implementation plan
-status: In review
+status: Accepted
 created: 2026-09-02
 updated: 2026-09-02
 spec_status_required: Accepted
@@ -12,7 +12,10 @@ spec_status_required: Accepted
 > **This document describes HOW.** It may not restate WHAT: the spec is the authority on behaviour,
 > and a plan that repeats it will disagree with it eventually.
 
-**On the gate.** The template asks for a spec at `Accepted` or better. 001's spec says `Implemented`,
+**On the gates.** This plan moved to `Accepted` when its review returned and the task list was
+asked for; the task list's own `plan_status_required` is what that satisfies.
+
+The template asks for a spec at `Accepted` or better. 001's spec says `Implemented`,
 which is [a statement about the exporting project](../../PROVENANCE.md) — *the WHAT is settled and
 was proven once, elsewhere*. That satisfies the gate and nothing else: no route is served here.
 This is the first plan in the repository, so the reading is recorded rather than assumed.

@@ -9,7 +9,7 @@ without it.
 
 ---
 
-## 1. The six that are absolute
+## 1. The seven that are absolute
 
 ### 1.1 Never read anything withheld from `../atrium-media-server`
 
@@ -83,6 +83,32 @@ one that is never automatic* — and it is stated rather than worked around.
 
 Enforced, not promised: the test harness fails any test that opens a network connection
 ([architecture §8](docs/architecture.md#8-testing-and-conformance)).
+
+### 1.7 Never commit a credential, and verify that on the branch you are committing from
+
+`.env` holds credentials and is ignored; `.env.example` is the tracked template. That much is
+ordinary. The part that is not ordinary, and the reason this is a rule rather than an assumption:
+
+**An ignore rule protects only the branches that carry it.** `.gitignore` is a tracked file, so a
+branch cut before the rule existed — or cut from a different line of work — does not have it, and a
+file that is ignored on one branch is staged by `git add -A` on another. Verifying the ignore
+somewhere is not verifying it here.
+
+So the check is on the branch you are about to commit from, and it is the same operation you are
+about to perform rather than a proxy for it:
+
+```bash
+git add -A --dry-run | grep -E '\.env|secret|credential|\.pem$|\.key$'
+```
+
+Silence is the pass. **`git check-ignore` is not the check** — it reports nothing for a file that is
+already tracked, so it answers *"is this ignored"* with a *"no"* that reads like *"this is fine"*
+exactly when it is not. `git ls-files` answers whether a file is tracked; that is the question.
+
+**And a leaked credential is not undone by removing it.** Rewriting history does not close it:
+GitHub keeps a merged pull request's refs, so the commit stays reachable by its own SHA and the file
+is still served. The remediation is to rotate the credential; everything else is tidying afterwards.
+Prefer naming paths over `git add -A` when a working tree holds anything that must not travel.
 
 ---
 

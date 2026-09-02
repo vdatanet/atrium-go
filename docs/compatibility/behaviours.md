@@ -56,6 +56,36 @@ transcoder for exactly this reason), so emitting three digits would not break th
 **Atrium does:** emits seven fractional digits and a `Z` suffix. Accepts anything ISO-8601 on input,
 with or without a timezone; a missing timezone is read as UTC.
 
+> ⚠️ **Seven is the maximum and the usual case, not a constant — measured 2026-09-02**, when this
+> claim's probe was finally written and the `prior-probe` discharged. Over 352 date values on eleven
+> routes, **346 carry seven fractional digits and six do not**
+> `[probe: tools/probe_wire_format, Jellyfin 10.11.11, 2026-09-02]`:
+>
+> | Field | Observed |
+> |---|---|
+> | `LastPlayedDate` | 7 digits x104, **6 digits x3**, **3 digits x1** — `2026-08-13T14:01:13.061Z` |
+> | `LastActivityDate` | 7 digits x12, **6 digits x2** — `2026-09-02T17:58:58.632188Z` |
+> | `DateCreated`, `DateLastMediaAdded`, `EndDate`, `LastLoginDate`, `LastPausedDate`, `LastPlaybackCheckIn`, `PremiereDate` | 7 digits, always |
+>
+> **The mechanism is not established here**, and this is recorded as a measurement without one — the
+> weaker kind of entry, marked as such, the way [§1.7](#17-a-null-property-is-absent-everywhere-by-one-setting)'s
+> exception is. The obvious explanation does not survive its own evidence: every short value is one
+> whose remaining digits would be trailing zeros (`.061` is `.0610000`, `.055673` is `.0556730`), which
+> looks like trailing-zero trimming — but `.0000000` is written **in full** on seven other fields, and
+> a rule that trims trailing zeros would have emitted no fraction at all there.
+>
+> **What this changes for Atrium: nothing, and that is the point.** Emitting seven digits always is
+> still right — it is what 346 of 352 values do, it is what a client parses either way, and inventing
+> the short form would mean reproducing a mechanism nobody has identified. What changes is the
+> **conformance** claim: a golden that asserts seven digits on `LastPlayedDate` or `LastActivityDate`
+> is asserting something the reference does not always do, and a differential comparing those two
+> fields will see a difference that is real and is the reference's.
+
+> **`0001-01-01T00:00:00.0000000Z` is how an unset date arrives**, on `DateCreated`,
+> `DateLastMediaAdded` and `LastPlaybackCheckIn` in the same run. It is .NET's `DateTime.MinValue`,
+> and it is emitted rather than omitted — so §1.7's "a null property is absent" does not cover it:
+> the value is not null, it is the zero of its type.
+
 ### 1.3 Durations and positions are .NET ticks
 
 **Jellyfin does:** expresses `RunTimeTicks`, `PositionTicks`, `PlaybackPositionTicks` and
@@ -786,6 +816,43 @@ outside the set is ignored rather than refused (005 §3.3), so a missing member 
 would return a default order under the name of the one the client asked for.
 
 **Atrium does:** the same set. How `SortName` itself is derived is §2.6.
+
+> ⚠️ **The set is not the vocabulary — measured 2026-09-02**, when this claim's probe was written
+> and the `prior-probe` discharged. The reference's own enumeration names **thirty**
+> `[source: Jellyfin.Data/Enums/ItemSortBy.cs @ v10.11.11]`, and asked one at a time against a
+> 9,333-item library, **twenty-one tokens outside the recorded eight order rows**
+> `[probe: tools/probe_sort_vocabulary, Jellyfin 10.11.11, 2026-09-02]`:
+>
+> `AiredEpisodeOrder`, `Album`, `OfficialRating`, `StartDate`, `Name`, `Runtime`,
+> `CommunityRating`, `ProductionYear`, `CriticRating`, `IsFolder`, `IsUnplayed`, `IsPlayed`,
+> `SeriesSortName`, `VideoBitRate`, `AirTime`, `Studio`, `IsFavoriteOrLiked`,
+> `DateLastContentAdded`, `SeriesDatePlayed`, `ParentIndexNumber`, `IndexNumber`.
+>
+> **The method, because the verdict depends on it.** Each token was asked ascending and descending
+> and the returned identifier sequences compared; a token that orders answers two different
+> sequences, and a token that is ignored answers the default order both times. The control is a
+> token no enumeration contains, and it is the method's own check that it answered **identically to
+> `Default`** — the one member of the thirty that is *supposed* to mean "no ordering".
+> `Random` was the one member whose two identical requests differed, which is §3.6's seedless
+> per-row shuffle seen from another angle. One member, `SeriesDatePlayed`, orders rows but takes
+> **63 seconds** a request on this library where every other token answers in under a second — the
+> one place this run measured a cost rather than a behaviour, and it is why the probe's timeout is
+> generous.
+>
+> **This is a floor that was read as a set.** The eight were what a 2026-06-13 session happened to
+> ask for, and nothing in that measurement claimed closure — the register said so, which is why the
+> row stayed open.
+>
+> **What it changes is not this entry but 005's.** Principle I is zero delta: a client sending
+> `SortBy=ParentIndexNumber` gets one order from the reference and, from a server implementing eight
+> tokens, a different one. **All three tokens a shipping music client sends outside the eight —
+> `ParentIndexNumber`, `IndexNumber` and `ProductionYear` — order rows here**, so this is not a
+> hypothetical client. [client-embeat-mobile §5.8](client-embeat-mobile.md#58-the-album-play-queue-is-correctly-ordered-by-accident)
+> concluded that album ordering survives *by accident* because two of the three keys evaporate; the
+> reference does not drop them, so against the reference the same request is ordered **on purpose**,
+> and a server that drops them is the one introducing the accident. Which of the thirty v1
+> implements is [005](../../specs/005-item-query-api/spec.md)'s decision and is now a decision it
+> knows it is taking.
 
 ### 2.6 `SortName` has two derivations, and three types use the second
 

@@ -2,12 +2,17 @@
 
 An independent implementation of the **Jellyfin API**, written in Go from specifications alone.
 
-> **Status: there is no code here yet, and that is deliberate.**
+> **Status: no server yet, and that is deliberate.**
 >
-> This repository currently holds twelve specifications, a constitution, the project architecture
-> and roadmap, seven numbered architecture decision records — five of them written — and a set of
-> measured compatibility documents. Nothing is implemented. No compatibility claim on this page has
-> been measured against this server, because this server does not exist yet.
+> This repository holds twelve specifications, a constitution, the project architecture and roadmap,
+> seven numbered architecture decision records — six of them written — and a set of measured
+> compatibility documents. **No endpoint is implemented**, and no compatibility claim on this page
+> has been measured against this server, because this server does not exist yet.
+>
+> The one exception is `tools/`: two Go programs that measure **the reference**, written on
+> 2026-09-02 to discharge the last two probe debts in
+> [reference-target.md](docs/compatibility/reference-target.md) that a read-only run could settle.
+> Both moved the claim they were sent to check.
 
 ## What this is
 

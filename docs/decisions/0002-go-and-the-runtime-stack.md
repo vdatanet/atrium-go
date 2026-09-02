@@ -202,8 +202,10 @@ pre-approved here.
   piece no route's own tests would exercise.
 - **This record decides nothing about the store, the password hashing, or the architecture.**
   ADR-0003 and ADR-0006 stay reserved and their index rows stay dangling;
-  [docs/architecture.md](../architecture.md) — which nine documents link to and which every
-  `plan.md` inherits from — is still owed.
+  [docs/architecture.md](../architecture.md) — which every `plan.md` inherits from — is still owed.
+  Three documents cite it: `specs/README.md`, the plan template, and ADR-0007 twice, by anchor.
+  (CLAUDE.md says nine; nine is `docs/roadmap.md`'s count in PROVENANCE's table, and this record
+  repeated the error before checking.)
 - **One leak line closes and PROVENANCE is left alone.** `docs/decisions/README.md:13` named Python;
   it now names this project's own decision. PROVENANCE's leak table still records what the export
   contained, because it is a description of the exported bytes and not a to-do list.

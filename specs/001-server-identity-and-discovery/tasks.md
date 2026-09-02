@@ -132,9 +132,20 @@ list is long for four routes.
 
 ## T6 — `wire`: the camelCase naming policy
 
-- [ ] **Changes:** two naming policies chosen at write time. The camelCase one lowers a leading run
+- [x] **Changes:** two naming policies chosen at write time. The camelCase one lowers a leading run
   of capitals all but the last, applies to **property names at every depth**, and never to
   **dictionary keys**.
+- **Amended 2026-09-03, on doing it:** the conversion is a **walk of the encoded document beside
+  the value it was encoded from**. `encoding/json` offers no seam where a property name is still a
+  property name, and re-implementing the encoder to make one would put tag rules, embedding and
+  `omitempty` at the mercy of a second reading — so the bytes decide the structure and the value
+  answers only the question they cannot, whether an object's keys came from a struct or from a map.
+  `plan.md` §6.3 carries the technique and the two things it forces: **a value that writes its own
+  JSON is not renamed** (which is the reference's behaviour as well
+  `[source: src/Jellyfin.Extensions/Json/JsonDefaults.cs:34-45,55-58 @ v10.11.11]`), and **a shape
+  the walk cannot account for is a refusal rather than a copy**, because half a converted body is
+  the same wrong answer as none of it and nobody would see it. An unrecognised `Naming` is an error
+  for the same reason; `plan.md` §5 carries that.
 - **Depends on:** T5
 - **Verified by:** a table test — `Id` → `id`, `UICulture` → `uiCulture`, a nested object's names
   converted, and a map-valued field whose keys come through untouched.

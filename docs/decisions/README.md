@@ -10,7 +10,7 @@ optional; a decision without visible alternatives is a preference.
 | # | Title | Status |
 |---|---|---|
 | [0001](0001-implement-the-jellyfin-api-not-a-new-one.md) | Implement the Jellyfin API, not a new one | Accepted |
-| [0002](0002-python-and-the-runtime-stack.md) | Python and the runtime stack | Accepted |
+| [0002](0002-go-and-the-runtime-stack.md) | Go, and the runtime stack | Accepted |
 | [0003](0003-sqlite-as-the-default-store.md) | SQLite as the default store | Accepted |
 | [0004](0004-pin-to-jellyfin-10-11.md) | Pin the reference to Jellyfin 10.11 | Accepted |
 | [0005](0005-licence.md) | Licence — GPL-3.0-or-later | Accepted |

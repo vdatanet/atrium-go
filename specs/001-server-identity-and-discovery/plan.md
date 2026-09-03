@@ -302,6 +302,36 @@ The router therefore only ever sees canonical paths, which is also why chi's own
 is never exercised. No redirect is ever issued: [§1.14](../../docs/compatibility/behaviours.md)
 records that a `307` here would be a second divergence rather than a smaller one.
 
+**Amended 2026-09-03, at T9.** Three steps above, and three things they left open.
+
+- **A segment is not always either literal or a parameter.** Step 2 reads as though the two kinds
+  alternate one per segment, and five rows of `surface.yaml` say otherwise:
+  `/Audio/{itemId}/stream.{container}` spells `stream.` itself and takes the rest from the client,
+  and `/Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}` puts two parameters in one
+  segment with a literal dot between them. The fold is therefore per **run** within a segment
+  rather than per segment: `/audio/AbC/STREAM.MP4` canonicalises to `/Audio/AbC/stream.MP4`, the
+  literal respelled and both parameters untouched. A parameter run ends at the leftmost occurrence
+  of the next literal, from one byte in — it must match at least one byte, or `/videos/x/hls1/p/.ts`
+  would be a segment with no name.
+- **A literal path is looked up before a parametrised one.** `/items/filters` is `/Items/Filters`
+  rather than `/Items/{itemId}` holding an item called `Filters`. Nothing in the table is ambiguous
+  under that rule today, and among parametrised paths the document's own order decides
+  (Principle VII); it is written down so that a row added later is a decision rather than something
+  that falls out of a map.
+- **The stage is a value with a `Wrap` method, and it is built once.** `NewPathFolder(table)`
+  returns an error rather than panicking, because a table that cannot be folded is a failure to
+  start (§7) and the entry layer is where a failure to start is reported. A method value is a
+  `func(http.Handler) http.Handler`, so `folder.Wrap` is what a router's `Use` wants with no
+  adapter. **This is the shape T10–T13 inherit**, and `internal/httpapi`'s package documentation
+  states it.
+
+The path folded is the request's **escaped** path, and the rewrite is published as both `Path` and
+`RawPath` the way `net/http` keeps them. Folding the decoded path instead would segment on a `%2F`
+a client percent-encoded precisely so that it would not be a separator. A percent-encoded *literal*
+segment therefore does not fold — `/%53ystem/Info/Public` is not `/System/Info/Public` here — and
+what the reference does with one has not been measured; it is a probe somebody owes, not a
+behaviour this plan is claiming.
+
 ### 6.2 Query key canonicalisation (behaviours §1.15)
 
 The same shape, on names only. Each route declares its parameter spellings; an incoming key that

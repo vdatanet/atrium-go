@@ -230,6 +230,58 @@ func (s *Store) TouchSession(ctx context.Context, sessionID string, at units.Tim
 		`UPDATE sessions SET last_activity_at = ? WHERE id = ?`, int64(at.Ticks()), sessionID)
 }
 
+// CloseSession removes the session and every token that opens it.
+//
+// The transaction is OpenSession's contract read backwards. A token names its
+// session by a foreign key, so the tokens go first and the session second — the
+// other order is refused by the database rather than by this function, which is
+// the schema doing the arguing. Either both are gone afterwards or neither is,
+// and a half-applied eviction would leave a live credential resolving to a
+// session that has been evicted.
+//
+// The token deletion requires no rows. A session nothing is logged in against
+// is an ordinary state — every token on a device can be revoked without closing
+// the session (RevokeTokensFor) — and a caller that had to treat that as a
+// failure would refuse to evict exactly the session that has been idle longest,
+// which is the one the ceiling picks.
+//
+// The session deletion requires exactly one, for updateOneSession's reason: a
+// DELETE that matched nothing succeeds, and an eviction that evicted nothing
+// would let the login it was clearing room for exceed the ceiling silently.
+func (s *Store) CloseSession(ctx context.Context, sessionID string) error {
+	failed := func(err error) error {
+		return fmt.Errorf("%s: closing session %s: %w", s.path, sessionID, err)
+	}
+
+	transaction, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return failed(err)
+	}
+	defer transaction.Rollback()
+
+	if _, err := transaction.ExecContext(ctx,
+		`DELETE FROM access_tokens WHERE session_id = ?`, sessionID); err != nil {
+		return failed(err)
+	}
+
+	result, err := transaction.ExecContext(ctx, `DELETE FROM sessions WHERE id = ?`, sessionID)
+	if err != nil {
+		return failed(err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return failed(err)
+	}
+	if affected != 1 {
+		return failed(fmt.Errorf("the deletion removed %d rows, want 1", affected))
+	}
+
+	if err := transaction.Commit(); err != nil {
+		return failed(err)
+	}
+	return nil
+}
+
 // updateOneSession is updateOneUser for the other table, and carries the same
 // guard for the same reason: an UPDATE that matched nothing succeeds.
 func (s *Store) updateOneSession(ctx context.Context, what, sessionID, statement string, arguments ...any) error {

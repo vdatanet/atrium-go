@@ -76,12 +76,20 @@ type Selection struct {
 // All three are predicates over one list, so they commute: no request tells one
 // sequence from another, and spec 3.8 records that writing AC-15 is what
 // discovered it. ActiveWithinSeconds running last is the same kind of
-// no-difference as DeviceID running first. What a client *can* see is the
+// no-difference as DeviceID running first. ~~What a client *can* see is the
 // combination in step 2's first case — DeviceID still narrows a request that
 // also carries ControllableByUser — and that is what the test asserts, under
-// that name rather than under "the order". The sequence is written the
-// reference's way regardless, because being right is not conditional on being
-// observable.
+// that name rather than under "the order".~~
+//
+// **Corrected 2026-09-03, by T20, which wrote the wire half of AC-15.** That
+// sentence is the same claim spec 3.8 and 002 plan 6.10 each lost once, written
+// a third time here: the early return below answers [] whatever DeviceID
+// narrowed to, so those two sequences agree as well and no request reaches the
+// order at all. The combination case stays and is named for the combination,
+// because it catches two wrong builds — one that ignores ControllableByUser and
+// one that lets it widen the list back — and visible_test.go says so where it
+// is asserted. The sequence is written the reference's way regardless, because
+// being right is not conditional on being observable.
 //
 // # Why a non-empty ControllableByUser answers nothing
 //

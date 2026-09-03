@@ -385,3 +385,69 @@ func TestSessionsAreReturnedInAStatedOrder(t *testing.T) {
 		t.Errorf("Sessions returned %s then %s, want the older one first", open[0].ID, open[1].ID)
 	}
 }
+
+// CloseSession is the store half of spec 3.8's session ceiling (AC-13), and
+// what it has to remove is a session **and every token that opens it**.
+//
+// The two halves are asserted separately because only one of them is visible
+// through Sessions. A build that deleted the row and left the tokens cannot
+// commit at all — the foreign key refuses it — so the failure a test has to
+// rule out is the other order: a build that revoked the tokens and left the
+// session behind would pass every token assertion below while leaving the
+// evicted row in GET /Sessions and in the count the next login makes.
+//
+// The second session is here for the reason every eviction test needs one: a
+// method that deleted the whole table would satisfy an assertion about the
+// session it was asked to close.
+func TestClosingASessionRemovesItAndTheTokensThatOpenIt(t *testing.T) {
+	store := openForTest(t)
+	ctx := context.Background()
+
+	if err := insertUser(t, store.writer, testUserID, "Alice", "alice"); err != nil {
+		t.Fatalf("inserting the account returned %v", err)
+	}
+
+	evicted := aSession(testSessionID, testUserID, "music-client", "device-1")
+	if err := store.OpenSession(ctx, evicted, aTokenDigest); err != nil {
+		t.Fatalf("opening the session to be evicted returned %v", err)
+	}
+	kept := aSession(otherSessionID, testUserID, "video-client", "device-2")
+	if err := store.OpenSession(ctx, kept, anotherTokenDiges); err != nil {
+		t.Fatalf("opening the session that stays returned %v", err)
+	}
+
+	if err := store.CloseSession(ctx, evicted.ID); err != nil {
+		t.Fatalf("CloseSession returned %v", err)
+	}
+
+	open, err := store.Sessions(ctx)
+	if err != nil {
+		t.Fatalf("Sessions returned %v", err)
+	}
+	if len(open) != 1 || open[0].ID != kept.ID {
+		t.Fatalf("after closing %s the store holds %d sessions, want only %s", evicted.ID, len(open), kept.ID)
+	}
+
+	if _, _, found, err := store.SessionByTokenDigest(ctx, aTokenDigest); err != nil || found {
+		t.Errorf("the evicted session's token still resolves (found %t, err %v), want it gone", found, err)
+	}
+	if _, _, found, err := store.SessionByTokenDigest(ctx, anotherTokenDiges); err != nil || !found {
+		t.Errorf("the other session's token stopped resolving (found %t, err %v): a close by user "+
+			"rather than by session would look exactly like this", found, err)
+	}
+}
+
+// A close that matched nothing is an error, not a quiet success.
+//
+// It is updateOneSession's guard on a DELETE, and the reason is sharper here
+// than on an update: the caller is a login clearing room for the session it is
+// about to open, so an eviction that evicted nothing leaves that account over
+// the ceiling it was asked to enforce — silently, and on the login that was
+// meant to fix it.
+func TestClosingASessionThatIsNotThereIsRefused(t *testing.T) {
+	store := openForTest(t)
+
+	if err := store.CloseSession(context.Background(), otherSessionID); err == nil {
+		t.Fatal("closing a session no row has succeeded, want a refusal")
+	}
+}

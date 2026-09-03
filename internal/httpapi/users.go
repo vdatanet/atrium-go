@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -405,6 +406,12 @@ func (h *UsersHandler) AuthenticateByName() http.HandlerFunc {
 //  4. Insert or update the session row at the derived identifier, with the
 //     token, as one statement.
 //
+// # A fifth step, which plan 6.5 did not have and spec 3.8's lifecycle asks for
+//
+// The session ceiling is enforced between steps 2 and 3, because it is a rule
+// about the session that is *about to* exist and it has to run before the
+// account holds a token it is over the cap with. See enforceSessionCeiling.
+//
 // # The response describes the row, not the value that was written
 //
 // The session is read back through the token that was just minted rather than
@@ -423,12 +430,16 @@ func (h *UsersHandler) openSession(r *http.Request, client ClientIdentification,
 	}
 	digest := sessions.TokenDigest(token)
 	now := h.clock.Now()
+	opening := sessions.DeriveID(client.Client, client.DeviceID)
 
+	if err := h.enforceSessionCeiling(r.Context(), account, opening); err != nil {
+		return AuthenticationResult{}, err
+	}
 	if err := h.sessions.RevokeTokensFor(r.Context(), account.ID, client.DeviceID); err != nil {
 		return AuthenticationResult{}, err
 	}
 	written := ports.Session{
-		ID:                 sessions.DeriveID(client.Client, client.DeviceID),
+		ID:                 opening,
 		UserID:             account.ID,
 		Client:             client.Client,
 		DeviceID:           client.DeviceID,
@@ -529,6 +540,54 @@ func sessionInfo(session ports.Session, username string) (SessionInfo, error) {
 	posted := json.RawMessage(session.CapabilitiesDocument)
 	info.Capabilities = &posted
 	return info, nil
+}
+
+// enforceSessionCeiling makes room for the session this login is about to open
+// (spec 3.8's lifecycle table, AC-13).
+//
+// # It evicts, and the reference refuses
+//
+// That contradiction is plan 6.7's and it is decided there, not here: the
+// specification is implemented as written because AGENTS.md 1.3 makes the
+// running server the tie-breaker and no reference instance is reachable in this
+// run. It is register row U-13, and two logins on an account whose
+// MaxActiveSessions is 1 settle it
+// [source: Emby.Server.Implementations/Session/SessionManager.cs:1623-1629 @ v10.11.11].
+//
+// # Nothing is read when nobody is capped, which is nearly always
+//
+// The ceiling is 0 for every account the reference provisions, so the guard is
+// what keeps a login from reading the whole session list on an installation
+// where no account has a cap. sessions.Evictions applies the same guard again
+// over its own argument, because a domain rule that is only right when its
+// caller checks first is a rule with two homes.
+//
+// # The whole list, and the choice in the domain
+//
+// The store is asked for every session rather than for this user's, which is
+// what GET /Sessions already does (plan 6.10: "a domain function over the whole
+// list"). The alternative is a second read method whose selection — this user's
+// sessions, not counting the one being replaced — is exactly the rule
+// sessions.Evictions exists to state in one place and to tabulate in a test.
+func (h *UsersHandler) enforceSessionCeiling(ctx context.Context, account ports.User, opening string) error {
+	policy, err := users.PolicyOf(account)
+	if err != nil {
+		return err
+	}
+	if policy.MaxActiveSessions < 1 {
+		return nil
+	}
+
+	open, err := h.sessions.Sessions(ctx)
+	if err != nil {
+		return err
+	}
+	for _, evicted := range sessions.Evictions(open, account.ID, opening, policy.MaxActiveSessions) {
+		if err := h.sessions.CloseSession(ctx, evicted); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // accessTokenBytes is the size of a minted token before it is rendered as hex:

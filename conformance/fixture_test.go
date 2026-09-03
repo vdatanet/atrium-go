@@ -174,6 +174,20 @@ func logIn(t *testing.T, s *server, device, username, password string) credentia
 		t.Fatalf("authenticating %s from %s: status %d, want %d\nbody: %s",
 			username, device, got.status, http.StatusOK, got.body)
 	}
+	return credentialFrom(t, got, device)
+}
+
+// credentialFrom reads the token and the two identifiers off an authentication
+// that has already been asserted to have worked.
+//
+// It is separate from logIn for one caller and one reason: T20's session
+// ceiling asserts the *status* of its second login itself, because that status
+// is the one register U-13 says a reference run would change, and the failure
+// message has to say so. Without this split that caller would parse the
+// response itself, which is the second way of answering "what is a token" this
+// package deliberately does not have.
+func credentialFrom(t *testing.T, got *response, device string) credential {
+	t.Helper()
 
 	session := json.RawMessage(rawField(t, got.body, "SessionInfo"))
 	held := credential{

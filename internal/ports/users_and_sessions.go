@@ -328,6 +328,27 @@ type SessionStore interface {
 	// TouchSession advances the session's LastActivityDate.
 	TouchSession(ctx context.Context, sessionID string, at units.Time) error
 
+	// CloseSession removes the session and every token that opens it.
+	//
+	// It is the store half of spec 3.8's session ceiling: exceeding
+	// MaxActiveSessions evicts the least recently used session *and its
+	// token*, and a method that removed only the row would leave a credential
+	// naming a session that is not there — the state the access_tokens foreign
+	// key exists to forbid. So the two deletions are one call and one
+	// statement, which is OpenSession's contract read backwards.
+	//
+	// Which session is evicted is the domain's (sessions.Evictions) and never
+	// the store's: the rule reads a policy the store does not decode, and a
+	// store that chose would be choosing from the one place a test cannot
+	// tabulate it.
+	//
+	// A session identifier no row has is an error rather than a silent
+	// success, for the reason TouchSession's guard gives: an UPDATE or a
+	// DELETE that matched nothing succeeds, and an eviction that evicted
+	// nothing is a login that then exceeds the ceiling it was asked to
+	// enforce.
+	CloseSession(ctx context.Context, sessionID string) error
+
 	// RevokeTokensFor invalidates every token this user holds on this device,
 	// and nothing else.
 	//

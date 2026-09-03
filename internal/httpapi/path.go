@@ -251,15 +251,36 @@ func (f *PathFolder) Canonicalise(path string) (string, bool) {
 		path = path[:len(path)-1]
 	}
 
-	if canonical, ok := f.literal[foldASCII(path)]; ok {
+	if canonical, _, ok := f.lookup(path); ok {
 		return canonical, true
 	}
-	for _, pattern := range f.patterns {
-		if canonical, ok := pattern.match(path); ok {
-			return canonical, true
+	return path, true
+}
+
+// lookup finds the table row a path belongs to and answers both spellings of
+// it: the path itself in the route's own casing, and the route's own pattern.
+//
+// The two differ only where a path carries a parameter — /items/AbC against
+// /Items/{itemId} answers "/Items/AbC" and "/Items/{itemId}" — and the second
+// is what a stage keyed by route needs, because a request never carries the
+// pattern that matched it. Query canonicalisation is that stage.
+func (f *PathFolder) lookup(path string) (canonical, pattern string, ok bool) {
+	if canonical, found := f.literal[foldASCII(path)]; found {
+		return canonical, canonical, true
+	}
+	for _, candidate := range f.patterns {
+		if canonical, found := candidate.match(path); found {
+			return canonical, candidate.canonical, true
 		}
 	}
-	return path, true
+	return "", "", false
+}
+
+// pattern returns the canonical path of the table row a request path belongs
+// to, or false for a path the table does not describe.
+func (f *PathFolder) pattern(path string) (string, bool) {
+	_, pattern, ok := f.lookup(path)
+	return pattern, ok
 }
 
 // match rebuilds path in the pattern's own spelling, or reports that the

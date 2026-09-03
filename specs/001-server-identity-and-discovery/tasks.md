@@ -216,9 +216,20 @@ list is long for four routes.
 
 ## T10 — Query key canonicalisation
 
-- [ ] **Changes:** the same treatment for query parameter **names** against each route's declared
+- [x] **Changes:** the same treatment for query parameter **names** against each route's declared
   spellings. **Values are never touched**, and an unrecognised key is left in place rather than
   dropped.
+- **Amended 2026-09-03, on doing it:** *"each route's declared spellings"* had nowhere to live, and
+  the decision is recorded rather than left open. `surface.yaml` carries no parameters and 001's own
+  four routes take none, so the declarations are **Go, beside the routes** — `QuerySpellings` keyed
+  by route, and `V1QuerySpellings()`, which is **empty**. Extending the paired artefact was rejected
+  on two grounds: the prose twin, the derived copy and the loader would all move to write an empty
+  list on 59 rows, and — the load-bearing half — §1.15 measured that the pinned document spells
+  every parameter camelCase while the reference's own clients send PascalCase *and both work*, so
+  there is no single spelling a surface file could state. The one this stage needs is the one this
+  server's handler binds. `plan.md` §6.2 carries the same amendment, with the two rules writing it
+  settled: a declaration is keyed by **route** rather than by path, and a declaration the table has
+  no row for is a refusal at construction.
 - **Depends on:** T8
 - **Verified by:** `Limit`, `limit` and `LIMIT` reach the handler as the declared spelling; a value
   differing only in case is unchanged; an unknown key survives to be counted later.

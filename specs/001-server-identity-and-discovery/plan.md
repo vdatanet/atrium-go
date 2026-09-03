@@ -339,6 +339,50 @@ folds to one of them is rewritten to the declared spelling. **Values are never t
 unrecognised key is left alone so [§1.12](../../docs/compatibility/behaviours.md)'s ignore-don't-
 reject rule still sees it — and so the ignored-parameter tally has something to count.
 
+**Amended 2026-09-03, at T10.** *"Each route declares its parameter spellings"* named no place for
+a declaration to live, and there was none. `surface.yaml` carries a path, a method, an operation,
+its consumers, the owning feature and the required level, and no parameters at all — while 001's
+own four routes take no query parameter, so this feature cannot supply an example either. Three
+ways were open and this is the decision taken, rather than an omission left standing.
+
+- **The declarations live in Go, beside the routes that have them.** `httpapi.QuerySpellings` is a
+  map from route to declared names, and `httpapi.V1QuerySpellings()` is the set the server runs on.
+  It is **empty**, and the fold is a no-op on every request this server can answer today.
+- **`surface.yaml` is not extended, and the cost is only half the argument.** It is a paired
+  artefact ([docs/README.md](../../docs/README.md#paired-files-edit-both-halves-or-neither)): its
+  prose twin, the derived copy beside `internal/surface` and the strict loader would all have to
+  move in the same commit, to write an empty list on 59 rows — and the document's own header says
+  it is generated against the pinned OpenAPI document by a tool that stayed in the source
+  repository, so a column added here by hand is a column the next generation would not know to
+  keep. The other half is what kind of fact a spelling is. §1.15 measured that the pinned document
+  spells every parameter camelCase and the reference's own clients send PascalCase, **and both
+  work** — so there is no single spelling the surface file could state. What this stage needs is
+  the one spelling *this server's own handler* binds, which is the handler's to declare and not the
+  surface's to record.
+- **The mechanism ships now and its first source arrives with the first parameter.** §6.7 makes the
+  order of the stages contract, so a stage inserted later is a change to that contract rather than
+  a row in a map. If the list ever grows unwieldy — 005's item query alone has dozens — moving it
+  into `surface.yaml` stays available, and moving a list that exists is a smaller decision than
+  inventing a column for an empty one.
+- **A declaration is keyed by route, not by path**, which is this section's own word. The reference
+  binds parameters per action, and a path served by two methods may bind different ones on each, so
+  a path-keyed declaration would rewrite a name on a method that never declared it — and §1.12 says
+  an unrecognised name is left alone. A request never carries the pattern that matched it, so the
+  stage borrows §6.1's fold to name the row a request belongs to before the router does.
+- **A declaration the route table has no row for is a refusal**, at construction, the way §6.1's
+  fold refuses a table it cannot describe. A name declared against a route that was renamed folds
+  nothing and says nothing, and the failure it hides is the one this stage exists to prevent.
+
+The fold runs on the query string's **own bytes**, undecoded, for the reason §6.1 gives for the
+path. A percent-encoded *name* therefore does not fold — `%4Cimit` is not `limit` here — and what
+the reference does with one has not been measured; it is a probe somebody owes, of exactly the same
+shape as the one §6.1 records.
+
+[architecture §4](../../docs/architecture.md#4-the-compatibility-boundary) puts case-insensitive
+query names in *"the same middleware"* as case-insensitive paths. The point of that row is where the
+behaviour may **not** be — *"a handler reading two spellings"* — and §6.7 fixes the pipeline with
+the two as adjacent stages, which is what shipped: two stages sharing one fold.
+
 ### 6.3 Choosing a naming policy (§3.0.2)
 
 Parse `Accept` into media ranges with their `q`. A range matches when its type is

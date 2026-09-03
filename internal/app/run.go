@@ -3,13 +3,14 @@ package app
 import (
 	"context"
 	"io"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/vdatanet/atrium-go/internal/build"
+	"github.com/vdatanet/atrium-go/internal/httpapi"
 	"github.com/vdatanet/atrium-go/internal/store/sqlite"
+	"github.com/vdatanet/atrium-go/internal/surface"
 	"github.com/vdatanet/atrium-go/internal/system"
 )
 
@@ -79,10 +80,41 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		"derived-migrations-applied", store.AppliedMigrations(sqlite.Derived),
 	)
 
-	server, err := NewServer(cfg, logger, NoRoutes())
+	// Also before the listener, and for the same reason: the three stages that
+	// read the route table refuse a table they cannot fold, and plan 7 makes
+	// that a failure to start rather than a route that quietly never matches.
+	//
+	// No routes are registered yet — T16-T18 write the four handlers — so
+	// every path the table names is answered by the router's own refusal. The
+	// pipeline is nonetheless the whole pipeline: the gate, the two headers,
+	// both canonicalisers and the refusal shapes are what this binary serves.
+	pipeline, err := httpapi.NewPipeline(surface.V1(), httpapi.V1QuerySpellings(), nil)
 	if err != nil {
 		return err
 	}
+
+	server, err := NewServer(cfg, logger, pipeline)
+	if err != nil {
+		return err
+	}
+
+	// The gate is shut from the moment it is built (plan 6.8), and this is the
+	// point at which the start has finished: the data directory exists, the
+	// identity is readable, the store is open and migrated, and the listener
+	// is bound. Opening it any earlier would make the gate answer a request
+	// that arrived while one of those was still in doubt, which is exactly the
+	// window spec 3.5 describes; opening it later than this — after Serve,
+	// which blocks until the process stops — would never happen at all.
+	//
+	// A request can still arrive between the bind and here, because NewServer
+	// binds. It waits in the accept queue and is answered once Serve reaches
+	// it, by which time the gate is open. A request that arrives while a
+	// *slower* start is still running gets the 503, which is the point.
+	pipeline.Gate().MarkReady()
+	// No address on this line: Serve writes "listening" with it next, and the
+	// interesting fact here is the state change rather than where it happened.
+	logger.Info("ready")
+
 	return server.Serve(ctx)
 }
 
@@ -98,19 +130,4 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 // tally is only complete at the moment the server stops.
 func ShutdownContext(parent context.Context) (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
-}
-
-// NoRoutes is the handler this binary serves until the request pipeline is
-// assembled. Nothing is routed yet, and a path matching no route is answered
-// "404, empty body, no Content-Type" (behaviours 1.11).
-//
-// It is a placeholder rather than a decision: the refusal shapes belong to the
-// router, are computed from the route table, and arrive with the pipeline. What
-// this must not do is answer something the reference never sends — the
-// standard library's own NotFoundHandler writes a text/plain body, which is a
-// shape no reference server produces.
-func NoRoutes() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	})
 }

@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/vdatanet/atrium-go/internal/httpapi"
+	"github.com/vdatanet/atrium-go/internal/surface"
 )
 
 // TestServeAnswersARequestAndStopsWhenItsContextIsCancelled is the lifecycle
@@ -24,7 +27,7 @@ import (
 func TestServeAnswersARequestAndStopsWhenItsContextIsCancelled(t *testing.T) {
 	before := runtime.NumGoroutine()
 
-	server := newTestServer(t, NoRoutes())
+	server := newTestServer(t, testPipeline(t))
 	ctx, cancel := context.WithCancel(context.Background())
 	stopped := serve(t, ctx, server)
 
@@ -179,7 +182,7 @@ func TestNewServerRefusesAnAddressItCannotBind(t *testing.T) {
 	cfg := testConfig(t)
 	cfg.BindAddress = taken.Addr().String()
 
-	server, err := NewServer(cfg, testLogger(), NoRoutes())
+	server, err := NewServer(cfg, testLogger(), testPipeline(t))
 	if err == nil {
 		server.http.Close()
 		t.Fatal("NewServer bound an address that was already taken")
@@ -192,7 +195,7 @@ func TestNewServerRefusesAnAddressItCannotBind(t *testing.T) {
 // TestAddrIsWhereTheServerActuallyListens is the property a test needs to send
 // a request to a server that asked for port 0.
 func TestAddrIsWhereTheServerActuallyListens(t *testing.T) {
-	server := newTestServer(t, NoRoutes())
+	server := newTestServer(t, testPipeline(t))
 	defer server.http.Close()
 
 	address, ok := server.Addr().(*net.TCPAddr)
@@ -202,6 +205,23 @@ func TestAddrIsWhereTheServerActuallyListens(t *testing.T) {
 	if address.Port == 0 {
 		t.Error("Addr() reports port 0, which is the port that was asked for and not the one that was granted")
 	}
+}
+
+// testPipeline is the pipeline the binary serves, with the gate already open —
+// which is the state Run leaves it in once the start has finished.
+//
+// Nothing is routed yet, so every path the table names is answered by the
+// router's own refusal: 404, empty body, no Content-Type (behaviours 1.11).
+// That is the same shape the placeholder handler this replaced answered, which
+// is why the lifecycle assertions below did not have to change.
+func testPipeline(t *testing.T) *httpapi.Pipeline {
+	t.Helper()
+	pipeline, err := httpapi.NewPipeline(surface.V1(), httpapi.V1QuerySpellings(), nil)
+	if err != nil {
+		t.Fatalf("assembling the pipeline: %v", err)
+	}
+	pipeline.Gate().MarkReady()
+	return pipeline
 }
 
 func testConfig(t *testing.T) Config {

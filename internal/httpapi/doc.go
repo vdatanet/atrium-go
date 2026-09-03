@@ -39,8 +39,12 @@
 //
 // Canonicalisation precedes routing because it rewrites what the router
 // matches: the router only ever sees a canonical path, which is why chi's own
-// case sensitivity is never exercised. Assembling the chain, and asserting the
-// order with checks only the order can satisfy, is T14's.
+// case sensitivity is never exercised.
+//
+// NewPipeline is where that chain is assembled, and it is the only place: a
+// stage wrapped anywhere else is a second order, and there is no second order.
+// pipeline_test.go asserts three properties only this order has, each against
+// a chain with exactly one stage moved.
 //
 // The readiness gate is third rather than outermost, and that is a decision
 // rather than an accident. A middleware that answers without calling the next

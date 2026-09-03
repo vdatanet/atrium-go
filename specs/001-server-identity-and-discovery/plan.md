@@ -489,6 +489,22 @@ Accept: application/json; profile="CamelCase"; charset=utf-8, application/json; 
 because it is what this plan and spec §3.0.2 say in as many words. It is one request to settle, and
 it is owed a probe.
 
+**Amended 2026-09-03, at T14 — the join has a home, and it is not a stage.**
+
+`httpapi.NegotiateProfile(r)` is `wire.Negotiate(strings.Join(r.Header.Values("Accept"), ","))`, and
+a handler calls it. `Header.Get` would have answered only the *first* field line, so a client
+sending `Accept: text/plain` and `Accept: application/json; profile="CamelCase"` on two lines would
+be answered in PascalCase — [§1.13](../../docs/compatibility/behaviours.md)'s failure mode exactly,
+an empty object out of the client's decoder.
+
+It is deliberately **not** a middleware carrying a `wire.Profile` in the request context, which is
+what "the negotiated profile travels to the handler" invites. Negotiation writes nothing, refuses
+nothing and answers nothing, so it is not one of §6.7's stages — it is the *handler → wire* step
+that order already ends with. And a `Profile` read out of a context is `ProfilePlain` in any handler
+tested without the stage installed: silently, with a correct-looking body and a content type that
+lies about what was asked for, which is the failure AC-9 exists to catch. Taking the request means
+the answer cannot be wrong for want of a stage. §6.7's order is therefore unchanged by this task.
+
 ### 6.4 The escape pass (behaviours §1.16)
 
 The encoder's own HTML escaping is switched off, and one pass rewrites the body: every non-ASCII

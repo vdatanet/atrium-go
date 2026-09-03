@@ -600,6 +600,36 @@ for there to be one filler.
 - **`ServerName` and `PrimaryImageAspectRatio` are null and therefore absent**, so their position in
   the order is unverifiable — §3.5 says so, and the model carries the note rather than an assertion.
 
+**Amended 2026-09-03, by T2, which wrote the two models.** *"`Configuration` is the same shape"* is
+true of the rule and not of the nullability, and two decisions this section did not take had to be
+taken to write the structs:
+
+- **Three of the sixteen configuration properties are nullable at the reference and are plain
+  strings here.** `AudioLanguagePreference`, `SubtitleLanguagePreference` and `CastReceiverId` are
+  `string?`, and the reference fills them per account — coercing the subtitle preference to the
+  empty string, leaving the audio preference as the account holds it, and answering
+  `CastReceiverId` with the first cast receiver application the installation has
+  `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:426-447 @ v10.11.11]`. Under
+  §1.7 a null is omitted, so a fresh account read from the source alone would send **15**, and §3.6
+  measured **16**. The measurement wins ([AGENTS.md §1.3](../../AGENTS.md)) and the three are
+  therefore non-optional here, which makes sixteen travel. **What the reference puts in them is
+  ⚠️ UNVERIFIED**, and `CastReceiverId` is the one this server cannot match on value: 001 answers
+  `/System/Info` with an empty `CastReceiverApplications` because Atrium ships no cast receiver, so
+  the only honest value is the empty string. This is the register's, at T23, not this section's to
+  resolve.
+- **`AccessSchedules` has an unspecified element type**, which is 001's rule for
+  `CompletedInstallations` applied unchanged: v1 gives an operator no way to create one, so
+  declaring the reference's element members would be a schema for a value nothing here can produce.
+  The feature that ever fills the array declares the type it fills it with. §3.5's amendment already
+  records that the reference enforces access schedules at authentication and that v1 does not.
+
+**And the two documents are encoded by the standard encoder rather than by the serialiser.**
+[architecture §2](../../docs/architecture.md#2-layers-and-the-direction-of-dependency) puts the
+serialiser in the Edge and the account domain in the Domain, so the domain may not import it — and a
+stored document is not a response: it is negotiated with nobody, escaped for nobody's decoder and
+carries no content type. What the two encodings share is the **struct**, which is where the property
+that matters lives: one declaration fixes both the stored order and the key order of the L3 body.
+
 ### 6.7 Disabled, locked out, and at the session ceiling
 
 The three refusals that are not about the password, in the order the login path tests them:

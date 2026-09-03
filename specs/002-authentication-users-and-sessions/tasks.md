@@ -84,7 +84,7 @@ still owe.
 
 ## T3 — Argon2id: the record, the ceiling, the decoy, and a plaintext that cannot be logged
 
-- [ ] **Changes:** `internal/users` — `Derive`, `Verify`, the `Plaintext` type,
+- [x] **Changes:** `internal/users` — `Derive`, `Verify`, the `Plaintext` type,
   [ADR-0006](../../docs/decisions/0006-password-hashing.md)'s PHC record, the buffered ceiling of
   four, and the decoy derived once at start from 32 random bytes with the current constants.
 - **Depends on:** —

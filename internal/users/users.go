@@ -1,6 +1,8 @@
-// Package users holds the account domain: the policy, the configuration, and
-// the rule that decides what a stored document means when it does not carry
-// every property.
+// Package users holds the account domain: the policy, the configuration, the
+// rule that decides what a stored document means when it does not carry every
+// property, and the credential — ADR-0006's Argon2id record, the ceiling on how
+// many derivations run at once, and the plaintext type that will not print
+// itself.
 //
 // # Where it sits
 //

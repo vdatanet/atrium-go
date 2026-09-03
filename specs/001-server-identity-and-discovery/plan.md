@@ -163,6 +163,13 @@ Two refusals beyond the task's own pair fell out of writing it and are cheap eno
 worth naming, because canonicalisation (T9) folds a request's literal segments case-insensitively
 and would have no rule for choosing between two spellings that fold together.
 
+**Amended 2026-09-03, at T18.** `internal/system`'s row says *"server identity, friendly name,
+setup state, and the three-tier `LocalAddress` choice"* and now also holds **the installation's
+path layout** — the seven directories spec §3.2 reports, derived from the data directory (§6.9).
+It belongs in the domain for the same reason the identity does: it is a fact about *this
+installation*, it reaches for no HTTP, and putting it at the handler would make the layout
+something each response decided for itself.
+
 ## 4. Data model
 
 **Precious half.** One table, and it is the only state 001 owns that a user would miss.
@@ -316,6 +323,12 @@ halves are read from one table.
 `Naming` survives as the policy `marshal` dispatches on, and nothing outside the package produces
 one any more. The T6 amendment's rule holds at both levels: an unknown `Profile` and an unknown
 `Naming` are each an error rather than a fall-through to PascalCase.
+
+**Amended 2026-09-03, at T18.** This section's list of contracts is complete for the domain and
+silent about the one an authenticated route needs. The first authenticated route added
+`httpapi.Authenticator`, and it is deliberately **not** in `internal/ports` beside the store —
+§6.10 argues where it lives, why it takes an `*http.Request` where everything else in this plan
+takes `RequestFacts`, and why the value that means *forbidden* is not declared yet.
 
 ## 6. Algorithms
 
@@ -748,6 +761,135 @@ sends `5`. And the `text/html` body's bytes are **⚠️ UNVERIFIED**: the main 
 message, the setup server renders a page out of the startup log, so there is no single body to copy
 and §3.5 asks only for the media type.
 
+### 6.9 What `/System/Info` answers with (§3.2)
+
+*Added 2026-09-03, at T18. This plan named no value for any of spec §3.2's twenty additional
+fields, and T18's own wording — "with the plan's stated values for the flags and paths" — pointed
+at a section that did not exist. Here it is, with what each answer turns on.*
+
+**The superset is structural.** The public model is **embedded** in the authenticated one and
+filled in by the one function that fills the public response, so the seven shared members are one
+value each rather than two values that agree. AC-5's *"agreeing on every shared field"* is then a
+property of the code rather than a promise a test has to keep checking — which it also does, over
+the wire, member by member as raw JSON.
+
+**The flags are all `false`, and two of them differ from the reference on purpose.** Atrium has no
+self-update, no restart, no browser to launch and no filesystem watcher, so `HasPendingRestart`,
+`IsShuttingDown`, `CanSelfRestart`, `CanLaunchWebBrowser`, `HasUpdateAvailable` and
+`SupportsLibraryMonitor` are false. The reference answers `SupportsLibraryMonitor = true`
+unconditionally `[source: Emby.Server.Implementations/SystemManager.cs:79 @ v10.11.11]` and
+`CanSelfRestart = true` by a default it marks obsolete
+`[source: MediaBrowser.Model/System/SystemInfo.cs:67-69 @ v10.11.11]`. Both differences are the
+spec's own answer and both are honest: a client that started a watch-dependent flow on a `true`
+would wait for a notification that never came.
+
+**`WebSocketPortNumber` is the port this process is actually listening on**, which forced a change
+at the entry layer. The handlers are built before the pipeline, the pipeline before the server, and
+the server is what binds — so at construction the port is not known, and under `--bind-address :0`
+it is not yet chosen. It therefore arrives as a **function**, which the entry layer fills in after
+it binds and before it opens the readiness gate. The alternative — parsing the port out of the
+configured bind address — answers `0` for every server started on port 0 while it is happily
+serving requests on a real one.
+
+**The seven paths are derived from the one path an operator configures.** 001's only path
+configuration is `--data-dir`, and the layout is:
+
+| Field | Value |
+|---|---|
+| `ProgramDataPath` | the data directory, exactly as `--data-dir` gave it |
+| `CachePath` | `<data>/cache` |
+| `LogPath` | `<data>/log` |
+| `InternalMetadataPath` | `<data>/metadata` |
+| `ItemsByNamePath` | **the same value as `InternalMetadataPath`** |
+| `TranscodingTempPath` | `<data>/cache/transcodes` |
+| `WebPath` | `<data>/web` |
+
+Three things about that table. The names follow the reference's own defaults — `metadata`
+`[source: Emby.Server.Implementations/ServerApplicationPaths.cs:36 @ v10.11.11]`,
+`cache/transcodes`
+`[source: MediaBrowser.Common/Configuration/EncodingConfigurationExtensions.cs:35 @ v10.11.11]` —
+not for compatibility, since no client reads these and every one of them differs per installation
+in a differential run, but because an operator who has run the reference already knows where to
+look. `ItemsByNamePath` is *not* a directory of its own: the reference fills both fields from
+`InternalMetadataPath` `[source: Emby.Server.Implementations/SystemManager.cs:71-72 @ v10.11.11]`,
+so two fields carrying one value is a fact about the response. And **none of these directories is
+created**: 001 creates the data directory and nothing inside it (§4, at T3), so a path field is an
+address rather than a promise that something is at it, and the feature that first needs one creates
+it there.
+
+The data directory is reported **as it was given**, not resolved to an absolute path. What the
+response says, what `--data-dir` said and what the `starting` log line printed are then one string.
+
+**The four remaining strings are empty, and that is spec §3.2's rule rather than a shrug.**
+`OperatingSystemDisplayName`, `SystemArchitecture` and `EncoderLocation` are each marked obsolete
+in the reference and never assigned, so the value it sends is a stale constant — `""`, `"X64"` and
+`"System"` respectively `[source: MediaBrowser.Model/System/SystemInfo.cs:28-29,137-143 @
+v10.11.11]`. §3.2 asks for *"real values where meaningful, empty string otherwise"*, and a field
+whose own declaration says it is not set has no meaningful value to give: copying `"X64"` would
+assert something false about this host, and reporting the host's real architecture would put a
+string on the wire that no reference server sends, on a field no reference server fills. Empty
+asserts nothing. §8 records the two differences that follow.
+
+**`PackageName` is not sent at all**, and that is the one place this section departs from a plain
+reading of §3.2's table. See the amendment in `spec.md` §3.2: §3.0.3 subordinates the general rule
+to a per-field verification wherever one exists, and behaviours §1.7 is that verification — the
+reference declares this property on this response and does not send it
+`[probe: tools/probe_public_info.py, Jellyfin 10.11.11, 2026-08-28]`.
+
+**`CompletedInstallations` and `CastReceiverApplications` are empty arrays, not nulls**, and their
+element type is deliberately left unspecified. The reference's are models of a package manager and
+a cast receiver that Atrium does not have; declaring their members here would be a schema for a
+value nothing can produce. The feature that ever fills one declares what it fills it with.
+
+### 6.10 Authentication is a port, and 001 fills it with nothing
+
+*Added 2026-09-03, at T18.*
+
+`/System/Info` is the first authenticated route, and **002 owns authentication**: five mechanisms
+with a measured precedence between them, tokens that name a session, users that hold permissions
+(002 spec §3.1). None of that is written here. What is written is the seam:
+
+```
+// internal/httpapi
+Access int  // AccessUnauthenticated | AccessGranted
+Authenticator interface { Authenticate(*http.Request) (Access, error) }
+```
+
+Three decisions in six lines.
+
+**It takes the request, and therefore lives in the edge package rather than in `internal/ports`.**
+Everything else the domain needs of a request reaches it as `RequestFacts` (§5), and a credential
+cannot: it is three header names and two query names, each with its own grammar and a measured
+order between them when two disagree. Reducing that to a value *before* this interface means
+implementing 002's reader, which is the one thing this task must not do. The domain half — a token
+to a session, a session to a user, a user to a permission — is 002's to declare in `ports`, and it
+is not this interface.
+
+**`AccessUnauthenticated` is the zero value, and 001 passes no `Authenticator` at all.** A server
+that has issued no token recognises no credential, so *every* credential is unrecognised — which
+is the true answer rather than a stub, and it is what makes the `401` of §7 reachable and testable
+now.
+
+**The third value is missing on purpose.** The reference answers a valid credential without the
+route's permission with `403`, and clients branch on the difference. 001 routes nothing that can
+reach it and behaviours §1.11 gives that shape a body this feature has no measurement for, so
+declaring the constant would be a plausible-looking stub in an enumeration (Principle VI). An
+`Access` the handler does not recognise is an **error**, never a fall-through — `internal/wire`'s
+rule for an unknown `Profile`, for the same reason: the two directions a fall-through could take
+are *admit everybody* and *refuse everybody*, and both are silent. That is the test which fails the
+day 002 adds the value without teaching the handler about it.
+
+**The first-time-setup exemption stays at the handler, not in the port.** §3.2 permits the route
+while setup is outstanding, and the reference's authorisation handler succeeds on
+`!IsStartupWizardCompleted` before it looks at a role
+`[source: Jellyfin.Api/Auth/FirstTimeSetupPolicy/FirstTimeSetupHandler.cs:29-31 @ v10.11.11]`; an
+unrecognised token does not change that, because its authentication handler answers *no result*
+rather than a failure and leaves authorisation to decide
+`[source: Jellyfin.Api/Auth/CustomAuthenticationHandler.cs:48-51,79-83 @ v10.11.11]`. That is a
+fact about **this route's policy**, so it belongs with the route. It also fixes the order the
+handler asks its two questions in: the setup state comes from the store, so the installation is
+read before admission is decided, and the same read supplies `StartupWizardCompleted` afterwards.
+
 ## 7. Failure handling
 
 | Failure | Detection | Response | Recovery |
@@ -775,7 +917,7 @@ Each acceptance criterion becomes a named test at the level §6 of the spec decl
 |---|---|---|
 | 1, 2, 3 | L1 golden | Byte-compared golden of `/System/Info/Public` on an empty installation; field values asserted separately so a golden diff says which field moved |
 | 4 | L2 | Start, read `Id`, stop, delete the database, start again, assert identical — the store rebuild AC-4 names |
-| 5 | L2 | `401` without a token; with one, every shared field equal to the public body |
+| 5 | L2 | `401` without a token; with one, every shared field equal to the public body — ~~one row~~ **two levels; see the T18 amendment below** |
 | 6 | L1 golden | Exact bytes `"Jellyfin Server"`, both methods |
 | 7, 8, 13 | L2 | Table-driven over the three tiers with synthesised `RequestFacts` — a pure-function test, which is what §5's seam buys |
 | 9 | L1 | Plain and `PascalCase` byte-identical; `CamelCase` same values, camelCase names at depth, dictionary keys untouched, content type echoing the match |
@@ -830,6 +972,52 @@ is precisely what makes it testable with nothing on disk but a data directory.
   whole and tested over all three tiers (T15); what is missing is a caller, and the feature that adds
   the configuration is where it arrives. Worth naming because a reader of §6.6 would otherwise
   expect tier 3 to be reachable today: it is not.
+
+**Amended 2026-09-03, at T18.** AC-5's row above is one line and it is three claims, two of which
+this repository cannot make from `conformance/`.
+
+- **The superset half is over the wire, against the running binary.** Both routes are issued to one
+  server with one `Host`, and the two bodies are compared **member by member as raw JSON** — the
+  only level at which a shared field that had changed type, `true` becoming `"true"`, is a
+  difference at all.
+- **The `401` half is not reachable from `conformance/`, and it is asserted at the HTTP boundary in
+  `internal/httpapi` instead.** It needs an installation whose setup is *complete*, and 001 serves
+  no route that completes setup — 002 owns it, and `conformance/` cannot reach into the store to
+  say so (that is the rule that makes the package worth having). So the state is stated through the
+  store at the handler level, and the request goes over a **real connection** rather than to a
+  recorder, because three of the four things behaviours §1.11 measures about that shape —
+  `Content-Length: 0`, no `Content-Type`, no `WWW-Authenticate` — are invisible to
+  `httptest.ResponseRecorder` (T11's finding).
+- **The remaining half, *"and `200` with a valid one"*, cannot be met here at all.** No credential
+  exists until 002. It is recorded as a **criterion carried into 002** rather than marked met
+  (`tasks.md` T18, T21). What *is* proven now is that the handler asks the port and obeys it, over
+  a stub — which is a fact about the wiring and not about any token.
+
+**There is no golden for `/System/Info`, and spec §6's row for it is amended to say so.** Seven of
+its fields are the installation's own paths and one is the port the operating system chose, so a
+recorded body would either match only on the machine that wrote it or have to be softened until it
+stopped being a byte comparison — and softening is exactly what the T16 amendment above forbids.
+What a golden buys is bought by two assertions instead: the **property names in order**, which is
+the count, the order and the absence of `PackageName` in one line, and the per-field raw-JSON
+values. Both are byte-level; neither can be held still as a file.
+
+**Two differences from the reference are owed to 010, and neither is in `allowlist.yaml`.**
+`SystemArchitecture` (`""` here, `"X64"` there) and `EncoderLocation` (`""` here, `"System"`
+there) follow from §6.9's reading of spec §3.2, and an allowlist entry needs either a
+`behaviours §N` or one of the four derivation classes — this has neither, so writing one would fail
+the file's own load. They are named here so that 010 meets them as *declared and argued* rather than
+as a surprise; whichever way that run resolves them, the change is to `behaviours.md` or to
+`spec.md` §3.2, not to the handler. The seven paths are **not** in this class:
+`request-cases.yaml` already calls them "triage rather than allowlist rows".
+
+**Key order is unmeasured here too, and more weakly than on the public route.** §3.1's order is at
+least the order a serialiser walking one type's properties would produce; `SystemInfo` *derives*
+from `PublicSystemInfo`, and where a serialiser puts an inherited property relative to a declared
+one is a property of that serialiser which no probe in this repository records. The order shipped
+is the seven public fields followed by the reference model's own declaration order
+`[source: MediaBrowser.Model/System/SystemInfo.cs:29-143 @ v10.11.11]`, marked `⚠️ UNVERIFIED` at
+the model. The route is L2, so nothing here asserts it against the reference; one request settles
+it, and failing that it is an undeclared difference in 010's run.
 
 ### 8.5 Routes against `surface.yaml`
 

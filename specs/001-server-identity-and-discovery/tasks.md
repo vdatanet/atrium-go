@@ -457,13 +457,34 @@ list is long for four routes.
 
 ## T18 — `GET /System/Info`
 
-- [ ] **Changes:** the authenticated superset of §3.2, with the plan's stated values for the flags
+- [x] **Changes:** the authenticated superset of §3.2, with the plan's stated values for the flags
   and paths. Token validation is taken through a port that **002 fills**; until then the only
   reachable states are *setup incomplete*, which the reference permits without a credential, and
   *any token*, which is invalid.
+- **Amended 2026-09-03, on doing it:** four things the wording did not survive contact with.
+  **The plan stated no paths** — it says nothing about `ProgramDataPath` and its six neighbours —
+  so the layout was decided here and `plan.md` §6.9 now carries it, derived from the one path an
+  operator configures. **`PackageName` is not sent at all**: §3.0.3 defers to a per-field
+  verification where one exists, behaviours §1.7 is that verification, and `spec.md` §3.2 carries
+  the amendment. **The superset is structural** — the public model is embedded in the
+  authenticated one and filled in by the same function, so the seven shared values are one value
+  each rather than two that agree. And **`WebSocketPortNumber` forced a change to the entry
+  layer**: the handler is built before the listener exists, so the port arrives as a function the
+  entry layer fills in after it binds, which is the only way `--bind-address :0` answers anything
+  but a lie.
 - **Depends on:** T16
 - **Verified by:** the superset assertion — every field shared with `/System/Info/Public` agrees —
   and the `401` shape without a token once setup is complete.
+- **Amended 2026-09-03, on doing it:** the two halves are proven at two levels, and they have to
+  be. The superset is asserted over the wire against the running binary
+  (`conformance/system_info_test.go`), member by member as raw JSON. The `401` is **not** reachable
+  there: it needs an installation whose setup is complete, and 001 serves no route that completes
+  setup — 002 owns it. So it is asserted at the HTTP boundary in `internal/httpapi`, over a real
+  connection rather than a recorder, because three of the four things behaviours §1.11 measures
+  about that shape are invisible to a recorder (T11's finding). **There is no golden for this
+  route**, and that is a consequence of the response rather than a shortcut: seven of its fields
+  are the installation's own paths and one is the port the operating system chose. `plan.md` §8 and
+  `spec.md` §6 both carry the amendment.
 - **Spec reference:** §3.2, AC-5.
 - **Carried:** AC-5's *"and `200` with a valid one"* half cannot be proven here, because no
   credential exists until 002. It is recorded as a **criterion carried into 002** rather than

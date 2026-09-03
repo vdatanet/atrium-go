@@ -3,7 +3,7 @@ feature: 001-server-identity-and-discovery
 title: Server identity and discovery
 status: Implemented
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-09-03
 accepted: 2026-08-26
 depends_on: []
 ---
@@ -155,6 +155,17 @@ Atrium returns the superset with these values:
 > harness (010) or a survey of other clients. It does not block this feature: the fields are sent
 > with honest values either way.
 
+**Amended 2026-09-03.** The table's last row asks for *"real values where meaningful, empty string
+otherwise"*, and for one of its four fields that is the wrong answer: **`PackageName` is not sent
+at all.** §3.0.3 says absent optional values are omitted *"exactly as the reference server does,
+verified per field rather than by rule"*, and for this field the per-field verification exists —
+the reference declares `PackageName` on this response and does not send it
+`[probe: tools/probe_public_info.py, Jellyfin 10.11.11, 2026-08-28]`, recorded in
+[behaviours §1.7](../../docs/compatibility/behaviours.md#17-a-null-property-is-absent-everywhere-by-one-setting)
+as the worked example of the omit-when-null rule. An empty string here would be a property no
+reference server carries, which is a delta by Principle I on the count. The row stands for the
+other three, which the reference does send and which are all empty.
+
 **Errors**
 
 | Condition | Status |
@@ -305,12 +316,19 @@ Everything else in these responses is derived at request time.
     request's own host and scheme come back in `LocalAddress`, with the port omitted when it is
     the scheme's default (§3.4 tier 2). *(Added at the same audit — M28.)*
 
+**Amended 2026-09-03. AC-5 is met in two of its three halves, and the third is carried.** The
+superset assertion and the `401` are proven; *"and `200` with a valid one"* is not, because a valid
+credential is something [002](../002-authentication-users-and-sessions/spec.md) issues and nothing
+here can. It is recorded as a **criterion carried into 002** rather than quietly widened into
+something a stub could satisfy — a test that admitted a fictional token would prove the handler
+asks its port, which is a true and much smaller claim, and it is asserted under that name instead.
+
 ## 6. Conformance
 
 | Endpoint | Level | How it is proven |
 |---|---|---|
 | `GET /System/Info/Public` | **L3** | Golden response, plus differential against a real reference server. It is the first request every client makes; a difference here costs everything downstream |
-| `GET /System/Info` | **L2** | Golden response and the superset assertion of AC-5 |
+| `GET /System/Info` | **L2** | ~~Golden response and~~ the superset assertion of AC-5, the property names in order, and each value asserted on its own — see the amendment below |
 | `GET /System/Ping` (both methods) | **L2** | Exact-body test |
 | `LocalAddress` selection | **L2** | Table-driven test over the three tiers with synthesised requester addresses |
 | Path matching and refusals (§3.6) | **L0** | Every route registered against `surface.yaml` and none outside it; the accepted spellings; the empty `404` and `405` |
@@ -319,6 +337,16 @@ The two cross-cutting sweeps described in
 [conformance.md](../../docs/compatibility/conformance.md#l1--shape) — PascalCase over every
 response model, and units over every `*Ticks` and `*Date` field — are **delivered by this feature**,
 because it is the first one with a response model to sweep.
+
+**Amended 2026-09-03. `/System/Info` has no golden, and the reason is in the response.** Seven of
+its fields are the installation's own paths and one is the port the operating system chose, so a
+recorded body would either match only on the machine that recorded it or have to be softened until
+it stopped comparing bytes — and a softened golden is worth less than none, because it looks like a
+byte comparison. The two things a golden buys are bought separately and both are byte-level: the
+**property names in the order they arrive**, which is the field count, the key order and the
+absence of `PackageName` in one assertion, and the **per-field raw JSON values**, which tell an
+empty array from a null one and a boolean from the string spelling of one. The superset assertion
+of AC-5 compares the two bodies member by member as raw JSON for the same reason.
 
 **L3 for `/System/Info/Public` is not met, and is deferred rather than skipped.** Its second half —
 the same request issued to Atrium and to a real reference server, compared field by field — needs

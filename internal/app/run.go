@@ -3,8 +3,10 @@ package app
 import (
 	"context"
 	"io"
+	"net"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/vdatanet/atrium-go/internal/build"
@@ -80,13 +82,36 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		"derived-migrations-applied", store.AppliedMigrations(sqlite.Derived),
 	)
 
+	// listeningPort is what /System/Info reports as WebSocketPortNumber, and
+	// it is filled in below, once the server has bound.
+	//
+	// The handlers are built before the pipeline, the pipeline before the
+	// server, and the server is what binds — so the port cannot be a value
+	// here, and with --bind-address naming port 0 it is not even a value this
+	// process has chosen. It is atomic because the goroutines that read it are
+	// the ones serving requests; nothing serves before Serve, so the store
+	// below already happens before every read, and the atomic says so rather
+	// than leaving a reader to work it out.
+	var listeningPort atomic.Int64
+
 	// The handlers, before the pipeline that registers them. The address
 	// configuration is the zero value because 001 gives an operator no way to
 	// set any of it — no published URL, no derive flag, no bound-address list —
 	// and system.LocalAddress then answers from the request itself, which
 	// plan 6.6 states as the deliberate answer for an installation with none of
 	// the three. The flags that fill it in are the feature that adds them.
-	systemHandler, err := httpapi.NewSystemHandler(installationID, store, system.AddressConfig{})
+	//
+	// No Authenticator, and that is the honest value rather than a gap: this
+	// build has issued no token and knows no user, so it recognises no
+	// credential and /System/Info answers 401 to every request once setup is
+	// complete (spec 3.2). 002 fills it.
+	systemHandler, err := httpapi.NewSystemHandler(httpapi.SystemHandlerConfig{
+		InstallationID: installationID,
+		Installations:  store,
+		Addresses:      system.AddressConfig{},
+		Paths:          system.PathsFor(cfg.DataDirectory),
+		HTTPPort:       func() int { return int(listeningPort.Load()) },
+	})
 	if err != nil {
 		return err
 	}
@@ -100,11 +125,11 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	// read the route table refuse a table they cannot fold, and plan 7 makes
 	// that a failure to start rather than a route that quietly never matches.
 	//
-	// Only GET /System/Info/Public is registered so far — T17 and T18 write the
-	// other three — so the remaining paths the table names are answered by the
-	// router's own refusal. The pipeline is nonetheless the whole pipeline: the
-	// gate, the two headers, both canonicalisers and the refusal shapes are
-	// what this binary serves.
+	// All four rows of 001 are registered now, so the paths this server
+	// answers are exactly the ones surface.yaml gives feature 001; every other
+	// path the table names is answered by the router's own refusal. The
+	// pipeline is the whole pipeline: the gate, the two headers, both
+	// canonicalisers and the refusal shapes are what this binary serves.
 	pipeline, err := httpapi.NewPipeline(surface.V1(), httpapi.V1QuerySpellings(), routes)
 	if err != nil {
 		return err
@@ -113,6 +138,13 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	server, err := NewServer(cfg, logger, pipeline)
 	if err != nil {
 		return err
+	}
+
+	// Now that there is a listener, the port /System/Info reports is knowable.
+	// Before the gate opens, so that no request can be answered with the zero
+	// this started as.
+	if address, ok := server.Addr().(*net.TCPAddr); ok {
+		listeningPort.Store(int64(address.Port))
 	}
 
 	// The gate is shut from the moment it is built (plan 6.8), and this is the

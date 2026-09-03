@@ -59,6 +59,7 @@ func Routes(table *surface.Table, handlers Handlers) (func(chi.Router), error) {
 		ping := handlers.System.Ping()
 		registrations = append(registrations,
 			registration{operationPublicSystemInfo, handlers.System.PublicInfo()},
+			registration{operationGetSystemInfo, handlers.System.Info()},
 			registration{operationGetPingSystem, ping},
 			registration{operationPostPingSystem, ping},
 		)
@@ -93,6 +94,10 @@ func Routes(table *surface.Table, handlers Handlers) (func(chi.Router), error) {
 // spelling of a route that does not change when a path does.
 const (
 	operationPublicSystemInfo = "GetPublicSystemInfo"
+
+	// The authenticated superset of the row above. Two operations, two paths,
+	// one body built from the other (systeminfo.go).
+	operationGetSystemInfo = "GetSystemInfo"
 
 	// The two rows of /System/Ping. They are two operations on one path, which
 	// is why the table is indexed by operation here and not by path: a lookup

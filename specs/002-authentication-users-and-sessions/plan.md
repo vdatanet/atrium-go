@@ -598,6 +598,42 @@ route is measured to answer the *same* bytes to an authenticated and an unauthen
 Making the handler ignore the credential is how that becomes a property rather than a coincidence:
 there is no branch to get wrong.
 
+**Amended 2026-09-03, by T13, which served `/Users/Public`.** Four things this row did not say had
+to be decided or recorded to write the handler. Every one of them is read from the reference's own
+source and **none is measured**, so each is stated here rather than acted on, and the register at
+T23 is owed a row for all four.
+
+1. **The order is the route's decision, and it is the store's order.** T4 deliberately left it open:
+   `UserStore.Users` orders by `username_folded, id` because
+   [architecture §2](../../docs/architecture.md#2-layers-and-the-direction-of-dependency) forbids an
+   order that derives from anything but stable input, *not* because anything measured says the
+   reference orders that way. The reference orders by the **unfolded** username
+   `[source: Jellyfin.Api/Controllers/UserController.cs:653-655 @ v10.11.11]`, under .NET's
+   culture-aware string comparison. The two agree for names that differ in more than case and can
+   differ for names that do not; what a running Jellyfin answers has never been asked.
+2. **The reference excludes disabled accounts as well as hidden ones**, in one call
+   `[source: Jellyfin.Api/Controllers/UserController.cs:117,625-633 @ v10.11.11]`. [spec §3.4](spec.md#34-get-userspublic--getpublicusers)
+   names only *"users flagged hidden from login screens"*, and the measurement behind it is of the
+   hidden flag `[prior-probe: Jellyfin 10.11.11, 2026-06-13]`. The specification is implemented as
+   written and the difference is **asserted as a test** rather than left in a comment, which is the
+   shape T15 uses for U-14: the day a probe lands, a failing test names the behaviour that moved
+   instead of somebody rediscovering it.
+3. **Before the startup wizard is completed the reference returns every account**, hidden and
+   disabled alike `[source: Jellyfin.Api/Controllers/UserController.cs:111-115 @ v10.11.11]`. That
+   state is unreachable here: §6.8 makes provisioning the first account complete setup, so an
+   installation holding an account and no completed setup does not exist. It is recorded because it
+   is the kind of branch a differential run would otherwise raise as an unexplained difference.
+4. **After setup the reference narrows the list twice more**, and the second narrowing complicates
+   *"reads no credential"*. It drops users who may not use the caller's device — reading the device
+   identifier off the **authenticated** principal, so an anonymous caller triggers none of it — and,
+   for a caller outside the local network, drops users without `EnableRemoteAccess`
+   `[source: Jellyfin.Api/Controllers/UserController.cs:635-651 @ v10.11.11]`. v1 has neither
+   notion, so this server answers one list to everybody. Two consequences worth writing down: this
+   is the **second** place the reference enforces `EnableRemoteAccess` — §3.5's amendment records
+   the first, at authentication itself, as [U-15](../../docs/compatibility/reference-target.md) —
+   and spec §3.4's measured byte-equality between an authenticated and an anonymous reading holds
+   for a **local** caller on a permitted device, which is what the probe that measured it was.
+
 ### 6.3 The `X-Emby-Authorization` grammar
 
 One parser, used for both header names, returning the four components of §3.2 and any `Token`.

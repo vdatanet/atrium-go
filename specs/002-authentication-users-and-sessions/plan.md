@@ -1019,6 +1019,39 @@ pipeline. What `conformance/` proves instead is the half that *is* a wire fact �
 refusals are byte-identical (AC-2) — and the two halves together are the disclosure ADR-0006
 describes.
 
+**The debt is paid, and here is what it cost.** T6 landed both halves in `internal/users`:
+`TestAnUnknownUsernameDerivesOnceWithTheCurrentConstants` is the mechanism and
+`TestTheTwoRefusalsCannotBeToldApartWithAStopwatch` is the wall clock. Measured on the machine that
+wrote them, the two medians over nine samples each are **50.554 ms** for an unknown username and
+**50.818 ms** for a wrong password — a difference of **264 µs** against a margin of **12.639 ms**,
+so the check passes with roughly fifty times the headroom it needs
+`[measurement: internal/users, Go 1.27.0 darwin/arm64, 2026-09-03]`. **ADR-0006 is not edited**: its
+*"asserted nowhere"* line is now untrue, and [AGENTS.md §4](../../AGENTS.md) makes an accepted ADR
+immutable — this paragraph and [T6](tasks.md) are where the discharge is recorded, so no reader of
+the record is left thinking the debt is open.
+
+Both halves were shown to fail, and the two mutations do not partition the way this section assumed.
+Deleting the decoy verification collapses the unknown-username median to **375 ns** against
+**49.760 ms** for a wrong password, failing the wall clock and the mechanism's count together. A
+decoy derived at the previous constants (`m=19 MiB, t=2, p=1`, the OWASP-minimum row of ADR-0006's
+table) fails the mechanism's parameter assertion on all three axes **and** the wall clock, at
+**16.911 ms** against **50.061 ms** `[measurement: internal/users, Go 1.27.0 darwin/arm64,
+2026-09-03]`. That second result is worth keeping: a stale decoy is not a *missing* derivation but a
+*cheaper* one, so the wall clock sees it only while the parameter gap stays large, and the
+deterministic half is what would catch a raise from `t=3` to `t=4`. Neither is sufficient alone, for
+a sharper reason than this section originally gave.
+
+**Neither half is behind a build tag or a `testing.Short` guard, and that is a decision rather than
+an omission.** The twenty derivations cost **0.94 s**, taking `internal/users` from 3.710 s to
+4.654 s `[measurement: go test -count=1 ./internal/users, 2026-09-03]` — a quarter more, on a
+package that already spends most of its time on Argon2id. CI runs `go test ./...` with no flags, so
+a `-short` skip would change nothing there while creating a second mode in which ADR-0006's only
+evidence silently does not run, and nothing else in this repository uses `testing.Short`. **A check
+this record's argument stands on is the wrong place to introduce an off switch**, and the loose
+margin is what makes it safe to run unconditionally on shared hardware: the gap it must survive is
+scheduling noise, and the gap it must catch is a whole derivation.
+*(Added 2026-09-03, at T6.)*
+
 ### 8.2 What this feature owes 001, and how each half is discharged
 
 001's closing audit put **AC-14** in this specification and rode two smaller notes on it.

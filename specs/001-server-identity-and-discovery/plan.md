@@ -1,7 +1,7 @@
 ---
 feature: 001-server-identity-and-discovery
 title: Server identity and discovery — implementation plan
-status: Accepted
+status: Implemented
 created: 2026-09-02
 updated: 2026-09-03
 spec_status_required: Accepted
@@ -1121,6 +1121,49 @@ be empty with no content type, because a handler that looked something up and di
 answers `404`. That last discrimination is the best signal available at the wire and it is not
 perfect: a future handler answering an empty `404` with no content type would be read here as an
 unregistered route. It is written down rather than left to be discovered.
+
+### 8.6 What the closing audit changed (T21, 2026-09-03)
+
+The audit ran four passes and they are recorded in full in `tasks.md` T21. Two of them changed the
+code, and this is what a later reader needs from them.
+
+**Two criteria were proven at a level below the one they are written at, and the difference was
+invisible until it was mutated.** Both AC-9 and AC-11 read as claims about *requests to this
+feature's endpoints*; both were proven over stand-ins, thoroughly and correctly, and neither had an
+assertion against the running binary.
+
+- **AC-9** is proven in `internal/wire` over a model declared in a test file, with a recorder. That
+  proof is the strong one — it compares the plain and PascalCase bodies with each other as well as
+  against an expectation, and puts a dictionary beside a property so the two conversions can be
+  told apart. But making `/System/Info/Public` write with a constant profile instead of the
+  negotiated one left every test at the HTTP boundary green **except the casing sweep's own failure
+  proof**, which is named for AC-10's machinery and asserts a count of findings.
+- **AC-11** is proven in `internal/httpapi` over a router whose handler echoes the route it was
+  reached through, so *"returns the same bytes"* is a claim about the echo. A pipeline whose path
+  folder recognises the doubled slash and then folds nothing left the whole HTTP-boundary suite
+  green.
+
+Both now have tests against the binary, and both were re-mutated afterwards to prove the new tests
+fail. **The general lesson is the one worth carrying into 002**: a criterion written about a
+request is not met by a test about the mechanism that serves it, however good that test is — and
+the way to tell the two apart is to break the wiring between them, which no amount of reading finds.
+
+**One instrument fault the new tests had to work around, and it generalises.** Go's `http.Client`
+follows a `301` transparently, so a server that answered every accepted spelling with a redirect to
+the canonical one passes a byte comparison of the followed response. §3.6's *"**Not** a redirect"*
+therefore needs a client that does not follow, and it is a separate assertion rather than another
+column. Measured: a fold stage rewritten to issue `301` fails the non-following test and **passes**
+the byte-comparison one.
+`[measurement: mutation of internal/httpapi.PathFolder.Wrap, Go 1.27.0, 2026-09-03]`
+
+**What the audit did not do, and why.** The four value differences on `/System/Info` — the two T18
+flagged (`SystemArchitecture`, `EncoderLocation`) and the two spec §3.2 mandates
+(`SupportsLibraryMonitor`, `CanSelfRestart`) — are now
+[behaviours §4.5](../../docs/compatibility/behaviours.md), which is the `behaviours §N` an
+[`allowlist.yaml`](../../docs/compatibility/allowlist.yaml) entry needs and could not previously
+cite. **The rows themselves are not written here.** That file is one of a three-way pairing —
+`allowlist.yaml`, `conformance.md` L3 and `010 spec §3.3`, compared row for row — and writing one
+third of a triple is how a paired set drifts. 010 writes them, citing §4.5.
 
 ## 9. Risks
 

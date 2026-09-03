@@ -52,7 +52,7 @@ Four layers, and dependencies point one way only.
 | **Entry** | Flag parsing, configuration, wiring, start and stop | everything |
 | **Edge** | The router, the middleware, the 59 handlers, the serialiser | Domain, Ports |
 | **Domain** | The measured semantics — sorting, resume branches, negotiation, playlist rules | Ports, and the unit types |
-| **Ports** | Interfaces the domain declares: the store, media inspection, the clock | nothing of ours |
+| **Ports** | Interfaces the domain declares: the store, media inspection, the clock | ~~nothing of ours~~ **the unit types** |
 
 **The domain imports no HTTP.** A rule about sort order or a resume threshold is a fact about
 Jellyfin's semantics, not about a request, and the measured ones in
@@ -64,6 +64,24 @@ test a six-branch resume rule is to issue a request.
 they serialise specially, because §1.3 says a duration is a tick everywhere — in the domain and in
 the store — and a domain that imported the serialiser to hold a duration would have inverted the
 whole diagram to get a number.
+
+**Amended 2026-09-03, at 001's closing audit.** The Ports row read *"nothing of ours"* and the
+paragraph above read *"a leaf, imported by both"*, and the two do not both hold: an interface that
+hands the domain a date has to name the type of that date. 001 met it at T4 —
+`MarkSetupComplete(ctx, units.Time)` and the `Clock` its plan declares are both written in terms of
+the unit type — implemented the **prose** reading, and recorded the argument rather than editing
+this table quietly. The audit agrees with the prose and the table is corrected here, dated, with
+the old wording struck rather than replaced.
+
+The alternative was a bare integer at the port, and it is worse for a measured reason: §1.3 of
+[behaviours.md](compatibility/behaviours.md) exists because a tick that travels as a number is a
+tick somebody eventually multiplies by the wrong constant, and the type is what makes the
+conversion impossible to forget. **The rule the row is really stating survives unchanged** — a port
+imports nothing that can reach a request, a status code or a store — and *"the unit types"* is the
+one exception, because they are a leaf that imports nothing itself. **No ADR is needed**: this is
+the document stating what it always meant three sentences further down, not a deviation from it. A
+port that ever needed to import something that is *not* a leaf would be the deviation, and that one
+would need one.
 
 **Ports are declared by the domain and implemented outward.** This is what lets
 [ADR-0003](decisions/) be argued after features are planned rather than before: a plan writes

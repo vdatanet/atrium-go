@@ -5,6 +5,7 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-03
 accepted: 2026-08-26
+amended: 2026-09-03 by T18 - section 3.2, on PackageName being absent rather than empty, and section 5, on AC-5's third half being carried into 002; by T18 - section 6, on why /System/Info has no golden. 2026-09-03 at the closing audit (T21) - sections 3.2, 3.4, 3.5 and 6: two places where this document is contradicted by the reference's own source and is deliberately NOT amended on that evidence, one refusal 001 can reach no state to produce, and what AC-9 and AC-11 were and were not proven against
 depends_on: []
 ---
 
@@ -173,6 +174,18 @@ other three, which the reference does send and which are all empty.
 | No or invalid token, and setup already complete | `401` |
 | Valid token without permission | `403` |
 
+**Amended 2026-09-03 at the closing audit. The `403` row is unreachable in this feature and is
+untested here on purpose.** 001 issues no credential, so there is no request that can be *valid and
+insufficient*: the two states it can reach are setup outstanding, which is admitted whatever the
+request carried, and setup complete with no credential, which is the `401`. The row is not softened
+or deleted — it is what the reference does — and the implementation refuses to guess at it: its
+admission port declares **two** values, granted and unauthenticated, and a third that arrived
+without the refusal being taught would be answered `500` loudly rather than admitted or refused
+silently. [behaviours §1.11](../../docs/compatibility/behaviours.md) also gives a `403` a **body**
+this project has not measured on this route, which is the second reason not to invent one.
+[002](../002-authentication-users-and-sessions/spec.md) is where a token exists and where this row
+is met.
+
 ### 3.3 `GET /System/Ping`, `POST /System/Ping` — `GetPingSystem`, `PostPingSystem`
 
 **Consumers:** none of the two analysed clients; included by design (health checks, reverse proxies,
@@ -216,6 +229,19 @@ break. `[probe: tools/probe_local_address.py, Jellyfin 10.11.11, 2026-09-02]`
 as a deliberate divergence in
 [behaviours.md §4.2](../../docs/compatibility/behaviours.md#42-localaddress-does-not-get-an-https-override).
 
+**Amended 2026-09-03 at the closing audit. The order of tiers 1 and 2 is contradicted by the
+reference's own source, and this document is deliberately not changed on that evidence.** The
+overload that serves this response tests *derive from the request* **before** *published URL*
+`[source: Emby.Server.Implementations/SystemManager.cs:77,120;
+ApplicationHost.cs:885-901 @ v10.11.11]`, which is the opposite of the numbering above and of
+[behaviours §2.3](../../docs/compatibility/behaviours.md)'s corrected table. The two readings differ
+on **exactly one installation**: one with both configured. AGENTS.md §1.3 makes a running server
+the tie-breaker over source, and no running reference is reachable from here — so the
+implementation follows this document as written, and the question is registered as **U-2** in
+[reference-target.md](../../docs/compatibility/reference-target.md#claims-this-project-asserts-and-has-never-measured--added-2026-09-03).
+One request settles it; failing that it is one undeclared difference in 010's run, and whichever
+way it falls, what changes is this paragraph rather than the implementation's shape.
+
 ### 3.5 What the server says while it is starting
 
 Not an error path of one endpoint but a property of the whole server: **every operation the
@@ -244,6 +270,33 @@ different message and a longer hint, without stopping the process.
 > The `503` responses are also where the reference's OpenAPI document declares `allowEmptyValue`
 > on header objects, which is invalid there and makes strict parsers reject the whole document. See
 > [reference-target.md §2](../../docs/compatibility/reference-target.md#2-sources-of-truth-in-precedence-order).
+
+**Amended 2026-09-03 at the closing audit. *"Nothing is exempt"* is cited from the pinned document
+and is contradicted by three readings of the reference's source, and this section is deliberately
+implemented as written rather than corrected.** The three, all at `v10.11.11`:
+
+1. the starting `503` does not come from the main pipeline at all. It comes from a **separate setup
+   web server** that runs before the application object exists, whose whole pipeline is `/health`,
+   forwarded headers, `/startup/logger`, `/System/Info/Public` and a catch-all `503`
+   `[source: Jellyfin.Server/ServerSetupApp/SetupServer.cs:177-259 @ v10.11.11]`. That server
+   registers **no** response-time middleware;
+2. on that server, `/System/Info/Public` is **not** a `503` once the host object exists — it
+   answers a real public body with `StartupWizardCompleted = false`
+   `[source: .../SetupServer.cs:204-237 @ v10.11.11]`;
+3. the **main** pipeline's own gate exempts `/system/ping`, case-insensitively, and sends
+   **neither** `Retry-After` nor `Message` — only the status, `text/html` and a localised string
+   `[source: Jellyfin.Api/Middleware/ServerStartupMessageMiddleware.cs:38-48 @ v10.11.11]`.
+
+None of that is a measurement of a running server, which is what would settle it (AGENTS.md §1.3),
+and there is no running reference here. So the section stands, the implementation exempts nothing
+and sends both headers, and the contradiction is registered as **U-1** in
+[reference-target.md](../../docs/compatibility/reference-target.md#claims-this-project-asserts-and-has-never-measured--added-2026-09-03)
+together with the two smaller unknowns it carries: whether `Retry-After` is zero-padded (the setup
+server writes `005`; the pinned document declares an integer; this server sends `5`) and what the
+`text/html` body's bytes are — there being no single reference body to copy, a bare string in one
+place and a rendered startup-log page in the other, so the media type is all this document asserts.
+**Editing §3.5 on source evidence would have been the wrong move**, and is recorded here as one not
+taken.
 
 ### 3.6 How a request is matched to a route
 
@@ -323,6 +376,21 @@ here can. It is recorded as a **criterion carried into 002** rather than quietly
 something a stub could satisfy — a test that admitted a fictional token would prove the handler
 asks its port, which is a true and much smaller claim, and it is asserted under that name instead.
 
+**Amended 2026-09-03 at the closing audit: the carried half now has somewhere to be met.** It is
+written into 002 as **[AC-14](../002-authentication-users-and-sessions/spec.md#5-acceptance-criteria)**,
+with the two conditions that discharge it — 001's authentication port filled, and the request
+issued to the running binary carrying a token 002's own route returned. A criterion carried in a
+sentence is a criterion nobody closes; a criterion carried into another specification's numbered
+list is one somebody has to.
+
+**Amended 2026-09-03 at the closing audit: AC-9 and AC-11 were proven at a level below the one they
+are written at, and now are not.** Both read as claims about *requests to this feature's
+endpoints*, and both were proven over stand-ins — AC-9 over a model declared in a test file, AC-11
+over a router whose handler echoes the route it was reached through. Each was verified by mutation
+rather than by reading: a handler writing a constant content profile, and a pipeline stage that
+recognises the doubled slash and then folds nothing, each left every test at the HTTP boundary
+green. Both now have tests against the running binary, and §6 records what they are.
+
 ## 6. Conformance
 
 | Endpoint | Level | How it is proven |
@@ -332,6 +400,7 @@ asks its port, which is a true and much smaller claim, and it is asserted under 
 | `GET /System/Ping` (both methods) | **L2** | Exact-body test |
 | `LocalAddress` selection | **L2** | Table-driven test over the three tiers with synthesised requester addresses |
 | Path matching and refusals (§3.6) | **L0** | Every route registered against `surface.yaml` and none outside it; the accepted spellings; the empty `404` and `405` |
+| The three content types (§3.0.2) | **L1** | Byte-identical plain and `PascalCase` bodies, camelCase names carrying the same raw values, and the echo — against both `/System/Info` routes as well as over the serialiser |
 
 The two cross-cutting sweeps described in
 [conformance.md](../../docs/compatibility/conformance.md#l1--shape) — PascalCase over every
@@ -347,6 +416,26 @@ byte comparison. The two things a golden buys are bought separately and both are
 absence of `PackageName` in one assertion, and the **per-field raw JSON values**, which tell an
 empty array from a null one and a boolean from the string spelling of one. The superset assertion
 of AC-5 compares the two bodies member by member as raw JSON for the same reason.
+
+**Amended 2026-09-03 at the closing audit. Three of this feature's behaviours are asserted below
+the HTTP boundary, and each is there for a reason that is a property of 001 rather than a shortcut.**
+Naming them is the point: a reader who assumes the whole of §3 is proven against the running binary
+would be wrong in exactly these three places, and each closes in a later feature.
+
+- **§3.4's three tiers, and AC-7, AC-8 and AC-13 with them.** 001 gives an operator no way to
+  configure a published URL, a derive-from-request flag or a bound-address list, so every
+  installation this binary can be started as reaches tier 3's fallback and answers from the
+  request. The choice is a pure function of the request's facts and the configuration, tested over
+  all three tiers and over the deliberate divergence; what is missing is a **caller**, and it
+  arrives with the first feature that adds configuration.
+- **§3.5 and AC-12.** The binary opens its readiness gate before it serves, and 001 routes nothing
+  that withdraws it, so no request a client can make ever sees a `503`. Every route and one
+  unrouted path are asserted against the assembled pipeline over a real connection instead, held
+  pre-ready — which is the same instrument minus the process boundary.
+- **§3.2's `401`.** It needs an installation whose setup is *complete*, and 001 serves no route
+  that completes one. Asserted at the handler over a real connection, because three of the four
+  things this refusal is measured by are invisible to an in-memory recorder. **It moves to the
+  HTTP-boundary suite the day 002 can finish setup over HTTP.**
 
 **L3 for `/System/Info/Public` is not met, and is deferred rather than skipped.** Its second half —
 the same request issued to Atrium and to a real reference server, compared field by field — needs

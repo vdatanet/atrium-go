@@ -43,6 +43,25 @@ forget. Requests are parsed case-insensitively, because Jellyfin's model binder 
 > ecosystem defaults to snake_case everywhere. It gets a conformance test that walks every
 > registered response model and fails on any non-PascalCase field name.
 
+**Amended 2026-09-03, at 001's closing audit. *"Every"* is 1003 of 1026, and the exceptions are in
+two places.** Writing the sweep meant writing the rule down, and a rule has to be checked against
+the document rather than against intuition. **23 of the 1026 property names the pinned document
+declares are not PascalCase**: five are RFC 7807's problem-details members (`type`, `title`,
+`status`, `detail`, `instance`) and eighteen belong to the plugin repository manifest. **None is on
+a v1 route**, so nothing in this project's surface changes and the *"Atrium does: the same"* above
+stands as written.
+`[spec: docs/compatibility/property-names.json, extracted from the pinned 10.11.11 document,
+counted 2026-09-03]`
+
+The finding that matters for anyone implementing the sweep is the shape of the rule rather than the
+count. **A rule spelled "a capital, then lower-case letters, repeated" is wrong**: the document
+contains `EnableIPv4`, `Video3DFormat` and `Hdr10PlusPresentFlag`, all of which it refuses. A sweep
+written that way fires on real names, and whoever meets it loosens it — which is how a check that
+was meant to catch a camelCase leak stops catching anything. The rule this project runs is measured
+against all 1026 rather than argued: **the first character is upper-case, and every character after
+it is a letter or a digit** — which admits the three names above and refuses an underscore, a
+hyphen and a leading lower-case letter alike.
+
 ### 1.2 Dates carry up to seven fractional digits
 
 **Jellyfin does:** emits .NET round-trip ISO-8601, e.g. `2025-06-19T00:00:00.0000000Z` — seven
@@ -1517,11 +1536,24 @@ Four measured details that a reimplementation needs and that reading the documen
   `ProviderIds`, `ImageTags` and `ImageBlurHashes` keep their keys, because the reference sets
   `PropertyNamingPolicy` and never sets `DictionaryKeyPolicy`.
 - **The conversion is .NET's, not "lower the first letter".** A leading run of capitals lowers all
-  but the last of them. Over the 1043 names of the pinned document the two rules disagree exactly
+  but the last of them. Over the ~~1043~~ **1026** names of the pinned document the two rules
+  disagree exactly
   **once** — `UICulture` becomes `uiCulture`, and lowering the first letter would give `uICulture` —
   and that one name is the one that was measured. The other name with a leading run, `ETag`,
   becomes `eTag` under both rules, which is why the difference is so easy to miss: a spot check
   almost certainly lands on a name where the wrong rule is right.
+
+> **Amended 2026-09-03, at 001's closing audit.** The count above read **1043** and the pin moved
+> under it. `docs/compatibility/property-names.json` declares and holds **1026**, and
+> [reference-target.md §1](reference-target.md#1-the-pinned-version) records why on 2026-09-01: the
+> 1043 was an extraction of one server's `10.11.10` document taken while that server carried a
+> Trakt plugin this project's reference does not, and the move to the `10.11.11` document dropped
+> nineteen names and gained two. That entry counted the cost of the move and this sentence was not
+> among the things it recounted. **The conclusion is unaffected** — `UICulture` is the single
+> disagreement under either index, and this project's own test asserts it over the 1026
+> `[spec: docs/compatibility/property-names.json, extracted from the pinned 10.11.11 document]`.
+> Corrected rather than deleted, because a number that moved silently is exactly the kind of thing
+> the amendment paragraphs exist to make visible.
 
 **Depends on it:** neither analysed client sends the profile, and both were checked rather than
 assumed. music-client decodes with a PascalCase naming strategy of its own and sets no `Accept`
@@ -2915,6 +2947,61 @@ correctness elsewhere.
 Worth revisiting only if the differential harness (010) finds a client that reads raw bytes — and
 if one exists, the fix belongs in `compat/responses.py` for every endpoint at once, not in the
 feature that happened to notice.
+
+### 4.5 `/System/Info` answers four fields with what is true here, not with the reference's constants
+
+**Added 2026-09-03, at 001's closing audit.** Four members of `/System/Info` differ from the
+reference in **value**, and they are here because they had nowhere else to be: an
+[`allowlist.yaml`](allowlist.yaml) entry must cite a `behaviours §N` or one of the four derivation
+classes, these have no derivation class, and the specification that decides them
+([001 §3.2](../../specs/001-server-identity-and-discovery/spec.md)) is not a section of this
+document. So the file's own load would have refused an entry and
+[010](../../specs/010-conformance-harness/spec.md) would have met four undeclared differences on
+the second response of the API. **This section is the `§N` those entries cite.**
+
+They fall into two pairs with two different arguments, and both are Principle V's *shape of a safe
+divergence* (§3.0.3) rather than Principle I: the **fields are all present, spelled and typed
+exactly as the reference declares them** — Principle I is a statement about the surface, and the
+surface is unchanged.
+
+**The first pair: the reference's value is true of nothing.**
+
+| Field | Reference | Atrium |
+|---|---|---|
+| `SystemArchitecture` | `"X64"` | `""` |
+| `EncoderLocation` | `"System"` | `""` |
+
+Both are **defaults under an obsolete marker on a property the server never assigns** —
+`SystemArchitecture` is marked *"no longer set"*
+`[source: MediaBrowser.Model/System/SystemInfo.cs:141-143 @ v10.11.11]` and `EncoderLocation`
+*"isn't set correctly anymore"* `[source: MediaBrowser.Model/System/SystemInfo.cs:137-139 @
+v10.11.11]`. So the reference's own declaration says the value means nothing, and a reference server
+answers `X64` on an ARM machine.
+
+Copying the constant would put a false claim about this host on the wire; reporting this host's real
+architecture would put a string there that **no reference server sends**, on a field whose
+declaration says it is not set. 001 §3.2's rule — real values where meaningful, empty string
+otherwise — picks the third answer, and it is the same answer the reference gives for
+`OperatingSystem` (§1.1's sibling case, and the one 001 §3.1 already fixes at `""`).
+
+**The second pair: Atrium honestly cannot.**
+
+| Field | Reference | Atrium | Why |
+|---|---|---|---|
+| `SupportsLibraryMonitor` | `true`, unconditionally `[source: Emby.Server.Implementations/SystemManager.cs:79 @ v10.11.11]` | `false` | v1 watches no filesystem |
+| `CanSelfRestart` | `true`, marked obsolete saying so `[source: MediaBrowser.Model/System/SystemInfo.cs:67-69 @ v10.11.11]` | `false` | v1 cannot restart itself |
+
+Answering `true` would be the failure §3.0.3 warns about in its other direction: a client that
+started a watch-dependent flow on the strength of a `true` waits for a notification that never
+arrives, and one that offers a restart button gets a route that is not in v1 at all (Principle VI).
+A capability flag is the one kind of field where the honest answer is also the compatible one,
+because its whole purpose is to let a client not try.
+
+**Depends on it:** neither analysed client reads any of the four; 001's OQ-1 is the open question
+about the second pair and it blocks nothing. **What this section costs:** four rows of
+`allowlist.yaml`, scoped to `GET /System/Info` and one JSON Pointer each, citing `behaviours §4.5`.
+Whichever way 010's run resolves them, the change is to this section or to 001 §3.2 — not to the
+handler.
 
 ---
 

@@ -188,6 +188,59 @@ a single word for the rest, and `UserData` is on every item **except** a by-name
 A claim that fails to reproduce when its probe is finally written is not quietly dropped: it goes
 into [behaviours.md](behaviours.md) as a behaviour that *changed*, with both dates.
 
+### Claims this project asserts and has never measured — added 2026-09-03
+
+The register above is about measurements somebody **took** and nobody here can re-run. This one is
+the opposite debt and it is the larger of the two: places where an implementation had to answer a
+question the reference has not been asked, wrote down the answer it took, and said so.
+
+They are collected here because they were scattered — each one was recorded where it arose, in a
+`plan.md` section or beside a constant in the code, and four separate tasks of feature 001 wrote
+*"this belongs in the register of measurements that still owe a probe"* without anyone owning the
+document. Collected, they are one afternoon's work against a running reference and a container
+this project already knows how to stand up
+([ADR-0007](../decisions/0007-a-container-runtime-for-the-reference-instance.md)).
+
+**The rows are not `prior-probe` citations and this table is not the one above.** Nothing here was
+ever measured; each row is an `⚠️ UNVERIFIED` inference or a specification this project implemented
+**as written** while its own source reading pointed the other way. Where the second is true the row
+says so, because AGENTS.md §1.3 makes the running server the tie-breaker and there is no running
+server here — *the specification was not amended on source evidence, and that is the correct move,
+not an oversight.*
+
+| # | What is unmeasured | What this project does today | Recorded at | One request? |
+|---|---|---|---|---|
+| U-1 | **Whether a starting reference exempts anything from its `503`.** Three source readings contradict [001 §3.5](../../specs/001-server-identity-and-discovery/spec.md)'s *"nothing is exempt"*: the starting `503` comes from a **separate setup web server** which registers no response-time middleware `[source: Jellyfin.Server/ServerSetupApp/SetupServer.cs:177-259 @ v10.11.11]`, that server answers a **real** `/System/Info/Public` rather than a `503` `[source: .../SetupServer.cs:204-237 @ v10.11.11]`, and the **main** pipeline's gate exempts `/system/ping` and sends **neither** `Retry-After` nor `Message` `[source: Jellyfin.Api/Middleware/ServerStartupMessageMiddleware.cs:38-48 @ v10.11.11]` | Implements §3.5 as written: every route, no exemption, both headers, a `text/html` body | 001 plan §6.8 | Four routes plus one unrouted path against a *starting* reference, recording status, `Retry-After`, `Message`, `Content-Type` and `X-Response-Time-ms`. Hard only because it has to catch a server mid-start |
+| U-2 | **The order of `LocalAddress` tiers 1 and 2.** The overload that serves this response tests `EnablePublishedServerUriByRequest` **before** `PublishedServerUrl` `[source: Emby.Server.Implementations/SystemManager.cs:77,120; ApplicationHost.cs:885-901 @ v10.11.11]`; [behaviours §2.3](behaviours.md)'s corrected table and [001 §3.4](../../specs/001-server-identity-and-discovery/spec.md) number them the other way | Implements the spec's order — published URL first | 001 plan §6.6 | Yes. One installation with **both** configured is the only case the two readings differ on |
+| U-3 | **The key order of a JSON body.** L3 compares bytes, so key order is contract. No probe in this repository records the key order of any response, and this repository's two sample bodies for `/System/Info/Public` disagree (§4 opens with `ServerName`, 001 §3.1 with `LocalAddress`) | Ships the reference model's declaration order `[source: MediaBrowser.Model/System/PublicSystemInfo.cs:14-53 @ v10.11.11]` | 001 plan §8, marked `⚠️ UNVERIFIED` at the model | Yes, and it is the response every client enters the API through. **Weaker still on `/System/Info`**, whose model *derives* from the public one: where a serialiser puts an inherited property is a property of that serialiser and nothing here records it |
+| U-4 | **Whether `Retry-After` is zero-padded.** The setup server formats it `"000"` — `005` for a five-second hint `[source: Jellyfin.Server/ServerSetupApp/SetupServer.cs:242 @ v10.11.11]`; the pinned document declares an integer | Sends `5` | 001 plan §6.8 | Rides U-1 |
+| U-5 | **The bytes of the `text/html` `503` body.** There is no single reference body to copy: a bare string in one place, a page rendered from the startup log in the other | Asserts the media type and nothing about the bytes | 001 plan §6.8 | Rides U-1 |
+| U-6 | **What a `charset` beside a `profile` does to *ranking*.** [§1.13](behaviours.md#113-the-camelcase-profile-really-is-camelcase) measured the fallback on a **single-range** `Accept` only. Two readings fit: the range becomes a plain candidate and keeps its rank, or it matches nothing and the next range is tried | Takes the first reading, because 001 §3.0.2 says "falls back to the plain type" in as many words | 001 plan §6.3 | Yes, and exactly one request tells them apart: `Accept: application/json; profile="CamelCase"; charset=utf-8, application/json; profile="CamelCase"` |
+| U-7 | **What a percent-encoded *literal* path segment matches.** Canonicalisation runs on the **escaped** path, because folding the decoded one would segment on a `%2F` a client encoded precisely so it would not be a separator — so `/%53ystem/Info/Public` does not fold here | Does not fold it | 001 plan §6.1 | Yes |
+| U-8 | **What a percent-encoded query *name* matches.** Same shape as U-7, on the query string's own bytes: `%4Cimit` is not `limit` here | Does not fold it | 001 plan §6.2 | Yes |
+| U-9 | **What an unknown method token on an unrouted path answers.** 001 §3.6 keys its `404` on the path, so this server answers `404` whatever the method; that is a *reading* of §3.6 rather than a measurement | `404` | 001 plan §6.5 | Yes |
+| U-10 | **Whether the reference writes a character above U+FFFF as a surrogate pair**, and **whether it escapes a control character at all.** [§1.16](behaviours.md) was measured only on characters fitting one UTF-16 code unit | Writes `\uXXXX\uXXXX`, and spells a control character `\uXXXX` upper-cased for consistency with §1.16 | 001 plan §6.4, marked in `internal/wire` | Yes — an item or playlist name carrying an emoji settles both |
+| U-11 | **The shape of a `500`.** [§1.11](behaviours.md) has no `500` row, so nothing is known about whether the reference sends a body with one | Status, empty body, nothing else | 001 plan §7 | Yes |
+| U-12 | **Whether the reference binds a query pair carrying a semicolon.** Go discards one — `url.ParseQuery` answers `invalid semicolon separator in query` for `a;b=1&c=2` and `r.URL.Query()` swallows the error `[measurement: net/url, Go 1.27.0, 2026-09-03]` — and ASP.NET Core has no such rule, so a request the reference binds may reach a handler here with the parameter missing | Neither creates nor hides it: query canonicalisation splits on `&` alone and leaves the fragment in place | 001 plan §6.2 | Yes, and it is owed by the first feature that reads a query **value** rather than folding a name |
+
+**A warning for [010](../../specs/010-conformance-harness/spec.md) that is not a row, because it is
+about the instrument rather than about the reference.** A differential run reads headers with some
+library, and **a header reader that returns one field line per name cannot see a repeated header**.
+That is not hypothetical: this project's own recorded measurement of chi's `Allow` said it named
+one arbitrary method, and re-measuring found it names **both, in two `Allow` field lines**, in Go
+map-iteration order — `GET, POST` 171 times and `POST, GET` 29 over 200 identical requests
+`[measurement: github.com/go-chi/chi/v5 v5.3.2, Go 1.27.0, 2026-09-03]`. The first reading is
+exactly what an instrument of that kind sees of two field lines. The same kind of instrument reads
+the reference. **A repeated header anywhere in the v1 surface would be invisible to a differential
+run made that way**, and the check is one line: read field *lines*, not a joined value, and assert
+their count.
+
+Nothing in this table blocks feature 001, and none of it is a defect in the implementation: every
+row is a decision taken deliberately, argued where it was taken, and reachable from here. What each
+row buys is that 010's differential run meets it as a **declared** difference rather than as a
+surprise — which is the shape [AGENTS.md §3](../../AGENTS.md) asks every conformance assertion to
+take.
+
 ### Obtaining the reference documents
 
 The OpenAPI document is **not vendored** into this repository — it is generated from GPL-licensed

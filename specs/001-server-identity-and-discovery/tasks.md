@@ -264,8 +264,30 @@ list is long for four routes.
 
 ## T12 — `X-Response-Time-ms` and `Server`
 
-- [ ] **Changes:** two middlewares — the response time in fractional milliseconds on **every**
+- [x] **Changes:** two middlewares — the response time in fractional milliseconds on **every**
   response, and `Server: Atrium/<version>` from the build stamp.
+- **Amended 2026-09-03, on doing it.** Three things the wording did not settle.
+  **The `503` row of the *Verified by* line below could not be reached**, because the gate that
+  answers one is T13's, and it is worth more than a missing row: `plan.md` §6.7 puts that gate
+  *outside* these two stages, where a refusal carries neither header, while T14's own acceptance
+  asks that the gate's `503` carry both. `plan.md` §6.7 now records the contradiction and the
+  reference's own answer to it — its response-time middleware is registered near the outside of the
+  main pipeline and its startup gate well inside it
+  `[source: Jellyfin.Server/Startup.cs:163,217 @ v10.11.11]` — and leaves the choice to T13/T14.
+  What ships here is a test for the constraint and a stand-in row named as one: a `503` written by a
+  stage *inside* the stamp carries both headers.
+  **The `Date` header T1 left open is answered and owes nothing.** Go's `net/http` sends one on
+  every response; so does the reference, measured moving on 19 of 19 read cases
+  `[probe: tools/probe_reference_determinism.py, Jellyfin 10.11.11, 2026-09-01]` and excused by name
+  in `allowlist.yaml` beside the response time itself. No divergence is owed.
+  **The value's shape is the reference's own quantisation, not a format choice.** The reference
+  formats a .NET `TimeSpan`'s total milliseconds with the invariant culture
+  `[source: Jellyfin.Api/Middleware/ResponseTimeMiddleware.cs:61 @ v10.11.11]`, and a `TimeSpan`
+  counts the same 100-nanosecond tick `internal/units` counts (behaviours §1.3) — so at most four
+  decimal places, which is what §1.9's measured `2.1329` shows, and the conversion is integer
+  arithmetic on `units.Ticks` rather than a format string. That a whole millisecond is sent with no
+  decimal part at all follows from .NET's shortest-round-trip formatting and is **⚠️ UNVERIFIED**;
+  it is marked in the code, and it costs nothing because the header is excused on every endpoint.
 - **Depends on:** T1
 - **Verified by:** both headers present on a `200`, on the empty `404`, on the `405` and on the
   `503` — the refusals are where a header added by the wrong layer goes missing.

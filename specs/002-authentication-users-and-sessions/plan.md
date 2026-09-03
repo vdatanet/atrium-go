@@ -1,7 +1,7 @@
 ---
 feature: 002-authentication-users-and-sessions
 title: Authentication, users and sessions — implementation plan
-status: In review
+status: Accepted
 created: 2026-09-03
 updated: 2026-09-03
 spec_status_required: Accepted
@@ -20,8 +20,11 @@ plan amended the spec**, in four places, and that does not reopen the gate. The 
 [specs/README.md](../README.md) closes deliberately — what planning teaches goes back into the
 spec, in the same change — and the amendments are listed in §11 with what forced each one.
 
-This plan is `In review`. It becomes `Accepted` when that review returns and a task list is asked
-for, which is what `tasks.md`'s own `plan_status_required` gates.
+~~This plan is `In review`. It becomes `Accepted` when that review returns and a task list is asked
+for, which is what `tasks.md`'s own `plan_status_required` gates.~~ **Moved to `Accepted` on
+2026-09-03, in the change that wrote [tasks.md](tasks.md)** — the review returned and the task list
+was asked for, which is exactly the transition that sentence described and what the list's own
+`plan_status_required` needs. 001's plan recorded the same move in the same place.
 
 **On two anchors this file has to honour.** Two documents already cite sections of a `plan.md` at
 this path that did not exist: [behaviours §2.4](../../docs/compatibility/behaviours.md#24-there-are-five-authentication-mechanisms-and-one-of-them-wins)
@@ -863,6 +866,14 @@ the test to this feature. It is two assertions and neither is sufficient alone:
   which is a whole 52 ms gap on the machine that measured it, and a tight margin would make a
   scheduling hiccup look like a regression. A test that is flaky is a test somebody deletes.
 
+**And the ADR is not edited when this lands, which is worth stating because the obvious tidy-up is
+forbidden.** ADR-0006's *"the timing equalisation is specified here and asserted nowhere"* becomes
+untrue at [T6](tasks.md), and [AGENTS.md §4](../../AGENTS.md) makes an accepted ADR immutable — a
+wrong one is superseded, never edited. This one is not wrong: it records a decision as taken,
+including what it owed at the time, and it already names 002 as where the debt is paid. The
+discharge is recorded in the task list and here, not by striking a line in the record.
+*(Added 2026-09-03, while writing the task list.)*
+
 Both must be proven able to fail: an early return on the unknown-username path fails the second and
 the counter assertion fails the first. **Neither is in `conformance/`**, and the reason is worth
 stating rather than apologising for: at the wire both paths carry the same 52 ms of Argon2 plus the
@@ -940,6 +951,13 @@ first route, both halves start requiring **all seven** of 002's `surface.yaml` r
 the last one lands. That is the intended friction. The task list therefore either lands the seven
 registrations in one change over handlers that already work, or accepts a red L0 in between — and
 the choice is the task list's to make deliberately, named here so it is not discovered.
+
+**Taken 2026-09-03, in [tasks.md](tasks.md): the seven registrations land in one change, at T17.**
+The second option is not available in practice, because every task here opens a pull request that
+has to go green on its own, and a red L0 is a red build. What it costs is written into the list
+rather than hidden: T12–T16's handlers are asserted at the HTTP boundary in `internal/httpapi`
+before any of them is reachable over the wire, and T18–T21 are where the criteria become assertions
+about requests — which is the distinction 001's closing audit turned into this plan's §8 rule.
 
 Adding a field to `httpapi.Handlers` also fails
 `TestTheRegistrationCheckIsRunWithEveryHandlerAServerCanBeBuiltWith` until `everyHandler` fills it.
@@ -1060,3 +1078,25 @@ for the order would have passed while proving something else.
 and the new `Selection`, §6.10, §7's two new refusal rows, and §8's rows for AC-4 and AC-15. **§9's
 `GET /Sessions` risk is retired** — it was the risk that this change would not be made, and AC-4's
 second half stopped being partly out of reach on the same request.
+
+**And two sections moved in the change that wrote [tasks.md](tasks.md), 2026-09-03. Neither is a
+spec amendment**: writing the ordered steps taught nothing about WHAT, which is the outcome a plan
+this heavily amended should hope for.
+
+- **§8.4's open choice is closed.** It named the L0 friction and left *"either the seven
+  registrations in one change or a red L0 in between"* to the task list. The list takes the single
+  change, because a red build is not a state a task can merge from, and the paragraph now records
+  which way it went and what it costs. A plan that leaves a choice open and never learns the answer
+  is a plan whose reader has to go and find the code.
+- **§8.1 states that ADR-0006 is not edited when the equalisation check lands.** The record's
+  *"asserted nowhere"* line stops being true at T6 and stays in the record, because
+  [AGENTS.md §4](../../AGENTS.md) makes an accepted ADR immutable. Without the sentence, the obvious
+  and forbidden tidy-up is the first thing a reader of §8.1 would reach for.
+
+**One thing this plan leaves open on purpose, and the task list says so rather than guessing.** §5
+writes `UserStore` and `SessionStore` in terms of `User`, `Credential`, `Session` and
+`LoginOutcome` without saying whether those types belong to `internal/ports` or to the domain
+packages that declare the interfaces. The two are not equivalent —
+[architecture §2](../../docs/architecture.md#2-layers-and-the-direction-of-dependency) lets `ports`
+import nothing of ours but `internal/units`, so a method returning `users.User` inverts the arrow —
+and T4 takes the decision and amends §5 with what forced it.

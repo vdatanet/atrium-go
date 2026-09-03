@@ -218,7 +218,7 @@ still owe.
 
 ## T8 — The credential reader and the `X-Emby-Authorization` grammar
 
-- [ ] **Changes:** `internal/httpapi` — one reader over the five mechanisms of spec §3.1 in the
+- [x] **Changes:** `internal/httpapi` — one reader over the five mechanisms of spec §3.1 in the
   measured order ([plan §6.1](plan.md#61-token-extraction)), and one parser for the grammar of spec
   §3.2, used for **both** header names, which never fails and returns what it could read
   ([plan §6.3](plan.md#63-the-x-emby-authorization-grammar)). Both cores are pure functions over

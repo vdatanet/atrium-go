@@ -498,6 +498,33 @@ records that *"the two query spellings were never set against each other"*. If b
 takes the first in the raw query string — stated here so it is a decision rather than a property of
 a map, and named in §9 as the one place a client could observe an order nobody measured.
 
+**Amended 2026-09-03, by T8, which wrote the reader.** The three rules above are implemented exactly
+as written. Reading the reference's own resolver to write them turned up **three places where its
+source says something no probe here has measured**, and all three are recorded rather than acted on
+(AGENTS.md §1.3 — a source line does not overturn a plan's stated decision, and there is no probe to
+resolve them against):
+
+1. **The reference's fallback from `Authorization` to `X-Emby-Authorization` is on the first header
+   being *absent*, not on it being unreadable.** It reads `Authorization`, and only when that field
+   is empty does it read the other, then parses whichever it took
+   `[source: Jellyfin.Server.Implementations/Security/AuthorizationContext.cs:231-238 @ v10.11.11]`.
+   So `Authorization: Bearer x` beside `X-Emby-Authorization: MediaBrowser Token="<good>"` is a
+   `401` there and a `200` here. The probe's measured pairs each carried a readable scheme word, so
+   nothing measured contradicts either reading; *"a header that is present but yields nothing does
+   not stop the search"* is this plan's own generalisation and it is what ships. **One request
+   settles it.**
+2. **The two query names are resolved by name there and by position here.** The reference reads
+   `ApiKey` and consults `api_key` only when that is empty
+   `[source: .../AuthorizationContext.cs:103-111 @ v10.11.11]`, so `?api_key=a&ApiKey=b` yields `b`
+   there and `a` here. This is precisely the case §9 already names as *"the one place a client could
+   observe an order nobody measured"*, and it now has a source reading — which is evidence, not a
+   measurement, and does not by itself move a decision this plan took deliberately.
+3. **The reference reads a sixth field, `X-MediaBrowser-Token`, between `X-Emby-Token` and the query
+   names** `[source: .../AuthorizationContext.cs:98-101 @ v10.11.11]`. Spec §3.1 measured and
+   declares **five**; a sixth mechanism nothing has probed and no client analysis names is an
+   endpoint-shaped stub in header form (Principle VI), so it is not read. A request carrying only
+   that header authenticates there and does not here.
+
 ### 6.2 Which routes require a token, and which merely accept one
 
 Requiring is per **route**, and the route asks. The table this feature ships:
@@ -558,6 +585,25 @@ session manager rather than at the parser
 refusal in the parser is the one mistake that would refuse requests the reference serves, on every
 route at once; [behaviours §2.13](../../docs/compatibility/behaviours.md) records it as *"the one
 fatal case"*, and it is fatal to a route, not to a parse.
+
+**Amended 2026-09-03, by T8, which wrote the parser.** The two strict rules are implemented as this
+section states them, symmetrically, and **the reference does not have a rule about whitespace around
+the `=` — it has a value scanner whose consequence is one.** It trims the *name* it reads before the
+`=`, does not trim the *value* after it, and then strips quote characters off that value's ends
+`[source: Jellyfin.Server.Implementations/Security/AuthorizationContext.cs:276-317 @ v10.11.11]`.
+`Token = "x"` therefore yields, there, a `Token` whose value is `` `"x`` — not a token, which is why
+the probe recorded `401` — while `Token ="x"`, with whitespace only *before* the `=`, appears to
+yield a clean `x`.
+
+The measurement is of the refusal and not of the mechanism: both readings answer `401` to the
+request the probe sent, so nothing measured separates them. What separates them is a request nobody
+has sent — a header carrying `Client ="x"`, whose `Client` this server drops and the reference
+appears to keep. Implemented as spec §3.2 and this section write it; **one probe settles it**, and
+until then it is one candidate undeclared difference on a header every client sends.
+
+One smaller reading came with it and is followed rather than recorded, because nothing here
+contradicts it: a value's quotes are **trimmed** rather than unwrapped as a matched pair
+`[source: .../AuthorizationContext.cs:313 @ v10.11.11]`, so an unbalanced `Token="x` yields `x`.
 
 ### 6.4 Verifying a password
 
@@ -1197,6 +1243,7 @@ That is deliberate too, and it is one line.
 | Timing equalisation is asserted with a wall clock in CI | Medium | A flaky test somebody deletes, taking ADR-0006's only check with it | §8.1's margin is a quarter of a derivation and the sample is nine; the mechanism half is deterministic and catches the same regression |
 | The user identifier is derived from the folded username | Low | A future rename would change every reference to that user | Stated in §6.9; v1 has no rename, and the feature that adds one inherits the line |
 | The session identifier deliberately differs from the reference's | Low | An allowlist row that stays rather than shrinks | Argued in §6.5 against the alternative, which is a three-way paired edit |
+| The credential reader is more generous than the reference's source in three unmeasured places (§6.1's amendment) | Medium | A request the reference answers `401` is answered `200` here, on the header every client sends | Recorded at §6.1 with source citations, ⚠️ UNVERIFIED in the code; three requests settle all three, and they belong in the register at T23 |
 | Four Argon2id verifications hold 256 MiB live | Medium | On the smallest host, beside SQLite and ffmpeg | ADR-0006 priced it and chose the ceiling; nothing here raises it |
 
 ## 10. Alternatives considered

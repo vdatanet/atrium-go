@@ -127,7 +127,7 @@ still owe.
 
 ## T5 — The login path: the order the refusals are tested in, and the three-way lockout switch
 
-- [ ] **Changes:** `internal/users` — the login path of [plan §6.4](plan.md#64-verifying-a-password)
+- [x] **Changes:** `internal/users` — the login path of [plan §6.4](plan.md#64-verifying-a-password)
   and [§6.7](plan.md#67-disabled-locked-out-and-at-the-session-ceiling): find by folded name; verify
   the decoy and discard when there is no account; refuse a disabled or locked account **without**
   verifying; otherwise verify, and re-derive on success inside the same call.

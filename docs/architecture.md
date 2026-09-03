@@ -319,7 +319,7 @@ only where each one lives.
 
 | Level | Where | Runs in CI |
 |---|---|---|
-| **L0 — Routed** | `conformance/`, over `surface.yaml`: exactly these routes and no others | yes |
+| **L0 — Routed** | ~~`conformance/`~~ **both halves of it: reachability in `conformance/`, registration in `internal/httpapi` — see the second amendment below**, over `surface.yaml`: exactly these routes and no others | yes |
 | **L1 — Shape** | `conformance/`, goldens in `testdata/golden/`, plus ~~the two reflection sweeps~~ **the wire half of the two sweeps; the reflection half is in `internal/httpapi` — see the amendment below** | yes |
 | **L2 — Semantic** | `conformance/`, over the fixture libraries | yes |
 | **L3 — Differential** | not `go test` at all — the harness, against a real Jellyfin | **never** |
@@ -346,9 +346,12 @@ So the sweeps are split by what each half can see, and each reaches something th
 **The split's one gap is named rather than papered over.** A field is swept by neither half if it is
 in no registered model *and* in no body the wire half requests. The first clause is closed: the
 model sweep's registry is checked against the operations the router is actually built with, so a
-route added without a model fails. The second is open — the wire half's request list is
+route added without a model fails. ~~The second is open — the wire half's request list is
 hand-written — and it is stated in that file, addressed to the route-registration check and to
-whichever feature adds the fifth route.
+whichever feature adds the fifth route.~~ **The second was closed at T20, by the check that half
+of this gap was addressed to:** the wire half's request list is still hand-written, because a
+request needs a method, a path and an `Accept` header that no table carries, but every row the
+running server answers must now appear in it. A route added and not swept fails `conformance/`.
 
 **Goldens are reviewed, never blindly regenerated.** An update flag exists; a diff in a golden file
 is a contract change and is read like one in review.
@@ -367,6 +370,23 @@ project is the one that is never automatic.**
 **The route registration check is the automated half of Principle VI.** It reads `surface.yaml` and
 asserts the server exposes exactly those rows — an endpoint served and not listed fails it, and so
 does one listed and not served, once its feature claims to be implemented.
+
+**Amended 2026-09-03, at 001's T20. The L0 check is two checks, in two directories, and "claims to
+be implemented" is derived rather than declared.** The paragraph above is right about what is
+asserted and silent about who asserts it, and §3's import rule splits this row exactly as it split
+the L1 sweeps one row above: enumerating what the router was told needs `chi.Walk` and therefore
+`internal/`, while issuing a real request needs only a socket. So **registration** lives in
+`internal/httpapi` and **reachability** in `conformance/`, and [001's plan §8.5](../specs/001-server-identity-and-discovery/plan.md)
+argues that the second is the stronger of the two — the only one that catches a route registered
+correctly and made unreachable by a stage above it.
+
+Neither half is given a list of implemented features. A list would be right until the next feature
+lands and then quietly wrong, and a stale list makes the check silent about exactly the rows it has
+stopped knowing about. Both halves derive it from the same rule instead: **a feature the server
+serves any row of must serve every row of it.** A feature with no row served is one this build does
+not implement — a reading of the server rather than a claim about the roadmap. The one shape that
+passes is a feature implemented and serving *none* of its rows, which is not a state any wording
+calls implemented.
 
 ---
 

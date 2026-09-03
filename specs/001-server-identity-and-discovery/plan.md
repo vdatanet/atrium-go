@@ -1086,6 +1086,42 @@ That is what the golden tests are for, and it is why T20 is not the last task.
 **L3 is deferred, not skipped**, on the spec's own terms: what is met now is L2, and the gap closes
 the first time 010 runs.
 
+**Amended 2026-09-03, at T20 — four things this subsection argued and did not settle.**
+
+**Where each half lives.** Both views were written here as if the check were one file. It is two,
+split by [architecture §3](../../docs/architecture.md#3-repository-layout) exactly as the L1 sweeps
+were one task earlier: `chi.Walk` needs the router, the router is `internal/httpapi`, and
+`conformance/` may not import it. So registration is `internal/httpapi/registration_test.go` and
+reachability is `conformance/routes_test.go`. The registration half walks `Pipeline.Router()`
+rather than a router the test assembles, which is what that accessor was written for.
+
+**What "implemented" means.** The subsection says *"whose owning feature is implemented"* and does
+not say who decides. It is **derived, in both halves, from the same rule: a feature the server
+serves any row of must serve every row of it.** A written list would be correct until 002 lands and
+then quietly wrong — and a stale list is worse than none, because the check goes silent about
+precisely the rows it has stopped knowing about. The rule's one blind spot is a feature implemented
+and serving *none* of its rows; no wording calls that state implemented, and nothing available to
+either half would say otherwise. What it does catch is the failure that actually happens: three of
+four rows registered and the fourth forgotten.
+
+**How the row list reaches `conformance/`.** It is read from
+[`docs/compatibility/surface.yaml`](../../docs/compatibility/surface.yaml) by a small strict reader
+in that package, not imported and not copied into `testdata`. A generated copy goes out of date
+silently and then agrees with whatever the document said last time somebody regenerated it. Two
+readers of one document is the trade the wire sweep already makes for the PascalCase rule and the
+date layout, and it buys the same thing here: the two halves reach the surface through different
+code, so they cannot agree by construction. It also reads the *document* rather than the derived
+copy `internal/surface` embeds, so a drift between those two fails this check as well as its own.
+
+**"Not a `404`" is one status too narrow.** The refusal a row that is not served receives is
+[behaviours §1.11](../../docs/compatibility/behaviours.md)'s empty shape, and it is a `405` rather
+than a `404` whenever the *path* has a row and the method does not — which is exactly how a
+half-registered feature looks from outside. Both are read as *not served*, and both are required to
+be empty with no content type, because a handler that looked something up and did not find it also
+answers `404`. That last discrimination is the best signal available at the wire and it is not
+perfect: a future handler answering an empty `404` with no content type would be read here as an
+unregistered route. It is written down rather than left to be discovered.
+
 ## 9. Risks
 
 | Risk | Likelihood | Impact | Mitigation |

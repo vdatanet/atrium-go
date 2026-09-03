@@ -9,15 +9,28 @@ import (
 	"github.com/vdatanet/atrium-go/internal/surface"
 )
 
-// Handlers is what a server serves: one field per feature that has handlers.
-// 001 is the only one so far.
+// Handlers is what a server serves: one field per handler a feature has.
 //
 // It is a struct rather than a list of arguments so that a feature adding its
 // handlers does not change the signature every caller of Routes has already
 // written.
+//
+// Every field is required to be non-nil by the L0 check's own guard
+// (registration_test.go): Routes registers what this value contains, so a field
+// filled in cmd/atrium's wiring and left empty by the check would register
+// routes nothing walks.
 type Handlers struct {
 	// System answers the four /System routes of feature 001.
 	System *SystemHandler
+
+	// Users answers five of feature 002's seven rows: the login, the two
+	// readings of a user object, the public listing and the configuration
+	// write.
+	Users *UsersHandler
+
+	// Sessions answers the other two: the session listing and the capabilities
+	// declaration.
+	Sessions *SessionsHandler
 }
 
 // Routes builds the registration callback NewPipeline takes, over the route
@@ -65,6 +78,28 @@ func Routes(table *surface.Table, handlers Handlers) (func(chi.Router), error) {
 		)
 	}
 
+	// Feature 002's seven rows arrive together, and that is a decision rather
+	// than a convenience. Both halves of the L0 check derive *implemented*
+	// rather than reading a list — a feature the server serves any row of must
+	// serve every row of it — so the first of these registrations makes all
+	// seven required at once (002 plan 8.4, 002 tasks T17). Registering them
+	// one at a time is a sequence of builds that cannot go green.
+	if handlers.Users != nil {
+		registrations = append(registrations,
+			registration{operationGetPublicUsers, handlers.Users.PublicUsers()},
+			registration{operationAuthenticateUserByName, handlers.Users.AuthenticateByName()},
+			registration{operationGetCurrentUser, handlers.Users.CurrentUser()},
+			registration{operationGetUserByID, handlers.Users.UserByID()},
+			registration{operationUpdateUserConfiguration, handlers.Users.UpdateConfiguration()},
+		)
+	}
+	if handlers.Sessions != nil {
+		registrations = append(registrations,
+			registration{operationPostFullCapabilities, handlers.Sessions.PostFullCapabilities()},
+			registration{operationGetSessions, handlers.Sessions.Sessions()},
+		)
+	}
+
 	// Resolved before the callback is returned, so that a row the document does
 	// not have is an error the entry layer reports rather than a panic inside
 	// chi at registration time.
@@ -105,6 +140,38 @@ const (
 	// registered on is exactly what distinguishes them.
 	operationGetPingSystem  = "GetPingSystem"
 	operationPostPingSystem = "PostPingSystem"
+)
+
+// The seven rows of feature 002.
+//
+// /Users/Configuration and /Users/{userId} are one path each in the table and
+// two patterns chi has to tell apart, and it tells them apart by their methods
+// alone: a GET whose path is literally /Users/Configuration matches the
+// parametrised row, with `Configuration` as the identifier
+// [measurement: github.com/go-chi/chi/v5 v5.3.2, Go 1.27.0, 2026-09-03]. That
+// is a reading of the router rather than a measurement of the reference, and it
+// is recorded at the registration because this is where the two rows meet.
+const (
+	// The login screen's listing, which reads no credential at all (spec 3.4).
+	operationGetPublicUsers = "GetPublicUsers"
+
+	// The project's first L3 row (spec 3.3).
+	operationAuthenticateUserByName = "AuthenticateUserByName"
+
+	// The two readings of one user object, built by one filler (spec 3.5,
+	// spec 3.7, plan 6.6).
+	operationGetCurrentUser = "GetCurrentUser"
+	operationGetUserByID    = "GetUserById"
+
+	// The configuration write (spec 3.6). Its `userId` query parameter is
+	// declared by the reference and ignored here, which is register row U-14
+	// rather than an omission — so it is deliberately absent from
+	// V1QuerySpellings.
+	operationUpdateUserConfiguration = "UpdateUserConfiguration"
+
+	// The two /Sessions rows (spec 3.8).
+	operationPostFullCapabilities = "PostFullCapabilities"
+	operationGetSessions          = "GetSessions"
 )
 
 // endpointForOperation finds one row by its operationId.

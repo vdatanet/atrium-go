@@ -74,11 +74,29 @@ import (
 // /System/Ping answers a bare JSON string (spec 3.3), which has no property
 // name to sweep, and saying so with a type is how the row is distinguished
 // from a row somebody forgot.
+//
+// A route that answers **no body at all** has a nil type, and that is the same
+// idea one step further. 002's two writes answer 204 (spec 3.6, spec 3.8), so
+// there is no model to name; the test below compares this registry against the
+// router in both directions, so an omission would fail, and a nil is therefore
+// the only way to say "this row was considered and sends nothing".
 var responseModels = map[string]reflect.Type{
 	"GetPublicSystemInfo": reflect.TypeOf(httpapi.PublicSystemInfo{}),
 	"GetSystemInfo":       reflect.TypeOf(httpapi.SystemInfo{}),
 	"GetPingSystem":       reflect.TypeOf(""),
 	"PostPingSystem":      reflect.TypeOf(""),
+
+	// Feature 002. The listing is registered as the **slice** the server
+	// answers rather than as its element: the sweep walks through a slice, and
+	// a model this server never sends on its own would be a claim about a body
+	// that does not exist.
+	"GetPublicUsers":          reflect.TypeOf([]httpapi.UserObject{}),
+	"AuthenticateUserByName":  reflect.TypeOf(httpapi.AuthenticationResult{}),
+	"GetCurrentUser":          reflect.TypeOf(httpapi.UserObject{}),
+	"GetUserById":             reflect.TypeOf(httpapi.UserObject{}),
+	"GetSessions":             reflect.TypeOf([]httpapi.SessionInfo{}),
+	"UpdateUserConfiguration": nil,
+	"PostFullCapabilities":    nil,
 }
 
 // TestEveryRegisteredOperationDeclaresItsResponseModel is what stops the split
@@ -164,11 +182,240 @@ func TestEveryUnitCarryingFieldHasAUnitType(t *testing.T) {
 	}
 }
 
-// 001 sends no tick and no date — spec 3.1 and spec 3.2 are strings, booleans,
-// one integer port and two empty arrays — so the two tests above are, today,
-// a sweep that finds nothing. That is the state a sweep is supposed to be in
-// and it is also the state in which it proves nothing, which is what the next
-// three tests are for.
+// ~~001 sends no tick and no date — spec 3.1 and spec 3.2 are strings,
+// booleans, one integer port and two empty arrays~~ **002's five models are the
+// first this sweep has had anything to walk in**: sixty policy and configuration
+// members under two user objects, a session with a date and a tick, and an
+// authentication result carrying both. The two tests above still find nothing,
+// which is the state a sweep is supposed to be in and also the state in which it
+// proves nothing — so the next tests are what make that state mean something,
+// and TestTheSweepsFailOverTheShapesOfTheModelsTheyWereJustHanded below is the
+// half that asks it of *these* models rather than of a shape invented for the
+// question.
+
+// modelsThisFeatureAdded is the five response models 002 registered, named
+// where the failure proof below can iterate over them.
+//
+// It exists because "the sweep passes over the new types" and "the sweep can
+// fail" are two claims, and only the second one needs a planted fault. Pairing
+// them here keeps the fault in a wrapper *around* a real model rather than in a
+// model invented to be broken: what is being proved is that the walk reaches
+// into a body of this shape, and a standalone two-field struct proves that
+// about a two-field struct.
+var modelsThisFeatureAdded = map[string]reflect.Type{
+	"GetPublicUsers":         reflect.TypeOf([]httpapi.UserObject{}),
+	"AuthenticateUserByName": reflect.TypeOf(httpapi.AuthenticationResult{}),
+	"GetCurrentUser":         reflect.TypeOf(httpapi.UserObject{}),
+	"GetUserById":            reflect.TypeOf(httpapi.UserObject{}),
+	"GetSessions":            reflect.TypeOf([]httpapi.SessionInfo{}),
+}
+
+// TestTheModelsThisFeatureAddedAreTheOnesTheSweepWalks ties the list above to
+// the registry, so that a sixth model registered later is not silently left out
+// of the failure proof.
+func TestTheModelsThisFeatureAddedAreTheOnesTheSweepWalks(t *testing.T) {
+	for operation, model := range modelsThisFeatureAdded {
+		registered, ok := responseModels[operation]
+		if !ok {
+			t.Errorf("%s is named as a model this feature added and is not in responseModels", operation)
+			continue
+		}
+		if registered != model {
+			t.Errorf("%s is registered as %v and the failure proof walks %v", operation, registered, model)
+		}
+	}
+}
+
+// TestTheSweepWalksIntoTheNestedMembersOfEachModelThisFeatureAdded is the half
+// of T17's proof that a planted fault cannot give.
+//
+// A fault planted at the top level of a wrapper proves the *rule* fires; it
+// says nothing about how far the walk got. These models are the first in the
+// project with real depth — a user object nests a policy and a configuration
+// (sixty members between them), a session nests two string slices and a raw
+// document, an authentication result nests both a user object and a session —
+// and a walk that stopped at the first level would sweep four names and pass
+// every other test in this file.
+//
+// So the members the walk reached are collected and named. The paths asserted
+// are the deepest ones each model has, and the count is asserted too: a walk
+// that reported one name per model would satisfy a contains-check.
+func TestTheSweepWalksIntoTheNestedMembersOfEachModelThisFeatureAdded(t *testing.T) {
+	for _, model := range []struct {
+		operation string
+		deepest   []string
+		atLeast   int
+	}{
+		{
+			operation: "GetCurrentUser",
+			// Through the object into both documents, which is where 002's
+			// sixty members live.
+			deepest: []string{"UserObject.Policy.IsAdministrator", "UserObject.Configuration.PlayDefaultAudioTrack"},
+			atLeast: 60,
+		},
+		{
+			operation: "GetPublicUsers",
+			// Through the slice as well, which is the container the listing
+			// arrives in and the one a walk is likeliest to stop at.
+			deepest: []string{"[].Policy.EnableMediaPlayback", "[].Configuration.SubtitleMode"},
+			atLeast: 60,
+		},
+		{
+			operation: "GetSessions",
+			deepest:   []string{"[].LastActivityDate", "[].SupportedCommands"},
+			atLeast:   15,
+		},
+		{
+			operation: "AuthenticateUserByName",
+			// Two levels of nesting on one body: the user object's policy, and
+			// the session beside it.
+			deepest: []string{"AuthenticationResult.User.Policy.IsDisabled", "AuthenticationResult.SessionInfo.LastActivityDate"},
+			atLeast: 70,
+		},
+	} {
+		t.Run(model.operation, func(t *testing.T) {
+			reached := membersReachedBy(responseModels[model.operation])
+
+			if len(reached) < model.atLeast {
+				t.Errorf("the walk reached %d members of %s, want at least %d:\n%s",
+					len(reached), model.operation, model.atLeast, strings.Join(slices.Sorted(maps.Keys(reached)), "\n"))
+			}
+			for _, deep := range model.deepest {
+				if !reached[deep] {
+					t.Errorf("the walk did not reach %s of %s, so nothing sweeps it",
+						deep, model.operation)
+				}
+			}
+		})
+	}
+}
+
+// membersReachedBy is every property the sweeps' own walk visits in a model,
+// as the path it was reached by.
+//
+// It calls walkModel — the function both sweeps call — rather than reflecting
+// again here, so that a walk that stopped early would be seen by this test as
+// well as by them.
+func membersReachedBy(model reflect.Type) map[string]bool {
+	reached := map[string]bool{}
+	walkModel(model, "", map[reflect.Type]bool{}, func(where, name string, _ reflect.StructField) {
+		reached[where+"."+name] = true
+	})
+	return reached
+}
+
+// TestTheSweepsFailOverTheShapesOfTheModelsTheyWereJustHanded is the other
+// half: the rules fire over a body of this shape.
+//
+// It runs the sweeps over each **registered 002 model with one fault added to
+// it**, so that the same walk that reported nothing above is shown reporting
+// something, over the same types. The four tests below do the same over models
+// invented to be wrong, which is a weaker claim about types this server sends.
+//
+// The two faults are the two the *Verified by* line names. The camelCase field
+// is literal. The three-digit date is what a type can say about one: a date
+// held in a string is the type that sends `2025-06-19T00:00:00.000Z`, and the
+// value-level half of the same proof is in conformance/sweep_test.go, over
+// bytes this server really sent.
+func TestTheSweepsFailOverTheShapesOfTheModelsTheyWereJustHanded(t *testing.T) {
+	for _, operation := range slices.Sorted(maps.Keys(modelsThisFeatureAdded)) {
+		t.Run(operation, func(t *testing.T) {
+			model := modelsThisFeatureAdded[operation]
+
+			// The fault is planted beside the real model, in a struct that
+			// embeds it: encoding/json promotes an embedded struct's members,
+			// so the fields swept are the real ones plus the planted one, and
+			// the walk that finds the plant is the walk that covered them.
+			//
+			// A slice model is wrapped inside a field rather than embedded,
+			// because a slice cannot be embedded and because that is the shape
+			// the sweep meets it in anyway.
+			faulty := reflect.StructOf([]reflect.StructField{
+				plantedField(model),
+				{Name: "LocalAddress", Type: reflect.TypeOf(""), Tag: `json:"localAddress"`},
+				{Name: "LastSeenDate", Type: reflect.TypeOf("")},
+			})
+
+			casing := sweepCasing(faulty)
+			if len(casing) != 1 || !strings.Contains(casing[0], "localAddress") {
+				t.Errorf("the casing sweep reported %d findings over %s with one camelCase field planted in it, want the one naming localAddress:\n%s",
+					len(casing), operation, strings.Join(casing, "\n"))
+			}
+
+			units := sweepUnits(faulty)
+			if len(units) != 1 || !strings.Contains(units[0], "LastSeenDate") {
+				t.Errorf("the unit sweep reported %d findings over %s with one string-typed date planted in it, want the one naming LastSeenDate:\n%s",
+					len(units), operation, strings.Join(units, "\n"))
+			}
+
+			// And the model on its own is clean, which is the other half: a
+			// sweep reporting one finding over a faulty model proves nothing
+			// if it reports one over the sound one too.
+			if found := append(sweepCasing(model), sweepUnits(model)...); len(found) != 0 {
+				t.Errorf("the sweeps reported %d findings over %s itself:\n%s",
+					len(found), operation, strings.Join(found, "\n"))
+			}
+		})
+	}
+}
+
+// plantedField carries a registered model into the struct the fault is planted
+// in: embedded when it is a struct, so its members are promoted to the top
+// level, and a named field when it is a slice.
+func plantedField(model reflect.Type) reflect.StructField {
+	if model.Kind() == reflect.Struct {
+		return reflect.StructField{Name: model.Name(), Type: model, Anonymous: true}
+	}
+	return reflect.StructField{Name: "Items", Type: model}
+}
+
+// TestTheSweepsDoNotDescendIntoARawCapabilitiesDocument states, at the type
+// level, what SessionInfo.Capabilities is and what this half of the sweep can
+// therefore say about it.
+//
+// The member is a *json.RawMessage: the client's own posted document, echoed
+// back unparsed, which is behaviours 5.9's measured defect and the reason
+// internal/wire cannot rename its keys under the camelCase profile either — a
+// json.Marshaler leaves the walk that renames. A []byte has no fields, so the
+// sweep reports the member's own name and nothing inside it.
+//
+// That is the correct answer here and not a loosening, and the distinction is
+// the whole point of writing it down: those keys are property names, they are
+// on the wire, and **the wire sweep does see them** — conformance/sweep_test.go
+// posts a PascalCase declaration for the sweep's fixture and proves separately
+// that a camelCase one is reported. A reader who met the silence at this level
+// and concluded the subtree was exempt would go and add an exemption there.
+func TestTheSweepsDoNotDescendIntoARawCapabilitiesDocument(t *testing.T) {
+	model := reflect.TypeOf(httpapi.SessionInfo{})
+
+	field, ok := model.FieldByName("Capabilities")
+	if !ok {
+		t.Fatal("SessionInfo declares no Capabilities member; this test is about that member's type")
+	}
+	if indirect(field.Type).Kind() != reflect.Slice {
+		t.Errorf("SessionInfo.Capabilities is a %s; this test asserts what a sweep can say about raw bytes", field.Type)
+	}
+
+	// The member is silent whatever it holds, because a []byte has no fields.
+	// The contrast beside it is what makes the silence a finding rather than
+	// an assumption: the same property name declared as a Go type is reported.
+	if found := sweepCasing(reflect.TypeOf(struct {
+		Capabilities *json.RawMessage
+	}{})); len(found) != 0 {
+		t.Errorf("the casing sweep reported %d findings over a raw document:\n%s",
+			len(found), strings.Join(found, "\n"))
+	}
+
+	declared := reflect.TypeOf(struct {
+		Capabilities struct {
+			PlayableMediaTypes []string `json:"playableMediaTypes"`
+		}
+	}{})
+	if found := sweepCasing(declared); len(found) != 1 || !strings.Contains(found[0], "playableMediaTypes") {
+		t.Errorf("the casing sweep reported %d findings over the same names as a declared type, want the one naming playableMediaTypes:\n%s",
+			len(found), strings.Join(found, "\n"))
+	}
+}
 
 // modelWithACamelCaseField is a test-only model, and it is the whole evidence
 // that the casing sweep can fail.
@@ -434,7 +681,15 @@ func TestThePascalCaseRuleAcceptsEveryPascalCaseNameOfThePinnedDocument(t *testi
 
 // sweepCasing walks a response model's type and reports every property name
 // that is not PascalCase.
+//
+// A nil model is a route that answers no body (the two 204s), and there is
+// nothing to walk. It is answered here rather than skipped at each caller, so
+// that the registry can hold the row.
 func sweepCasing(model reflect.Type) []string {
+	if model == nil {
+		return nil
+	}
+
 	var found []string
 	walkModel(model, "", map[reflect.Type]bool{}, func(where, name string, field reflect.StructField) {
 		if !isPascalCase(name) {
@@ -448,6 +703,10 @@ func sweepCasing(model reflect.Type) []string {
 // sweepUnits walks a response model's type and reports every field whose type
 // cannot spell the unit its name claims.
 func sweepUnits(model reflect.Type) []string {
+	if model == nil {
+		return nil
+	}
+
 	timeType := reflect.TypeOf(time.Time{})
 	unitsTimeType := reflect.TypeOf(units.Time{})
 
@@ -637,9 +896,12 @@ func registeredOperations(t *testing.T) []string {
 	t.Helper()
 
 	table := surface.V1()
-	handler := newSystemHandlerFrom(t, httpapi.SystemHandlerConfig{Installations: &fakeInstallations{}})
 
-	routes, err := httpapi.Routes(table, httpapi.Handlers{System: handler})
+	// everyHandler rather than a Handlers value assembled here, for the reason
+	// registration_test.go builds that helper at all: a handler this file
+	// forgot would be an operation the registry was never compared against,
+	// and the comparison would pass by having looked at less.
+	routes, err := httpapi.Routes(table, everyHandler(t))
 	if err != nil {
 		t.Fatalf("building the routes callback: %v", err)
 	}

@@ -2,6 +2,7 @@ package conformance_test
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -218,8 +219,24 @@ func (s *server) get(t *testing.T, path, host string, header http.Header) *respo
 // with no parameters at all.
 func (s *server) do(t *testing.T, method, path, host string, header http.Header) *response {
 	t.Helper()
+	return s.send(t, method, path, host, header, nil)
+}
 
-	request, err := http.NewRequest(method, s.baseURL+path, nil)
+// send is do with a request body.
+//
+// It exists because 002's three writes are the first routes in v1 that read
+// one, and a helper that could not carry a body would mean a second way of
+// issuing a request in this package. The body is bytes rather than a reader
+// for the reason a response's is: what a test states is what goes on the wire.
+func (s *server) send(t *testing.T, method, path, host string, header http.Header, body []byte) *response {
+	t.Helper()
+
+	var payload io.Reader
+	if body != nil {
+		payload = bytes.NewReader(body)
+	}
+
+	request, err := http.NewRequest(method, s.baseURL+path, payload)
 	if err != nil {
 		t.Fatalf("building a %s request for %s: %v", method, path, err)
 	}
@@ -243,11 +260,11 @@ func (s *server) do(t *testing.T, method, path, host string, header http.Header)
 	}
 	defer got.Body.Close()
 
-	body, err := io.ReadAll(got.Body)
+	answered, err := io.ReadAll(got.Body)
 	if err != nil {
 		t.Fatalf("reading the body of %s %s: %v", method, path, err)
 	}
-	return &response{status: got.StatusCode, header: got.Header, body: body}
+	return &response{status: got.StatusCode, header: got.Header, body: answered}
 }
 
 // response is one answer, with its body kept as bytes.

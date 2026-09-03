@@ -60,7 +60,15 @@ import (
 type sweptResponse struct {
 	name   string
 	method string
-	path   string
+
+	// path is the route as the surface document spells it, parameters and all.
+	// It is what TestTheSweepReachesEveryRouteTheServerServes matches on, so
+	// it is the document's spelling rather than the one that is sent.
+	path string
+
+	// request is what is actually sent, for a row whose path carries a
+	// parameter. Empty means the path itself.
+	request string
 
 	// accept is the Accept header, empty for a client that asks for nothing in
 	// particular. Only the two PascalCase profiles appear below: the CamelCase
@@ -69,59 +77,496 @@ type sweptResponse struct {
 	// It has its own test at the end of this file, where the sweep firing is
 	// the assertion rather than the failure.
 	accept string
+
+	// token says whether the request carries the fixture's access token, in
+	// the Authorization header a client really sends it in.
+	token bool
+
+	// device replaces the fixture's own DeviceId. It is set on exactly the two
+	// login rows, and it has to be: a second authentication from one device
+	// revokes the first one's token (002 plan 6.5), so a login sent from the
+	// fixture's device would log the rest of this list out half-way through.
+	device string
+
+	// body is the request body, for the three routes of 002 that read one.
+	body string
+
+	// status is what the request must answer. Zero means 200; the two writes
+	// answer 204 and have no body to sweep at all, which is stated here rather
+	// than inferred from an empty response.
+	status int
 }
 
-// sweptResponses is every body feature 001 puts on the wire, under each content
+// sweptResponses is every body this server puts on the wire, under each content
 // profile whose names are PascalCase.
 //
-// /System/Info is requested on a fresh installation, where first-time setup is
-// outstanding and the route is therefore admitted without a credential
-// (spec 3.2) — the only state 001 can reach it in.
+// ~~/System/Info is requested on a fresh installation, where first-time setup
+// is outstanding and the route is therefore admitted without a credential
+// (spec 3.2) — the only state 001 can reach it in.~~ **002 reaches the other
+// state**: the fixture below provisions an account, so setup is complete and
+// the route is requested with a token this server issued.
 var sweptResponses = []sweptResponse{
 	{name: "the public system info", method: http.MethodGet, path: publicSystemInfoPath},
 	{name: "the public system info, PascalCase", method: http.MethodGet, path: publicSystemInfoPath, accept: pascalCaseProfile},
-	{name: "the system info", method: http.MethodGet, path: systemInfoPath},
-	{name: "the system info, PascalCase", method: http.MethodGet, path: systemInfoPath, accept: pascalCaseProfile},
+	{name: "the system info", method: http.MethodGet, path: systemInfoPath, token: true},
+	{name: "the system info, PascalCase", method: http.MethodGet, path: systemInfoPath, accept: pascalCaseProfile, token: true},
 	{name: "a ping", method: http.MethodGet, path: pingPath},
 	{name: "a ping, PascalCase", method: http.MethodGet, path: pingPath, accept: pascalCaseProfile},
 	{name: "a posted ping", method: http.MethodPost, path: pingPath},
 	{name: "a posted ping, PascalCase", method: http.MethodPost, path: pingPath, accept: pascalCaseProfile},
+
+	// Feature 002's seven rows. The tie in routes_test.go requires every row
+	// the running server answers to be here, and it does **not** write them:
+	// a request needs a method, a credential, a body and a path with its
+	// parameters filled, and no table carries any of those.
+	{name: "the public users", method: http.MethodGet, path: publicUsersPath},
+	{name: "the public users, PascalCase", method: http.MethodGet, path: publicUsersPath, accept: pascalCaseProfile},
+
+	{name: "an authentication", method: http.MethodPost, path: authenticateByNamePath,
+		body: sweepLoginBody, device: "sweep-login-plain"},
+	{name: "an authentication, PascalCase", method: http.MethodPost, path: authenticateByNamePath,
+		body: sweepLoginBody, device: "sweep-login-pascal", accept: pascalCaseProfile},
+
+	{name: "the caller's own user object", method: http.MethodGet, path: currentUserPath, token: true},
+	{name: "the caller's own user object, PascalCase", method: http.MethodGet, path: currentUserPath, token: true, accept: pascalCaseProfile},
+
+	// The request path is filled in by the fixture: the identifier is derived
+	// from the account name (Principle VII) and read off the login response
+	// rather than transcribed, so this list cannot disagree with the server
+	// about what it is.
+	{name: "a user object by identifier", method: http.MethodGet, path: userByIDPath, token: true},
+	{name: "a user object by identifier, PascalCase", method: http.MethodGet, path: userByIDPath, token: true, accept: pascalCaseProfile},
+
+	{name: "the session list", method: http.MethodGet, path: sessionsPath, token: true},
+	{name: "the session list, PascalCase", method: http.MethodGet, path: sessionsPath, token: true, accept: pascalCaseProfile},
+
+	{name: "a configuration write", method: http.MethodPost, path: userConfigurationPath,
+		token: true, body: "{}", status: http.StatusNoContent},
+	{name: "a capabilities declaration", method: http.MethodPost, path: capabilitiesPath,
+		token: true, body: sweepCapabilities, status: http.StatusNoContent},
 }
+
+// The 002 paths, spelled as the surface document spells them.
+const (
+	publicUsersPath        = "/Users/Public"
+	authenticateByNamePath = "/Users/AuthenticateByName"
+	currentUserPath        = "/Users/Me"
+	userByIDPath           = "/Users/{userId}"
+	userConfigurationPath  = "/Users/Configuration"
+	capabilitiesPath       = "/Sessions/Capabilities/Full"
+	sessionsPath           = "/Sessions"
+)
 
 const (
 	pascalCaseProfile = `application/json; profile="PascalCase"`
 	camelCaseProfile  = `application/json; profile="CamelCase"`
 )
 
+// The account the sweep's requests are made as, and the credential it holds.
+//
+// The password is a literal in a public repository and that is deliberate: it
+// authenticates against an installation this test creates in a temporary
+// directory and destroys when it ends, and a value that looked like a real
+// secret would be worse rather than better — provisioning_test.go already takes
+// the same view.
+const (
+	sweepAccountName     = "Sweep"
+	sweepAccountPassword = "hunter2"
+	sweepLoginBody       = `{"Username":"` + sweepAccountName + `","Pw":"` + sweepAccountPassword + `"}`
+)
+
+// sweepCapabilities is the declaration the fixture posts, and its property
+// names are PascalCase on purpose.
+//
+// behaviours 5.9: the reference stores the posted document and answers it back
+// **unparsed**, so whatever keys a client sent travel into every later
+// /Sessions body. internal/wire cannot rename them under a content profile
+// either — it renames by walking the document beside the value it was encoded
+// from, and a json.Marshaler leaves that walk. So the keys in the response are
+// the keys in this literal, and the sweep judges them like any other property
+// name. That is the correct treatment and not an oversight: the subtree is
+// **not** declared as a dictionary, and
+// TestTheCasingSweepFiresOnAnEchoedCapabilitiesDocument below proves the sweep
+// still sees into it.
+const sweepCapabilities = `{"PlayableMediaTypes":["Audio","Video"],"SupportedCommands":["Play"],"SupportsMediaControl":false}`
+
+// sweepFixture is the installation every request above is issued against: one
+// visible administrator with a password, logged in, with a capabilities
+// document posted so that /Sessions carries the raw subtree.
+type sweepFixture struct {
+	*server
+
+	// token is the access token the login answered with.
+	token string
+
+	// userID is the account's identifier, read off the login response rather
+	// than derived here — this package cannot derive one, and stating it would
+	// be transcribing what the server computed.
+	userID string
+}
+
+// newSweepFixture provisions the account, starts the server and logs in.
+//
+// The account is created with --hidden=false because a fresh account is hidden
+// at the reference [source: Jellyfin.Data/UserEntityExtensions.cs:173 @
+// v10.11.11], and /Users/Public excludes hidden accounts (spec 3.4). A hidden
+// fixture would answer `[]` and the sweep over that row would walk nothing
+// while passing.
+func newSweepFixture(t *testing.T) *sweepFixture {
+	t.Helper()
+
+	fixture := &sweepFixture{server: startServer(t,
+		withProvisionedAccount(sweepAccountName, sweepAccountPassword+"\n",
+			"--administrator", "--hidden=false"))}
+
+	got := fixture.send(t, http.MethodPost, authenticateByNamePath, goldenHost,
+		http.Header{"Authorization": {clientIdentification(sweepFixtureDevice, "")}},
+		[]byte(sweepLoginBody))
+	if got.status != http.StatusOK {
+		t.Fatalf("authenticating the sweep's account: status %d, want %d\nbody: %s",
+			got.status, http.StatusOK, got.body)
+	}
+
+	fixture.token = unquote(t, rawField(t, got.body, "AccessToken"))
+	fixture.userID = unquote(t, rawField(t, []byte(rawField(t, got.body, "User")), "Id"))
+	if fixture.token == "" || fixture.userID == "" {
+		t.Fatalf("the login answered no token or no identifier:\n%s", got.body)
+	}
+
+	// So that /Sessions carries the raw document rather than nothing. Posted
+	// here rather than relying on the swept row of the same route, because the
+	// order two rows of one list run in is not something a test should depend
+	// on.
+	declared := fixture.send(t, http.MethodPost, capabilitiesPath, goldenHost,
+		http.Header{"Authorization": {clientIdentification(sweepFixtureDevice, fixture.token)}},
+		[]byte(sweepCapabilities))
+	if declared.status != http.StatusNoContent {
+		t.Fatalf("declaring the fixture's capabilities: status %d, want %d\nbody: %s",
+			declared.status, http.StatusNoContent, declared.body)
+	}
+
+	return fixture
+}
+
+// sweepFixtureDevice is the DeviceId the fixture's own session is keyed on. The
+// two login rows use their own, for the reason sweptResponse.device gives.
+const sweepFixtureDevice = "sweep-fixture"
+
+// unquote reads a raw JSON string into the value it carries.
+//
+// rawField hands back the bytes as they arrived (Principle VIII), which is what
+// makes it the right reader for an assertion; a token has to be used rather
+// than asserted on, and this is where it stops being bytes.
+func unquote(t *testing.T, raw string) string {
+	t.Helper()
+
+	var value string
+	if err := json.Unmarshal([]byte(raw), &value); err != nil {
+		t.Fatalf("%s is not a JSON string: %v", raw, err)
+	}
+	return value
+}
+
+// clientIdentification is 002 spec 3.2's grammar, as a client writes it.
+//
+// Spelled out here rather than imported, which is the boundary doing its job:
+// this is the string a real client puts in the header, and if the parser ever
+// stopped accepting it these tests would fail rather than agree with it.
+func clientIdentification(device, token string) string {
+	value := `MediaBrowser Client="Atrium Conformance", Device="A Sweep", DeviceId="` +
+		device + `", Version="1.0.0"`
+	if token != "" {
+		value += `, Token="` + token + `"`
+	}
+	return value
+}
+
+// request turns one row of the list above into the request it names.
+func (f *sweepFixture) issue(t *testing.T, swept sweptResponse) *response {
+	t.Helper()
+
+	header := http.Header{}
+	if swept.accept != "" {
+		header.Set("Accept", swept.accept)
+	}
+	switch {
+	case swept.device != "":
+		header.Set("Authorization", clientIdentification(swept.device, ""))
+	case swept.token:
+		header.Set("Authorization", clientIdentification(sweepFixtureDevice, f.token))
+	}
+
+	var body []byte
+	if swept.body != "" {
+		body = []byte(swept.body)
+	}
+	return f.send(t, swept.method, f.pathOf(swept), goldenHost, header, body)
+}
+
+// pathOf is what a row sends: its own request path, or the document's path with
+// the fixture's identifier substituted.
+func (f *sweepFixture) pathOf(swept sweptResponse) string {
+	if swept.request != "" {
+		return swept.request
+	}
+	if swept.path == userByIDPath {
+		return "/Users/" + f.userID
+	}
+	return swept.path
+}
+
 // TestEveryResponseSweepsClean is the two sweeps, run over the wire.
 //
-// One server, every response 001 sends, both rules. It finds nothing today —
-// 001's bodies are strings, booleans, one integer port and two empty arrays —
-// which is the state a sweep is meant to be in and also the state in which it
-// has proved nothing. The tests below it are what make that state mean
-// something.
+// One server, every response this build sends, both rules. ~~It finds nothing
+// today — 001's bodies are strings, booleans, one integer port and two empty
+// arrays~~ **002's bodies are the first with anything in them**: two user
+// objects carrying sixty policy and configuration members, a session with a
+// date, a tick and an echoed document, and an authentication result carrying
+// both. It still finds nothing, which is the state a sweep is meant to be in
+// and also the state in which it has proved nothing. The tests below it are
+// what make that state mean something.
 func TestEveryResponseSweepsClean(t *testing.T) {
 	t.Parallel()
 
-	server := startServer(t)
+	fixture := newSweepFixture(t)
 
 	for _, swept := range sweptResponses {
 		t.Run(swept.name, func(t *testing.T) {
-			var header http.Header
-			if swept.accept != "" {
-				header = http.Header{"Accept": {swept.accept}}
-			}
-			got := server.do(t, swept.method, swept.path, goldenHost, header)
+			got := fixture.issue(t, swept)
 
-			if got.status != http.StatusOK {
+			want := swept.status
+			if want == 0 {
+				want = http.StatusOK
+			}
+			if got.status != want {
 				t.Fatalf("%s %s: status %d, want %d\nbody: %s",
-					swept.method, swept.path, got.status, http.StatusOK, got.body)
+					swept.method, fixture.pathOf(swept), got.status, want, got.body)
+			}
+
+			// A 204 has no body, so there is nothing to walk — and saying so
+			// is the row rather than an omission. The assertion is that it
+			// really is empty: a sweep handed nothing reports nothing, and a
+			// route that started sending a body would otherwise go unswept.
+			if want == http.StatusNoContent {
+				if len(got.body) != 0 {
+					t.Fatalf("%s %s answered %d with a body, which nothing here sweeps:\n%s",
+						swept.method, fixture.pathOf(swept), got.status, got.body)
+				}
+				return
 			}
 
 			for _, found := range sweepBody(t, got.body) {
-				t.Errorf("%s %s: %s", swept.method, swept.path, found)
+				t.Errorf("%s %s: %s", swept.method, fixture.pathOf(swept), found)
 			}
 		})
+	}
+}
+
+// TestTheSweptBodiesAreNotEmpty is what keeps the run above from passing by
+// having looked at nothing.
+//
+// Every assertion in this file is of the form "the sweep found no fault", and
+// an empty listing, a session list with no sessions in it or a user object that
+// did not arrive would all satisfy it perfectly. So the bodies the new rows
+// produce are required to carry the members that make them worth sweeping.
+func TestTheSweptBodiesAreNotEmpty(t *testing.T) {
+	t.Parallel()
+
+	fixture := newSweepFixture(t)
+
+	for _, row := range []struct {
+		name     string
+		swept    sweptResponse
+		contains []string
+	}{
+		{
+			name:     "the public users list has the visible account in it",
+			swept:    sweptResponse{method: http.MethodGet, path: publicUsersPath},
+			contains: []string{`"Name":"` + sweepAccountName + `"`, `"Policy"`, `"Configuration"`},
+		},
+		{
+			name:     "the session list has the fixture's own session in it",
+			swept:    sweptResponse{method: http.MethodGet, path: sessionsPath, token: true},
+			contains: []string{`"DeviceId":"` + sweepFixtureDevice + `"`, `"LastActivityDate"`, `"Capabilities"`},
+		},
+		{
+			name:     "the user object carries both documents",
+			swept:    sweptResponse{method: http.MethodGet, path: currentUserPath, token: true},
+			contains: []string{`"IsAdministrator"`, `"PlayDefaultAudioTrack"`},
+		},
+	} {
+		t.Run(row.name, func(t *testing.T) {
+			got := fixture.issue(t, row.swept)
+			if got.status != http.StatusOK {
+				t.Fatalf("status %d, want %d\nbody: %s", got.status, http.StatusOK, got.body)
+			}
+			for _, want := range row.contains {
+				if !strings.Contains(string(got.body), want) {
+					t.Errorf("the body does not contain %s, so the sweep over it walks less than this file claims:\n%s",
+						want, got.body)
+				}
+			}
+		})
+	}
+}
+
+// TestTheSweepsFailOnAFaultPlantedInABodyThisServerReallySent is T17's failure
+// proof at the wire, and it is deliberately not the same test as the three
+// below.
+//
+// Those run the sweeps over bytes this file wrote. This one takes a **real
+// response** from one of the seven new routes and plants the two faults the
+// *Verified by* line names into it — a camelCase property name, and a date with
+// three fractional digits where behaviours 1.2 requires seven. What that proves
+// is the thing a hand-written body cannot: the walk descends through this
+// server's own nesting — a session inside an array, a policy inside a user
+// object inside an authentication result — and would have reported a fault at
+// that depth.
+func TestTheSweepsFailOnAFaultPlantedInABodyThisServerReallySent(t *testing.T) {
+	t.Parallel()
+
+	fixture := newSweepFixture(t)
+
+	for _, row := range []struct {
+		name  string
+		swept sweptResponse
+
+		// property is a PascalCase name in the real body, renamed to its
+		// camelCase spelling in the copy.
+		property string
+
+		// date is a seven-digit date member in the real body, truncated to
+		// three digits in the copy.
+		date string
+	}{
+		{
+			name:     "a session in the list",
+			swept:    sweptResponse{method: http.MethodGet, path: sessionsPath, token: true},
+			property: "DeviceName",
+			date:     "LastActivityDate",
+		},
+		{
+			name:     "the authentication result",
+			swept:    sweptResponse{method: http.MethodPost, path: authenticateByNamePath, body: sweepLoginBody, device: "sweep-planted"},
+			property: "IsAdministrator",
+			date:     "LastActivityDate",
+		},
+	} {
+		t.Run(row.name, func(t *testing.T) {
+			got := fixture.issue(t, row.swept)
+			if got.status != http.StatusOK {
+				t.Fatalf("status %d, want %d\nbody: %s", got.status, http.StatusOK, got.body)
+			}
+			if found := sweepBody(t, got.body); len(found) != 0 {
+				t.Fatalf("the body this fault is planted in is not clean to begin with:\n%s",
+					strings.Join(found, "\n"))
+			}
+
+			planted := plantACamelCaseProperty(t, got.body, row.property)
+			planted = plantAThreeDigitDate(t, planted, row.date)
+
+			found := sweepBody(t, planted)
+			if len(found) != 2 {
+				t.Fatalf("the sweeps reported %d findings on a body with two faults planted in it, want 2:\n%s\nbody: %s",
+					len(found), strings.Join(found, "\n"), planted)
+			}
+			report := strings.Join(found, "\n")
+			if !strings.Contains(report, lowerFirst(row.property)) {
+				t.Errorf("no finding names %q:\n%s", lowerFirst(row.property), report)
+			}
+			if !strings.Contains(report, row.date) {
+				t.Errorf("no finding names %q:\n%s", row.date, report)
+			}
+		})
+	}
+}
+
+// plantACamelCaseProperty rewrites one property name of a body to its camelCase
+// spelling, wherever it occurs.
+//
+// It works on the bytes rather than on a decoded document, which is the only
+// way to keep everything else — key order included — exactly as it arrived.
+func plantACamelCaseProperty(t *testing.T, body []byte, property string) []byte {
+	t.Helper()
+
+	before := `"` + property + `":`
+	if !bytes.Contains(body, []byte(before)) {
+		t.Fatalf("the body carries no property called %q, so nothing was planted:\n%s", property, body)
+	}
+	return bytes.ReplaceAll(body, []byte(before), []byte(`"`+lowerFirst(property)+`":`))
+}
+
+// plantAThreeDigitDate truncates a member's seven fractional digits to three —
+// the spelling the reference itself sends on LastPlayedDate, and one this
+// server may not send (behaviours 1.2).
+func plantAThreeDigitDate(t *testing.T, body []byte, member string) []byte {
+	t.Helper()
+
+	truncate := regexp.MustCompile(`("` + member + `":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3})\d{4}Z"`)
+	planted := truncate.ReplaceAll(body, []byte(`${1}Z"`))
+	if bytes.Equal(planted, body) {
+		t.Fatalf("the body carries no seven-digit %s, so nothing was planted:\n%s", member, body)
+	}
+	return planted
+}
+
+// lowerFirst is the camelCase spelling of a PascalCase property name.
+func lowerFirst(name string) string {
+	return strings.ToLower(name[:1]) + name[1:]
+}
+
+// TestTheCasingSweepFiresOnAnEchoedCapabilitiesDocument is the other half of
+// what SessionInfo.Capabilities needs said about it, and it is a divergence
+// recorded as an assertion rather than a hole opened in the sweep.
+//
+// behaviours 5.9 measured the reference storing a posted capabilities document
+// and answering it back unparsed, unknown properties and all. This server does
+// the same, and internal/wire cannot rename those keys under a content profile
+// because a json.Marshaler leaves the walk that renames. So a client that posts
+// camelCase keys gets camelCase keys back inside every later /Sessions body —
+// and the sweep reports them, correctly, because they are property names on
+// this server's wire.
+//
+// The subtree is therefore **not** declared in dictionaryPointers. Declaring it
+// would be the loosening that makes the guard stop seeing a real casing fault
+// one member over, and the fixture posts a PascalCase document for the same
+// reason a real client does.
+func TestTheCasingSweepFiresOnAnEchoedCapabilitiesDocument(t *testing.T) {
+	t.Parallel()
+
+	fixture := newSweepFixture(t)
+
+	// Two camelCase keys, one of them a property the reference declares and
+	// one it does not, posted from the fixture's own device so that the
+	// declaration replaces the one the fixture made.
+	const camelCased = `{"playableMediaTypes":["Audio"],"somethingNobodyDeclares":true}`
+	declared := fixture.send(t, http.MethodPost, capabilitiesPath, goldenHost,
+		http.Header{"Authorization": {clientIdentification(sweepFixtureDevice, fixture.token)}},
+		[]byte(camelCased))
+	if declared.status != http.StatusNoContent {
+		t.Fatalf("declaring capabilities: status %d, want %d\nbody: %s",
+			declared.status, http.StatusNoContent, declared.body)
+	}
+
+	got := fixture.issue(t, sweptResponse{method: http.MethodGet, path: sessionsPath, token: true})
+	if got.status != http.StatusOK {
+		t.Fatalf("status %d, want %d\nbody: %s", got.status, http.StatusOK, got.body)
+	}
+
+	// Echoed unparsed, which is the behaviour under test before the sweep is.
+	if !strings.Contains(string(got.body), `"somethingNobodyDeclares":true`) {
+		t.Errorf("the posted document did not survive into the session body, which is behaviours 5.9's measurement:\n%s", got.body)
+	}
+
+	found := sweepBody(t, got.body)
+	if len(found) != 2 {
+		t.Fatalf("the casing sweep reported %d findings over an echoed camelCase declaration, want the two keys:\n%s\nbody: %s",
+			len(found), strings.Join(found, "\n"), got.body)
+	}
+	for _, key := range []string{"playableMediaTypes", "somethingNobodyDeclares"} {
+		if !strings.Contains(strings.Join(found, "\n"), key) {
+			t.Errorf("no finding names %q:\n%s", key, strings.Join(found, "\n"))
+		}
 	}
 }
 

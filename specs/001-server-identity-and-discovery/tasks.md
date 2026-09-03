@@ -295,10 +295,36 @@ list is long for four routes.
 
 ## T13 — The readiness gate and the `503`
 
-- [ ] **Changes:** the outermost stage. Until the server reports itself ready, **every** route
-  answers `503` with `Retry-After` in full integer seconds, a `Message` header, and a `text/html`
-  body — never JSON. The same response serves a deliberate withdrawal, with a different message and
-  a longer hint, without stopping the process.
+- [x] **Changes:** ~~the outermost stage~~ **the third stage.** Until the server reports itself
+  ready, **every** route answers `503` with `Retry-After` in full integer seconds, a `Message`
+  header, and a `text/html` body — never JSON. The same response serves a deliberate withdrawal,
+  with a different message and a longer hint, without stopping the process.
+- **Amended 2026-09-03, on doing it.** Two things, and neither is a detail.
+  **The contradiction T12 left is resolved and `plan.md` §6.7 carries the decision**: the gate is
+  third, immediately inside the response-time stamp and `Server` and immediately outside anything
+  that could route. A middleware that answers without calling the next handler is never reached by
+  anything below it, so "outermost" and T14's *"a `503` from the gate still carries the
+  response-time stamp and `Server`"* could not both hold. The reference has already taken this way
+  out — response-time middleware near the outside of the main pipeline, startup gate well inside it
+  `[source: Jellyfin.Server/Startup.cs:163,217 @ v10.11.11]` — the alternative duplicates two
+  header values into every stage that refuses, and §3.5 costs nothing either way because nothing
+  between the stamp and the gate reads a path. **The plan moved to meet T14's acceptance, not the
+  other way round.**
+  **§3.5's *"nothing is exempt"* is contradicted by the reference's own source, and it is recorded
+  rather than acted on.** The starting `503` comes from a separate setup server with no
+  response-time middleware; that setup server answers a real `/System/Info/Public`; and the main
+  pipeline's gate exempts `/system/ping` and sends neither header
+  `[source: Jellyfin.Server/ServerSetupApp/SetupServer.cs:177-259,204-237 @ v10.11.11]`
+  `[source: Jellyfin.Api/Middleware/ServerStartupMessageMiddleware.cs:38-48 @ v10.11.11]`. §3.5 and
+  AC-12 cite the **pinned document**, [AGENTS.md §1.3](../../AGENTS.md) says the running server
+  wins, and there is no running reference here — so the disagreement cannot be settled and the
+  specification, as the authority on WHAT, is implemented as written. `plan.md` §6.8 states what
+  discharges it: one probe against a starting reference, failing which 010's differential run.
+  **`spec.md` is deliberately unamended.**
+  Two values came from the reference rather than from a choice made here: the starting message is
+  its own localised string, and the five-second hint is its own
+  `[source: Emby.Server.Implementations/Localization/Core/en-US.json:79 @ v10.11.11]`
+  `[source: Jellyfin.Server/ServerSetupApp/SetupServer.cs:143 @ v10.11.11]`.
 - **Depends on:** T1
 - **Verified by:** a server held pre-ready answers `503` on all four routes **and on a path that
   matches no route**; `Retry-After` parses as an integer; the body's content type is `text/html`.

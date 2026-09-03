@@ -32,13 +32,23 @@
 //
 // # Order is contract
 //
-// plan 6.7 fixes the order of the stages:
+// plan 6.7 fixes the order of the stages, as amended at T13:
 //
-//	readiness gate → response-time stamp → Server header → path canonicalisation
+//	response-time stamp → Server header → readiness gate → path canonicalisation
 //	  → query canonicalisation → routing → refusal shapes → handler → wire
 //
 // Canonicalisation precedes routing because it rewrites what the router
 // matches: the router only ever sees a canonical path, which is why chi's own
 // case sensitivity is never exercised. Assembling the chain, and asserting the
 // order with checks only the order can satisfy, is T14's.
+//
+// The readiness gate is third rather than outermost, and that is a decision
+// rather than an accident. A middleware that answers without calling the next
+// handler is never reached by anything below it, so a gate above the stamp
+// would answer spec 3.5's 503 carrying neither X-Response-Time-ms nor Server.
+// The reference resolves it the same way — its response-time middleware near
+// the outside of the main pipeline, its startup gate well inside it
+// [source: Jellyfin.Server/Startup.cs:163,217 @ v10.11.11] — and it costs
+// spec 3.5's "nothing is exempt" nothing, because neither stage above the gate
+// reads a path, matches a route or refuses.
 package httpapi

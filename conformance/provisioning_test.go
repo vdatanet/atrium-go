@@ -29,11 +29,11 @@ const (
 // installation into a state is to run the same command an operator runs. The
 // fixture is not a back door.
 func withProvisionedAccount(name, password string, extra ...string) serverOption {
-	return func(t *testing.T, dataDirectory string) {
+	return func(t *testing.T, setup *installationSetup) {
 		t.Helper()
 		arguments := append([]string{
 			userCommand, userAddCommand,
-			"--data-dir", dataDirectory,
+			"--data-dir", setup.dataDirectory,
 			"--name", name,
 		}, extra...)
 

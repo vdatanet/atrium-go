@@ -1,7 +1,7 @@
 ---
 feature: 002-authentication-users-and-sessions
 title: Authentication, users and sessions — tasks
-status: Draft
+status: Implemented
 created: 2026-09-03
 updated: 2026-09-03
 plan_status_required: Accepted
@@ -893,7 +893,7 @@ still owe.
 
 ## T23 — The closing audit
 
-- [ ] **Changes:** whatever this task finds. It is not a formality:
+- [x] **Changes:** whatever this task finds. It is not a formality:
   [AGENTS.md §5](../../AGENTS.md) records that every implemented feature in the exporting project
   found, in its own final task, **an acceptance criterion with no test or a test proving less than
   its name** — and 001, the only feature this repository has implemented, found two.
@@ -929,6 +929,275 @@ still owe.
     with none here the specification is implemented as written and the contradiction is recorded —
     which 001 did twice and which this feature already owes at U-13 and U-14.
 - **Spec reference:** all of §5; §6; AGENTS.md §5.
+
+### The record — 2026-09-03
+
+**It found one, and it is 001's own finding one feature on: AC-11 was proven about the mechanism and
+not about any request.** AGENTS.md §5 asks for a criterion with no test or a test proving less than
+its name, and this task's own *Verified by* line guessed at two candidates — AC-3 and AC-11. **The
+guess was half right, and testing it rather than trusting it is the point**: AC-3 turned out to be
+proven at the wire in every clause, by T18's `conformance/mechanisms_test.go`, and the pure-function
+table this task suspected is a companion to it rather than a substitute. AC-11 was the other one.
+
+Three smaller things came out of passes (b) and (e), each of them a **document that had gone on
+describing the feature the day before this one**, and one of them — §3.5's `IsAdministrator` row —
+is what makes AC-4's second half look like a criterion with no request in 002 at all.
+
+Twenty-four mutations were run against production code. The four that survived are named below;
+three of them are the finding, and the fourth is a mutation of the audit's own making.
+
+#### Pass (a) — fifteen criteria, twenty-four mutations, one finding
+
+Every row was verified by **breaking the behaviour in the production code** and watching named tests
+fail. A mutation that merely deletes a function is not on this list, because a test failing only when
+code is missing is a test of the build.
+
+| AC | The tests that carry it | Mutation, and what fell over |
+|---|---|---|
+| 1 | `conformance`: `TestTheAuthenticationRouteAtTheWire/a successful authentication matches its golden`; `internal/httpapi`: `TestAuthenticatingAnswersATokenAndASessionThatHasNeverPlayedAnything` | An access token of **sixteen** hex characters instead of thirty-two → both, plus the golden |
+| 2 | `conformance`: `.../the three measured refusals carry one body and three statuses`; `internal/httpapi`: `TestTheFourMeasuredRefusalsAreOneBodyAndFourStatuses` | A disabled account answered `401` → **6**, including AC-10's wire subtest, because a lockout *is* the disabled state; the twenty-five byte body losing its full stop → **11 across four routes**, which is what one golden for one constant buys |
+| 3 | `conformance`: `TestTheTokenMechanismsAtTheWire`, seven subtests; `internal/httpapi`: `TestThePrecedenceHoldsInBothDirections`, `TestEachMechanismOnItsOwnYieldsItsToken`, `TestAHeaderThatYieldsNothingDoesNotStopTheSearch` | Dropping `X-Emby-Authorization` as a token mechanism → **19 subtests**; reading `X-Emby-Token` ahead of the two grammar headers → **7**. **This task guessed AC-3 was proven a level too low and it is not** — see the note below the table |
+| 4 (`401`) | `internal/httpapi`: `TestNoCredentialAndAnUnknownTokenAnswerTheSameBytes`; `conformance`: every route's *no credential* row | `admitted`'s unauthenticated arm answering `403` → **37 subtests across both packages** |
+| 4 (`403`) | `conformance`: `.../AC-15: the parameter matrix/a restricted seat naming somebody else is the 403 of AC-2's golden`; `internal/httpapi`: `TestControllableByUserIdNamingSomebodyElseFromARestrictedSeatIsTheGoldenRefusal`, `TestNamingAnotherUsersDeviceAndNamingAnotherUserAnswerDifferently` | Dropping the administrator check on `controllableByUserId` → **3**. This is the one request in 002 where a valid token is refused for **who its holder is**, and §3.5's table denied it existed until this audit |
+| 5 | `conformance`: `TestASecondAuthenticationFromOneDeviceReplacesTheFirst`; `internal/httpapi`: `TestAuthenticatingTwiceFromOneDeviceLeavesOneSessionAndOneLiveToken` | Removing the `RevokeTokensFor` call from the login transaction → **2**, one per package |
+| 6 | `conformance`: `.../AC-6: the public users are the same bytes an authenticated caller reads`, `TestTheInstallationWhereEveryUserIsHidden/AC-6`; `internal/httpapi`: `TestAHiddenUserIsExcludedAndTheOthersTravelWhole`, `TestAnInstallationWhereEveryUserIsHiddenAnswersAnEmptyArray` | Dropping the hidden exclusion → **5**, and note that the byte-equality across routes is **not** among them: both readings go through one filler, which is why the exclusion needs its own assertion |
+| 7 | `conformance`: `.../AC-7: the caller matrix`, twelve seat-and-subject pairs and four answers; `internal/httpapi`: `TestTheCallerMatrixAnswersOneObjectPerSubjectWhoeverAsked`, `TestARestrictedNonAdministratorReadsAnAdministratorsWholeObject`, `TestTheThreeSeatsReadAsThreeDifferentObjects` | A `403` for a caller who is neither the subject nor an administrator — the refusal this specification asserted for six months — → **the whole matrix**, twenty-plus subtests |
+| 8 | `conformance`: `.../AC-8: every configuration property round-trips and an unknown one is dropped`; `internal/httpapi`: `TestEverySixteenPropertyPostedComesBackThroughUsersMe`, `TestAnUnknownPropertyIsAcceptedAndDroppedWhileTheDeclaredOnesSurvive` | One posted property discarded on the way to the store → **3** |
+| 9 | `conformance`: `.../AC-9: a posted declaration is hoisted, echoed, and not believed`; `internal/httpapi`: `TestTheDeclarationIsHoistedWhileTheControlFlagsStayTheServersJudgement`, `TestAnUnknownCapabilitiesPropertySurvivesIntoSessions` | Storing an empty document in place of the posted one → **8**, including the casing sweep's own proof that an echoed camelCase document is *reported* rather than accommodated |
+| 10 | `conformance`: `.../AC-10: the lockout, and the success that resets it`; `internal/users`: `TestAThresholdOfTwoLocksAfterTwoFailuresAndASuccessResetsTheCount`, `TestAThresholdOfZeroLocksAfterThree`, `TestTheAttemptAfterALockoutIsRefusedAsDisabled` | Never writing the lockout transition → **8**, including `/System/Info`'s `403`, which is the only way this project can reach a live token whose account was disabled afterwards; recording a success as a failure → the whole caller matrix, because every seat locks out |
+| 11 | **Finding F-1, below.** `conformance`: **new** `TestAPasswordReachesNoLogRecordAndNoResponseBody`; `internal/users`: `TestAPlaintextRedactsItselfThroughEveryVerbAndThroughSlog` | Three mutations after the fix: `slog.Info` of the request body → the new test; a `Debug` record carrying `body.Pw` → the same; the `401` message interpolating the password → the new test **and** three of AC-2's golden comparisons |
+| 12 | `conformance`: `.../AC-12: the caller's own object, whole`; `internal/httpapi`: `TestTheCallerMatrixAnswersOneObjectPerSubjectWhoeverAsked` | `/Users/Me` answering an empty policy → **3** |
+| 13 (ceiling) | `conformance`: `.../AC-13: exceeding MaxActiveSessions evicts the least recently used session` | Bypassing `enforceSessionCeiling` at the handler → **1, and only that one.** `internal/sessions`' table for `Evictions` is a pure function and cannot see a caller that stopped calling it — which is the shape this audit is hunting, caught here by the criterion having a request of its own |
+| 13 (activity) | `conformance`: `.../AC-13: an authenticated request advances LastActivityDate`; `internal/httpapi`: `TestActivityIsWrittenAtMostOncePerSessionPerSecond` | `recordActivity` made a no-op → **6**, across two criteria (AC-13's date and AC-15's exclusion row) |
+| 13 (replacement) | `conformance`: `.../AC-13: the declaration is replaced rather than merged into`; `internal/httpapi`: `TestASecondPostReplacesTheCapabilitiesRatherThanMergingIntoThem` | Covered by AC-9's mutation; T16 already ran the merge-instead-of-replace one, which fails **exactly one** test because everything a merge kept was posted at some point |
+| 14 | `conformance`: `TestSystemInfoAnswersTheCredentialRatherThanTheExemption/AC-14: the token is answered 200 and the identical request without it is 401` | Refusing a request the authenticator admitted → **8**, and the companion request without the token stays green, which is what makes the pair a proof |
+| 15 | `conformance`: `.../AC-15: the parameter matrix`, ten rows; `internal/httpapi`: `TestTheParameterMatrix`, `TestActiveWithinSecondsExcludesASessionOlderThanItsWindow` | Ignoring `deviceId` → **6**; applying `activeWithinSeconds` at zero and below → the domain table and the wire matrix |
+
+**On the guess this task's own *Verified by* line made, because being wrong about it is the useful
+part.** The line named AC-3 as a likely instance — *"five mechanisms, a pure function with a
+beautiful table test"* — and it is not one. `internal/httpapi/authreader_internal_test.go` is that
+table, and T18 put **every clause of the criterion at the wire beside it**: five mechanisms against a
+real credential on a real route, the six precedence pairs in both directions, the four
+unreadable-first-header rows, and the whole grammar table over both field names. Removing the second
+mechanism from the reader fails nineteen wire subtests. The guess was reasonable and the check was
+cheap, and a criterion that *looks* like the hazard is exactly the one worth a mutation rather than a
+paragraph.
+
+**F-1 — AC-11's *"never in any log record at any level"* was proven about `users.Plaintext`.** The
+criterion is about a **request**; the test was about a type. `internal/users`'
+`TestAPlaintextRedactsItselfThroughEveryVerbAndThroughSlog` is thorough and correct — every
+formatting verb, a struct holding one, an error wrapping one, a real `slog` handler at four levels —
+and it proves that a caller who reaches for the redacting type cannot leak through it. The login
+route reads its body into a struct whose `Pw` is an ordinary `string`, because that is what
+`encoding/json` fills, and `users.NewPlaintext` is called on it one line later. **Between those two
+lines a single `slog.Info("authenticating", "body", body)` printed the password to standard error
+and left the entire suite green**
+`[measurement: mutation of internal/httpapi.UsersHandler.AuthenticateByName, Go 1.27.0, 2026-09-03]`.
+That is 001's F-1 exactly — a criterion about a request proven about the mechanism that serves it —
+and neither is visible to reading.
+
+`conformance/passwords_test.go` is the fix: five requests carrying a distinctive password, four of
+them refusals, against a server **started at `debug`** — which needed one new `serverOption`,
+because a fixture pinned to `info` cannot fail on a `Debug` line and *"at any level"* is half the
+criterion. It carries three controls, because an assertion of absence is the easiest green in
+existence: the log must contain a `DEBUG` record (the level really moved), it must contain the
+startup record (the log was collected at all), and the account's own name — a marker of the same
+shape, in the same requests, which the server *is* supposed to disclose — must be findable in a body
+(the substring search is looking somewhere). The three mutations above now fail it.
+
+**One more request had no test, found in pass (b) and fixed here.** [§3.2](spec.md#32-how-a-client-identifies-itself)'s
+last paragraph says the identification header *"is accepted anywhere and authenticates nobody"*.
+Every neighbour of that claim was asserted — a header carrying an unreadable `Token`, a token with
+no header, the grammar table over both field names — and the request in between was not: **a
+perfectly readable header, every component present, no `Token` at all**, sent from the device that
+is holding a live session. That last clause is the design of the row rather than a detail: a
+session's identifier is derived from the client name and the `DeviceId`, both of which the header
+carries, so a build that resolved a caller from the identity a request *declares* rather than from
+the credential it *presents* admits precisely this request. Measured — an authenticator falling back
+to a session lookup on the derived identity passes the assertion when the device is an unused one
+and fails it when it is the fixture's own
+`[measurement: mutation of internal/httpapi.TokenAuthenticator.Authenticate, Go 1.27.0, 2026-09-03]`.
+It is a subtest of `TestTheTokenMechanismsAtTheWire`.
+
+**Three mutations survived, and each survives for a reason rather than for a missing test.** They are
+recorded here rather than covered by a test that would pass either way, which is T11's precedent used
+a fourth time. (1) `WriteControllerRefusal`'s explicit `Content-Length` changes no byte on any
+request today — `net/http` computes it for a bodied response and keeps it when it drops the body for
+a `HEAD` (T11). (2) Building the authentication response's `SessionInfo` from the value handed to the
+store instead of reading the row back passes the whole suite, because nothing in v1 writes the
+playback check-in column; it becomes a wire bug the day 007 does (T12). (3) Handing
+`ReplaceConfiguration` the posted bytes rather than the re-encoded document changes nothing, because
+the read side decodes over the defaults too (T15). The fourth survivor was the audit's own bad
+mutation — a `PresentedToken` returning a fabricated token for an identification header, which
+resolves to no session and is a `401` for the wrong reason — and it is why the §3.2 row above sends
+its request from a device that *has* one.
+
+#### Pass (b) — every paragraph of spec §3
+
+Tested, unless the row says otherwise. *"Tested"* means at least one named test fails when the
+paragraph's behaviour is broken. **Ten places of §3 are newer than the tests under them** — T22
+changed the document in ten places, five strikes and five additions — and every addition was found
+already asserted, which is the answer that row was hoping for: the finding would have been the test,
+not the row.
+
+| §3 paragraph | Status |
+|---|---|
+| 3.1 the five mechanisms, all accepted on every authenticated route | AC-3, at the wire and in the reader's own table |
+| 3.1 `X-Emby-Authorization` is the second and reads the same grammar | AC-3. `TestEitherHeaderNameIdentifiesTheClient` is the login route's half |
+| 3.1 the measured precedence, pair by pair in both directions | AC-3. **The four rows where the *first* header is present and unreadable are this plan's generalisation and not a measurement** — [U-19](../../docs/compatibility/reference-target.md), and it is the register's first row to measure |
+| 3.1 the image and delivery route classes accept all five and require none | **Not this feature's, and asserted as today's `404` rather than as a comment.** 006 and 008 inherit it; `.../the image and delivery classes belong to features six and eight` goes red the day either class is routed |
+| 3.1 the rejection split: `401` no or unknown token, `403` lacking permission, `403` disabled | AC-2, AC-4, and `TestALiveTokenWhoseAccountWasDisabledIsTheEmptyForbidden`. **The two `403`s are different shapes on one status** and every assertion about one says which |
+| 3.2 the header's four components, and `DeviceId` as the session identity | `TestAClientHeaderWithNoDeviceIdIsFatalHereAndOnNoOtherRoute`, which sends the identical header to two routes |
+| 3.2 mandatory on the login route and there only | The same test, both halves |
+| 3.2 the scheme word, matched case-insensitively; without one nothing is read | `TestTheSchemeWordDecidesWhetherAnythingIsReadAtAll`, `TestAFieldValueWithNoSchemeWordYieldsNothing`, and two wire rows |
+| 3.2 lenient in six ways, strict in two | `TestTheGrammarIsLenientInTheSixWaysItIsMeasuredToBe`, `TestWhitespaceAroundTheEqualsIsNoComponentAtAll`, `TestALowercaseComponentNameIsNoComponentAtAll`, and the fifteen-row wire table over both field names. **The strictness is a rule here and a consequence there** — U-22, and the request that separates them has never been sent |
+| 3.2 the header is accepted anywhere and **authenticates nobody** | **Was untested; now `.../the identification header identifies a client and admits nobody`.** See pass (a) |
+| 3.3 request: the header, `Username`, `Pw` | AC-1, AC-2 |
+| 3.3 response: the four members, `LastPlaybackCheckIn`'s zero tick, the 32-hex token | AC-1, and the byte-compared golden |
+| 3.3 the four refusals and their one body | AC-2, six responses standing on one golden file that two packages compare |
+| 3.3 the refusal *order* — body, then the four components, then the credential | `TestTheBodyIsBoundBeforeTheClientComponents`, `TestTheClientComponentsAreCheckedBeforeTheCredential`. **Read from the reference's source, never probed** — U-27 |
+| 3.3 a malformed body keeps the structured shape | `TestABodyThatIsNotJSONKeepsTheProblemDetailsShape` |
+| 3.3 behaviour 1: a session per `(user, DeviceId, Client)`, replaced on re-authentication | AC-5 |
+| 3.3 behaviour 2: failed attempts counted, the threshold, the reset | AC-10, at the domain and at the wire. **The status a locked-out account answers is v1's own decision** (OQ-5) |
+| 3.3 behaviour 3: passwords never recoverable, never in logs | AC-11 — **and the log half had no request until this audit.** The "never recoverable" half is the PHC record: `internal/users`' `password_test.go` |
+| 3.4 an array of complete objects, byte-identical to an authenticated reading | AC-6, across routes, with `assertPairwiseDifferent` beside it so that one-object-for-everybody does not pass |
+| 3.4 hidden users excluded; `[]` is a valid `200` | AC-6, over two installations |
+| 3.4 **the reference also excludes disabled accounts, answers everybody before setup, and narrows by device and remote access** | Not stated by §3.4 and not implemented. Asserted as a divergence for the first (`TestADisabledUserIsListedHereAndTheReferencesSourceExcludesIt`); the second is unreachable here; U-32 |
+| 3.5 the fourteen-row field table and its order | `TestServerIdIsWrittenBeforeId` transcribes the whole member list; AC-1's golden fails at byte 33 on a transposition |
+| 3.5 `ServerName` and `PrimaryImageAspectRatio` declared and never sent | `TestTheUserObjectSendsNoImageMembers` |
+| 3.5 `LastLoginDate` absent until the first login | `TestLastLoginDateIsAbsentBeforeAFirstLoginAndPresentAfter`, and `assertTheWholeUserObject`'s second argument at the wire |
+| 3.5 `LastActivityDate` | **Absent from every response this feature sends, and the table did not say so.** Corrected at this audit; U-35 |
+| 3.5 the 42 policy properties | `internal/users`: `TestEveryMemberNameIsOneThePinnedDocumentDeclares` and the transcribed order list |
+| 3.5 the fourteen honoured flags | `IsDisabled`, `IsHidden`, the two lockout members and `MaxActiveSessions` are AC-2, AC-6, AC-10 and AC-13. **`IsAdministrator` is honoured by this feature and the table said it was reserved** — corrected at this audit. The library, deletion and transcoding flags belong to 003, 006, 008 and 009 and nothing in v1 routes them yet |
+| 3.5 the other 28 are stored and echoed, ~~all~~ **twenty-six** of which gate features v1 lacks | The echo is AC-8's shape on the policy side. **The narrowing to twenty-six had no test until this audit** — `TestAnAccountRestrictedToTheLocalNetworkAuthenticatesHereAndTheReferencesSourceRefusesIt`; U-15 |
+| 3.6 the sixteen properties round-trip; unknown ones ignored | AC-8. **The count is measured and the reference's source reads fifteen** — U-30, recorded in §3.6 at this audit |
+| 3.6 `204`, `401`, and the validation `400` for a body that is not a document | `TestTheAnswerIsA204WithNoBodyAndNoContentType`, `TestNoCredentialIsTheEmptyUnauthorizedAndWritesNothing`, `TestABodyThatIsNotJsonIsTheValidationProblem`, `TestTheCredentialIsReadBeforeTheBodyIsBound` |
+| 3.6 v1 acts on only some of them | Not a behaviour of this feature: the properties that change something change it in 005 and 008 |
+| 3.7 the four answers, and no refusal anywhere in the matrix | AC-7, including T22's newly written all-zero row, asserted at the wire against the same golden as §3.3's refusals |
+| 3.8 the capabilities route stores a declaration and `/Sessions` reflects it | AC-9 |
+| 3.8 `/Sessions` returns the caller's own, and everybody's to an administrator | `TestSessionsAnswersTheCallersOwnAndAnAdministratorsIsEverybodys`, AC-15's matrix |
+| 3.8 the fifteen members and their order | `TestASessionsBodyDeclaresCapabilitiesFirst`. **Three members the reference sends on a fresh session are absent here** — U-24 |
+| 3.8 `204`, replacement not merge, an unknown property surviving | AC-9, AC-13, `TestAnUnknownCapabilitiesPropertySurvivesIntoSessions` |
+| 3.8 the validation `400` for a body that is not a document | `TestABodyThisRouteCannotReadIsTheValidationRefusal`. Added by T22 and already asserted |
+| 3.8 `SupportsMediaControl` and `SupportsRemoteControl` are the server's judgement | `TestTheDeclarationIsHoistedWhileTheControlFlagsStayTheServersJudgement` |
+| 3.8 the three parameters, their order and their two tables | AC-15, ten rows at the wire and the domain table beneath. **The order itself is deliberately not asserted** — `visible_test.go` opens with the comment saying why |
+| 3.8 the all-zero `controllableByUserId` is the caller's own | `TestAControllableByUserIdIsBoundBeforeItIsRefused` and the wire matrix. Added by T22 and already asserted |
+| 3.8 the two ⚠️ UNVERIFIED rows | U-17. Implemented, asserted as what this server does, unmeasured against the reference |
+| 3.8 lifecycle: replacement, activity, `MaxActiveSessions` eviction | AC-5, AC-13 |
+| 3.8 lifecycle: playback check-in | **007's.** Nothing in v1 writes the column, which is what makes T12's surviving mutation survive |
+| 3.8 lifecycle: inactivity expiry | **Untested because v1 does not do it.** OQ-2 states the decision and the safe direction; there is no behaviour to break |
+| 3.9 an installation is set up from its first account, recorded once | `internal/app`: the provisioning tests; `conformance`: AC-14's pair and `TestSystemInfoIsServedDuringFirstTimeSetup`. **The guard itself is only visible in SQL** — T7's finding, recorded at plan §6.8: with it removed the boolean assertions at three layers all stay green, because the wire carries a boolean and the state is an instant |
+
+#### Pass (c) — the L3 row, stated
+
+**`POST /Users/AuthenticateByName` does not reach L3 in this run, and nothing in this repository
+says it does.** Checked: no task entry and no definition-of-done line claims it. T12's entry says in
+terms *"it is not L3 and this task does not claim it"*; §6's row says the differential half is a
+recorded gap; and the definition of done below names it rather than ticking it, the way 001 named
+its own two.
+
+What **is** met is L2 and byte-level goldens — and §6 now says which requests that covers, because
+*"L2 is met"* reads as more than it is. The `200` and all four refusals are compared as bytes over a
+six-account fixture. It does not cover the two rows §3.3 marks as v1's own decision, a **wrong
+password** and a **locked-out account**, whose reference answers §7's OQ-5 declines to measure at
+somebody's installation. Those are not levels this feature failed to reach; they are answers nothing
+has been able to compare, which is the distinction 001's audit drew about `/System/Info`.
+
+**What already covers the differential half when 010 runs**, counted rather than grepped:
+`allowlist.yaml` carries **ten** rows on this endpoint — eight `derived-identifier` and two
+`wall-clock` — and **two** on `GET /Sessions`. T22's warning is honoured here and repeated because
+it is the technique rather than the number: **plan §8.3 named three gaps and two of them did not
+exist**, because it counted endpoint-scoped rows and the wildcards do most of the work in that file.
+`GET /Sessions`' `/-/Id` and `/Users/Public`'s `Id` and `ServerId` are declared by a `*`-scoped row
+whose own `reason` names *"a public user, a session"* in words. **The one real gap is
+`LastLoginDate`**, in three spellings, all `wall-clock`, and it is 010's because that file is one
+third of a three-way pairing. §8.3 is struck in place and says one.
+
+And 002 writes **no `behaviours.md` section**, which is a decision with a reason and not an omission:
+001 wrote §4.5 because its four `/System/Info` fields fit none of the four derivation classes, so the
+allowlist's own load would have refused an entry. `LastLoginDate` is a `wall-clock`, a declared
+class, so an entry citing it loads and there is nothing to write.
+
+#### Pass (d) — the register
+
+**U-19 to U-41 are new: twenty-three claims this feature asserts and nothing has measured.** They
+were scattered exactly the way 001's were — thirteen of this feature's tasks ended a handover note
+with some form of *"this belongs in the register"*, each claim recorded where it arose in a plan
+section, a doc comment or beside a constant, and none of them anywhere a differential run would look.
+Two existing rows gained a second half: **U-13**, because the reference's ceiling check counts the
+session a re-authentication is about to replace, and **U-14**, because the capabilities route ignores
+its `id` the same way the configuration route ignores its `userId`.
+
+Three things about the batch, written into `reference-target.md` rather than only here:
+
+- **U-19 displaces U-14 as the row to measure first.** It is a difference on an **authenticated**
+  path, on the header every client sends, and one request settles it. It exists because plan §6.1
+  generalised *"a header that is present but yields nothing does not stop the search"* from measured
+  pairs that each carried a readable scheme word. T18 narrowed it as far as reading can: rewriting
+  the reader to stop at a present `Authorization` leaves all six precedence pairs green and fails
+  only four rows, of which this is the sole candidate difference.
+- **U-24 and U-35 are absent members, not differing values**, and an allowlist row does not excuse an
+  absence. Both are on bodies this feature owns; one of them is this project's only `L3` body.
+- **Six rows are asserted in the code as divergence tests** rather than left in a comment — U-15,
+  U-28, U-32, U-34, U-37 and U-38 — so the day a probe runs, the answer arrives as a failing test
+  naming the decision. U-15's assertion was written **at this audit**, and that is pass (b)'s finding
+  rather than a tidy-up: see the note below.
+
+#### Pass (e) — what went back into the documents
+
+- **`spec.md`**, four places, three of which are a row or a table that had gone on describing the
+  feature the day before this one:
+  - **§3.5's `IsAdministrator` row** said *"reserved; v1 has no admin surface to gate"*. §3.8 gates
+    two things on it — whose sessions a caller sees, and the `controllableByUserId` `403` — so the
+    row was falsified by another section of the same document. It matters because a reader taking it
+    at its word reads **AC-4 as having no request in 002 at all**, which is precisely what §5 spent
+    this feature discovering was wrong. Struck in place with the two effects named.
+  - **§3.5's `LastActivityDate`** is absent from every response this feature sends, because nothing
+    in v1 records that an account was seen. The note says so, and says the thing that makes it more
+    than a gap: it is an **absent member** rather than a differing value, on three `L2` routes and on
+    the one `L3` body, and `allowlist.yaml`'s `wall-clock` entry for that pointer excuses a value.
+  - **§3.6's sixteen** is kept against a source reading of fifteen, with both citations and the
+    reason: AGENTS.md §1.3 makes the running server the tie-breaker and there is none here, so the
+    measurement stands and the contradiction is recorded rather than resolved on source evidence.
+    This is the fourth time this project has taken that decision deliberately and said it was taking
+    it.
+  - **§6** now states which requests the L3 row's L2 half covers, for the reason pass (c) gives.
+- **`reference-target.md`** — U-19 to U-41, and two amended rows. Pass (d).
+- **`plan.md`** — every *"the register at T23 is owed the row"* now names the row it was owed;
+  §6.1's three items name U-19, U-20 and U-21; §9's risk row does the same. `status: Implemented`.
+- **`tasks.md`** — this record, and `status: Implemented`.
+- **[001's `tasks.md`](../001-server-identity-and-discovery/tasks.md), struck in place in two
+  places.** T21 left an unmeetable condition in a closed feature's record — *"when the rename
+  endpoint lands, send it here and drop the caveat"* — and flagged it for this audit to decide. The
+  decision is to strike it, with the date and the reason, because the reference renames a server at
+  an operation `surface.yaml` does not carry
+  `[source: Jellyfin.Api/Controllers/StartupController.cs:74-78 @ v10.11.11]`: **no v1 feature can
+  satisfy it, and a condition nothing can satisfy reads exactly like one that is merely waiting.**
+  What can discharge it is the friendly name becoming operator configuration, over the
+  `SetServerName` port that still has no production caller. AGENTS.md §4 asks for a strike rather
+  than a rewrite, and what 001 believed is the useful half.
+- **`behaviours.md`** — **nothing, and this is the honest half of the line.** No probe ran during
+  this feature: no reference instance is reachable in this run, so every reference claim 002 acquired
+  is a *source reading*, and a source reading is not a measurement. That is exactly why twenty-three
+  of them went to `reference-target.md` and none of them to `behaviours.md`.
+
+**And the pattern T22 asked this audit to carry, because it generalises and it caught something.**
+*A correction that narrows a claim instead of testing the narrower one is how a claim outlives its
+refutation.* T22 found it on `GET /Sessions`' parameter order, where *"the order is observable"*
+became *"the combination is observable"* — the same claim over a smaller domain — and survived five
+documents and two rounds of correction. Searching for others of that shape found one:
+[§3.5](spec.md#35-the-user-object)'s *"the unenforced flags all gate features v1 does not have"* was
+corrected on 2026-09-03 by being narrowed to **twenty-six of the twenty-eight**, with
+`EnableRemoteAccess` and `AccessSchedules` named as the two that gate logging in — and **nothing
+asserted the narrower claim**. It was true by construction, in the sense that `internal/httpapi`'s
+matrix fixture happens to log in a seat whose `EnableRemoteAccess` is false, and true by accident is
+not the same as tested.
+`TestAnAccountRestrictedToTheLocalNetworkAuthenticatesHereAndTheReferencesSourceRefusesIt` is the
+assertion, in the shape T13 and T15 established for a divergence: what this server does, with the
+reference's source citation beside it, so that the day U-15 is measured the answer is a failing test
+naming the decision. `AccessSchedules` is not its second half, because v1's model carries that
+member as an always-empty list with no element type — there is no schedule to put an account outside
+of, and it rides U-15.
 
 ---
 
@@ -1043,20 +1312,56 @@ that settles it is a debt nobody can close.*
 
 The feature is done when **all** of these hold:
 
-- [ ] Every acceptance criterion in `spec.md` §5 has a passing test, mapped in T23's pass (a) and
-  each mapping verified by **breaking the behaviour** rather than by reading.
+- [x] Every acceptance criterion in `spec.md` §5 has a passing test, mapped in T23's pass (a) and
+  each mapping verified by **breaking the behaviour** rather than by reading — twenty-four
+  mutations, one of which found a criterion proven a level below the one it is written at. **AC-11
+  had no test of the criterion until this change**: its log clause was proven about
+  `users.Plaintext` and a `slog` line carrying the request body left the whole suite green.
+  `conformance/passwords_test.go` is the fix and the same mutation now fails it.
 - [ ] Every endpoint reaches the conformance level declared in `spec.md` §6 — **except the
   differential half of `POST /Users/AuthenticateByName`'s L3, which is deferred on the
   specification's own terms and closes the first time 010 runs.** It is named here rather than
-  ticked, the way 001 named its own two.
-- [ ] `docs/compatibility/surface.yaml` lists every route added, and no route exists outside it —
-  proven by both halves of the L0 check, over eleven rows rather than four (T17).
-- [ ] Anything learned during implementation is back in `spec.md`, in this same change.
-- [ ] Any new measured Jellyfin behaviour is in `docs/compatibility/behaviours.md` with provenance,
+  ticked, the way 001 named its own two. **And the exception is not the only reason this line is
+  left unticked; see the paragraph below the list, because a level is only as good as the requests
+  it covers.**
+- [x] `docs/compatibility/surface.yaml` lists every route added, and no route exists outside it —
+  proven by both halves of the L0 check, over eleven rows rather than four (T17): a `chi.Walk` of
+  the router the binary is built with, and one real request per row against the running binary.
+- [x] Anything learned during implementation is back in `spec.md`, in this same change — §3.5 twice,
+  §3.6 and §6, listed in T23's pass (e). **Three of those four are a row or a table that had gone on
+  describing the feature the day before this one**, and the sharpest is §3.5's `IsAdministrator`:
+  *"reserved; v1 has no admin surface to gate"* was falsified by §3.8 of the same document, and a
+  reader taking it at its word reads AC-4 as having no request in 002 at all.
+- [x] Any new measured Jellyfin behaviour is in `docs/compatibility/behaviours.md` with provenance,
   and anything this feature asserts and has **not** measured is in `reference-target.md`'s register
-  rather than in a plan paragraph.
-- [ ] The debt 001 recorded here is discharged and says so: AC-14 at T21, together with the two
-  assertions 001 parked at a lower level for the same reason.
-- [ ] ADR-0006's timing equalisation — *"specified here and asserted nowhere"*, and the one check
-  that record's argument stands on — is asserted at T6, in both halves, each shown able to fail.
-- [ ] `spec.md`, `plan.md` and `tasks.md` are all marked `Implemented`.
+  rather than in a plan paragraph. **Both halves, and the first one is empty on purpose:** no probe
+  ran during this feature, because no reference instance is reachable in this run, so every
+  reference claim 002 acquired is a source reading and a source reading is not a measurement.
+  Twenty-three of them are now U-19 to U-41, and two existing rows gained a second half.
+- [x] The debt 001 recorded here is discharged and says so: AC-14 at T21, together with the two
+  assertions 001 parked at a lower level for the same reason — the `401` on `/System/Info` moved to
+  `conformance/` on an installation §3.9 completes, and `/System/Ping`'s friendly-name caveat was
+  corrected to a condition that can be met. **The second of those two is not discharged and now says
+  which feature can discharge it**: 001's own `tasks.md` carried *"when the rename endpoint lands"*,
+  which no v1 row can satisfy, and it is struck in place in two places at T23.
+- [x] ADR-0006's timing equalisation — *"specified here and asserted nowhere"*, and the one check
+  that record's argument stands on — is asserted at T6, in both halves, each shown able to fail. And
+  T6 found that the plan's two mutations do not partition the way §8.1 assumed: a stale decoy fails
+  **both** halves, because it is a cheaper derivation rather than a missing one.
+- [x] `spec.md`, `plan.md` and `tasks.md` are all marked `Implemented`.
+
+**One line of this list does not hold as written, and saying so is the job rather than a failure of
+it.** The second bullet reads *"every endpoint reaches the conformance level declared in §6"*. The
+declared L3 row does not, and that is stated in §6 and in T23's pass (c). But the honest version is
+longer, and it is the version 001's audit arrived at from the other side: **a route reaches a level
+only as far as its states are reachable.** On `POST /Users/AuthenticateByName` the L2 half covers the
+`200` and all four measured refusals as bytes, and it does **not** cover the two rows §3.3 marks as
+v1's own decision — a wrong password on an enabled account, and an account locked out by failed
+attempts. Those two answer what this project decided rather than what the reference answers, because
+§7's OQ-5 declines to lock somebody's account to find out. `GET /Sessions` reaches L2 for every row
+of §3.8's parameter matrix and carries **two** rows the specification itself marks `⚠️ UNVERIFIED`
+(U-17), which is a level the route reaches over an answer nothing has compared.
+
+Neither is a level this feature failed to reach; both are answers nothing has been able to compare,
+and the register is where each one now waits with the request that settles it. A reader deserves to
+know which requests a row in §6 covers, and now the row says.

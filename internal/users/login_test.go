@@ -706,3 +706,57 @@ func TestTheLockoutThresholdIsReadFromTheColumnAndNotFromTheDocument(t *testing.
 			"the count was read from the stored document rather than from its column")
 	}
 }
+
+// TestAnAccountRestrictedToTheLocalNetworkAuthenticatesHereAndTheReferencesSourceRefusesIt
+// is spec 3.5's twenty-six-of-twenty-eight amendment, asserted rather than
+// commented.
+//
+// Spec 3.5 says twenty-eight policy flags are stored and echoed unenforced,
+// "because the unenforced flags all gate features v1 does not have". Two of
+// them do not: the reference refuses a login outright when the caller has no
+// remote access and is outside the local network, and when the caller is
+// outside their permitted schedule
+// [source: Jellyfin.Server.Implementations/Users/UserManager.cs:595-611 @ v10.11.11].
+// The feature they gate is logging in, which v1 has — so v1 admits two logins
+// the reference refuses, and the amendment says twenty-six.
+//
+// **That amendment was a narrowing, and a narrowing is not a correction until
+// the narrower claim is tested** (002's closing audit). What v1 does is
+// asserted here, with the source reading beside it, so that the day register
+// row U-15 is measured this is a failing test naming the decision rather than
+// a rediscovery. The direction it fails in is the safe one — behaviours 3.0.3
+// calls a refusal the reference does not send the dangerous direction, and this
+// is its opposite.
+//
+// AccessSchedules is not the second half of this assertion because v1's model
+// carries it as an always-empty list with no element type (internal/users'
+// Policy): there is no schedule to put an account outside of. It rides U-15.
+func TestAnAccountRestrictedToTheLocalNetworkAuthenticatesHereAndTheReferencesSourceRefusesIt(t *testing.T) {
+	accounts := newFakeAccounts()
+	password := thePassword
+	policy := policyWithThreshold(-1)
+	policy.EnableRemoteAccess = false
+	accounts.add(t, "u1", "Alice", policy, &password)
+	login := users.NewLogin(accounts, fixedClock{})
+
+	user, err := login.Authenticate(context.Background(), "alice", users.NewPlaintext(password))
+	if err != nil {
+		t.Fatalf("an account with EnableRemoteAccess false was refused: %v — v1 stores the flag "+
+			"and does not enforce it (spec 3.5, register U-15); if this is now enforced, U-15 is "+
+			"closed and this test is the record of the decision", err)
+	}
+	if user.ID != "u1" {
+		t.Errorf("the login answered %q, want u1", user.ID)
+	}
+
+	// And the flag really did survive the round trip, so that the assertion
+	// above is about a restricted account rather than about a default one.
+	stored, err := users.PolicyOf(user)
+	if err != nil {
+		t.Fatalf("reading the policy back: %v", err)
+	}
+	if stored.EnableRemoteAccess {
+		t.Errorf("EnableRemoteAccess came back true, so the account this test admitted was not " +
+			"the restricted one it meant to admit")
+	}
+}

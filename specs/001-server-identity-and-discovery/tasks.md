@@ -448,8 +448,18 @@ list is long for four routes.
   where a fixture *can* choose one: the handler-level test sets a deliberately unlike name through
   the store, and the conformance test reads `ServerName` off the same running server, refuses to
   proceed if it has become the product name, and then asserts the ping bytes. Both guards were run
-  against a mutation that makes the two names equal, and both fire. **→ 002: when the rename
-  endpoint lands, send it here and drop the caveat.**
+  against a mutation that makes the two names equal, and both fire. ~~**→ 002: when the rename
+  endpoint lands, send it here and drop the caveat.**~~ **Struck in place 2026-09-03, at 002's
+  closing audit, because the condition can never be met.** The reference renames a server at
+  `POST /Startup/Configuration`
+  `[source: Jellyfin.Api/Controllers/StartupController.cs:74-78 @ v10.11.11]`, which is not one of
+  `surface.yaml`'s fifty-nine rows — so *"the rename endpoint"* is not 002's and is not any v1
+  feature's. What can discharge the caveat is the friendly name becoming **operator
+  configuration**, over the `SetServerName` port this row already names as having no caller; 002
+  deliberately did not add one, because it is 001's datum and not that feature's decision to take.
+  [002 §5](../002-authentication-users-and-sessions/spec.md#5-acceptance-criteria) carries the
+  correction in the form the note should have had. This record is struck rather than rewritten
+  ([AGENTS.md §4](../../AGENTS.md)): what 001 believed is the useful half.
 - **Depends on:** T14
 - **Verified by:** exact bytes on both methods. A test that would pass if the handler returned
   `ServerName` is not a test of this; the fixture sets a friendly name that differs.
@@ -653,7 +663,7 @@ paragraph's behaviour is broken.
 | 3.2 errors: `401` | Tested at the handler over a real connection; moves to `conformance/` with 002 |
 | 3.2 errors: `403` | **Untested, and unreachable.** 001 issues no credential, so no request can be valid *and* insufficient; the admission port declares two values on purpose and an unknown third is a loud `500`. §3.2 carries the amendment; 002 owns it |
 | 3.3 both methods, a bare JSON string | AC-6 |
-| 3.3 note: the product name, not the friendly name — "the code is the specification" | `TestPingIgnoresTheFriendlyNameTheSameHandlerReports` at the handler; at the wire the guard refuses to proceed if the two are equal. **The wire half is half-proven** — 001 has no route that renames a server — and it is carried into 002 with the assertion to complete |
+| 3.3 note: the product name, not the friendly name — "the code is the specification" | `TestPingIgnoresTheFriendlyNameTheSameHandlerReports` at the handler; at the wire the guard refuses to proceed if the two are equal. **The wire half is half-proven** — 001 has no route that renames a server — and ~~it is carried into 002 with the assertion to complete~~ **it stays 001's, struck 2026-09-03 at 002's closing audit**: no v1 row renames a server `[source: Jellyfin.Api/Controllers/StartupController.cs:74-78 @ v10.11.11]`, 002 deliberately did not add a configuration surface for the friendly name, and the caveat drops when a feature gives an operator one — over the `SetServerName` port, which still has no production caller |
 | 3.4 the three tiers | Tested over all three, in `internal/system` and at the handler. **Untested at the wire, and unreachable there**: 001 ships no configuration surface. **The order of tiers 1 and 2 contradicts the reference's source** — U-2, and §3.4 carries the amendment |
 | 3.4 the deliberate divergence (no HTTPS override) | `TestTierThreeIgnoresAConfiguredCertificate`, `TestACertificateChangesNothingOnAnyTier`. T15's mutation 12 — reintroducing the override — fails exactly those two and nothing else, which is what makes it asserted rather than assumed |
 | 3.5 the whole section | AC-12, against the assembled pipeline. **Untested at the wire, and unreachable there.** *"Nothing is exempt"* is contradicted by three source readings — U-1 — and `Retry-After`'s padding and the body's bytes ride with it as U-4 and U-5. §3.5 carries the amendment and is **deliberately not corrected on source evidence** |
@@ -669,8 +679,18 @@ Written into 002 as **AC-14**, with the two conditions that discharge it: 001's 
 filled, and the request issued to the running binary carrying a token 002's own route returned. Two
 smaller carried notes ride with it in the same amendment — the `401` assertion that moves to
 `conformance/` when 002 can finish setup over HTTP, and the `/System/Ping` friendly-name
-discrimination that completes when a rename endpoint exists. 002's front matter records the
-amendment. *A criterion carried in a sentence is one nobody closes.*
+discrimination that completes ~~when a rename endpoint exists~~ **when an operator can name a
+server**. 002's front matter records the amendment. *A criterion carried in a sentence is one nobody
+closes.*
+
+**Both conditions were struck in place on 2026-09-03, at 002's closing audit, because neither could
+be met as written** — 002 completes setup and does not do it over HTTP, and no v1 row renames a
+server `[source: Jellyfin.Api/Controllers/StartupController.cs:74-78 @ v10.11.11]`. The first is
+discharged: 002 §3.9 makes an installation set up at its first account, so an installation in that
+state can be stood up and the `401` assertion moved to `conformance/` with AC-14. The second is not,
+and it is 001's to take whenever a feature gives an operator a way to set the friendly name. *A
+condition no feature can satisfy is a debt that outlives the project, and it reads exactly like one
+that is merely waiting.*
 
 #### Pass (d) — what went back into the documents
 

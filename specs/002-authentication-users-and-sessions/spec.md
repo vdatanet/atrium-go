@@ -5,7 +5,8 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-03
 accepted: 2026-08-26
-amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid. 2026-09-03 at 001's closing audit (001 T21) - section 5 gains AC-14, the half of 001 AC-5 that needs a credential only this feature can issue, together with the two assertions 001 parked at a lower level for the same reason. 2026-09-03 by this feature's own plan, in four places: section 3.9 and a section 4 row are new, because nothing in v1 completes setup and AC-14 would otherwise be met by a request carrying no token at all; section 3.5 records that two of the twenty-eight unenforced policy flags are enforced by the reference at authentication itself, so "they all gate features v1 does not have" holds for twenty-six; section 5's two carried conditions are corrected, because neither "when this feature can complete setup over HTTP" nor "when the rename endpoint lands" can ever be met - no v1 row does either; and OQ-6 records what the reference's source says about the -1 sentinel while staying open, because the running server has not been asked. 2026-09-03 again, in the change that follows that plan - section 3.8 declares `GET /Sessions`' three request parameters, section 5 gains AC-15 and records that AC-4's second half finally has a request, and section 6's row for the route names the matrix that proves it. What forced it: behaviours 2.25 has carried the measurement since 2026-08-29 and says in terms that the three are "specified in 002, in the change that adds them", the video client sends `deviceId` today, and a task list cannot be written across the gap. The refusal is the load-bearing half - naming another user's device is an empty `200` while naming another user in `controllableByUserId` is a `403`, and a route declaring neither answers both with a `200` the client reads as success. And one claim did not survive being written down: the *order* of `deviceId` and the visibility rule is NOT observable, because predicates over one list commute - what a client can see is the combination with `controllableByUserId`, which is what AC-15 asserts - and behaviours 2.25's "Atrium does: none of it" is corrected in the same change. Two cases the measurement does not reach are marked UNVERIFIED and registered as U-17 and U-18 rather than answered. 2026-09-03 at T22, the pass that decides which cross-document debts are this feature's, in ten places - five strikes and five additions, every one of them recorded as owed by an earlier task. AC-15 loses the fifth and last copy of one struck sentence - that `deviceId` still narrows a request also carrying `controllableByUserId` - and section 3.8 loses two more of its own, because a non-empty `controllableByUserId` answers [] whatever `deviceId` narrowed to, so the combination distinguishes no sequence either and NOTHING in v1 reaches the order of the three. AC-14's paragraph loses the authentication port's signature twice over: it stopped being true when T10 widened what the port returns, and a signature is a HOW this document may not carry at all. Section 3.8's opening cross-reference is retargeted off a section 3.9 that named nothing when it was written, because the plan's own new section 3.9 turned a reference pointing at nothing into one pointing at the wrong thing - done with the reason beside it, since AGENTS.md section 4 forbids retargeting one silently rather than at all. And five things are ADDED, each recorded as owed by earlier tasks and each already implemented and asserted at the wire: section 3.7's table gains the all-zero `userId`, which is the bare-text 400 and not the 404 the table as written made it, plus the note that explains it; section 3.8's table gains the all-zero `controllableByUserId`, which the reference substitutes the caller's own identity for and which is therefore never the 403; and sections 3.6 and 3.8 both gain the validation 400 for a body that is not a JSON document, written on both routes together because writing it on one would have made two routes that answer alike look different - and on the capabilities route it is load-bearing, since that route stores the posted bytes whole and an unparsed body would be echoed into every later /Sessions response
+amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid. 2026-09-03 at 001's closing audit (001 T21) - section 5 gains AC-14, the half of 001 AC-5 that needs a credential only this feature can issue, together with the two assertions 001 parked at a lower level for the same reason. 2026-09-03 by this feature's own plan, in four places: section 3.9 and a section 4 row are new, because nothing in v1 completes setup and AC-14 would otherwise be met by a request carrying no token at all; section 3.5 records that two of the twenty-eight unenforced policy flags are enforced by the reference at authentication itself, so "they all gate features v1 does not have" holds for twenty-six; section 5's two carried conditions are corrected, because neither "when this feature can complete setup over HTTP" nor "when the rename endpoint lands" can ever be met - no v1 row does either; and OQ-6 records what the reference's source says about the -1 sentinel while staying open, because the running server has not been asked. 2026-09-03 again, in the change that follows that plan - section 3.8 declares `GET /Sessions`' three request parameters, section 5 gains AC-15 and records that AC-4's second half finally has a request, and section 6's row for the route names the matrix that proves it. What forced it: behaviours 2.25 has carried the measurement since 2026-08-29 and says in terms that the three are "specified in 002, in the change that adds them", the video client sends `deviceId` today, and a task list cannot be written across the gap. The refusal is the load-bearing half - naming another user's device is an empty `200` while naming another user in `controllableByUserId` is a `403`, and a route declaring neither answers both with a `200` the client reads as success. And one claim did not survive being written down: the *order* of `deviceId` and the visibility rule is NOT observable, because predicates over one list commute - what a client can see is the combination with `controllableByUserId`, which is what AC-15 asserts - and behaviours 2.25's "Atrium does: none of it" is corrected in the same change. Two cases the measurement does not reach are marked UNVERIFIED and registered as U-17 and U-18 rather than answered. 2026-09-03 at T22, the pass that decides which cross-document debts are this feature's, in ten places - five strikes and five additions, every one of them recorded as owed by an earlier task. AC-15 loses the fifth and last copy of one struck sentence - that `deviceId` still narrows a request also carrying `controllableByUserId` - and section 3.8 loses two more of its own, because a non-empty `controllableByUserId` answers [] whatever `deviceId` narrowed to, so the combination distinguishes no sequence either and NOTHING in v1 reaches the order of the three. AC-14's paragraph loses the authentication port's signature twice over: it stopped being true when T10 widened what the port returns, and a signature is a HOW this document may not carry at all. Section 3.8's opening cross-reference is retargeted off a section 3.9 that named nothing when it was written, because the plan's own new section 3.9 turned a reference pointing at nothing into one pointing at the wrong thing - done with the reason beside it, since AGENTS.md section 4 forbids retargeting one silently rather than at all. And five things are ADDED, each recorded as owed by earlier tasks and each already implemented and asserted at the wire: section 3.7's table gains the all-zero `userId`, which is the bare-text 400 and not the 404 the table as written made it, plus the note that explains it; section 3.8's table gains the all-zero `controllableByUserId`, which the reference substitutes the caller's own identity for and which is therefore never the 403; and sections 3.6 and 3.8 both gain the validation 400 for a body that is not a JSON document, written on both routes together because writing it on one would have made two routes that answer alike look different - and on the capabilities route it is load-bearing, since that route stores the posted bytes whole and an unparsed body would be echoed into every later /Sessions response 2026-09-03 at this feature's closing audit (T23), in four places, three of which are a row or a table saying something the implementation had already falsified: section 3.5's `IsAdministrator` row said "reserved; v1 has no admin surface to gate" while GET /Sessions reads the flag twice, which is what AC-4's second half stands on; section 3.5's `LastActivityDate` is absent from every response this feature sends, because nothing in v1 records that an account was seen, and it is an ABSENT MEMBER on this project's one L3 body rather than a differing value an allowlist row excuses; and section 3.6's count of sixteen configuration properties is kept against a source reading of fifteen, recorded rather than resolved. The fourth is section 6, which now says which requests the L3 row's L2 half covers rather than leaving "L2 is met" to be read as more than it is. What the audit itself found is in tasks.md T23; the one criterion proven a level too low was AC-11, and it is closed in the same change.
+
 depends_on: [001]
 ---
 
@@ -238,7 +239,7 @@ Returned by §3.3, §3.4, §3.6 and §3.7.
 | `HasConfiguredEasyPassword` | boolean | Always `false`; v1 has no PIN concept |
 | `EnableAutoLogin` | boolean | |
 | `LastLoginDate` | date | Absent until first login |
-| `LastActivityDate` | date | |
+| `LastActivityDate` | date | **Absent from every response this feature sends**, and not for the reason `ServerName` is — see the note below the table |
 | `Configuration` | object | §3.6. **Sent by `/Users/Public` too** |
 | `Policy` | object | **Sent by `/Users/Public` too** |
 
@@ -246,6 +247,23 @@ Returned by §3.3, §3.4, §3.6 and §3.7.
 response**, because they are null and nulls are omitted globally
 ([behaviours §1.7](../../docs/compatibility/behaviours.md)). Their position in the order is
 therefore unverified: nothing can measure where a property that is never sent would sit.
+
+> **`LastActivityDate` is absent too, and for a different reason — recorded 2026-09-03 at this
+> feature's closing audit.** The two members above are absent because the *reference* sends nothing
+> there. This one is absent because **nothing in v1 ever records that an account was seen**: the
+> account's activity is a value this specification declares and no behaviour in this feature writes,
+> so the member is missing from a body the reference fills. It is a Principle I difference on three
+> `L2` routes and on this feature's one `L3` body, and it is an **absent member** rather than a
+> differing value — which matters because
+> [allowlist.yaml](../../docs/compatibility/allowlist.yaml)'s `wall-clock` entry for that pointer
+> excuses a value that differs and says nothing about one that is not there. What the reference does
+> is itself unmeasured — it stamps an account only after sixty seconds and a token only after three
+> minutes, while keeping the *session's* own date exact
+> `[source: Emby.Server.Implementations/Session/SessionManager.cs:265-271 @ v10.11.11]`
+> `[source: Jellyfin.Server.Implementations/Security/AuthorizationContext.cs:180-184 @ v10.11.11]` —
+> so this is recorded rather than acted on, and it is
+> [U-35](../../docs/compatibility/reference-target.md) in the register. The session's
+> `LastActivityDate` of §3.8 is a different member on a different body and is written.
 
 `[spec: UserDto]`
 
@@ -256,7 +274,7 @@ row of this table and the amendment below it:
 
 | Flag | Effect |
 |---|---|
-| `IsAdministrator` | Reserved; v1 has no admin surface to gate |
+| `IsAdministrator` | ~~Reserved; v1 has no admin surface to gate~~ **Two things on `GET /Sessions` (§3.8): whose sessions a caller may see, and the `403` for `controllableByUserId` naming anybody else.** *(Corrected 2026-09-03 at this feature's closing audit — see below.)* |
 | `IsDisabled` | Authentication answers `403` `[probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11, 2026-08-26]` |
 | `IsHidden` | Excluded from `/Users/Public` |
 | `EnableAllFolders`, `EnabledFolders` | Which libraries the user sees |
@@ -287,6 +305,20 @@ flag whose feature arrives must be enforced in the same change.
 > landed on 2026-09-03**, in the change that wrote the login path — the code that decides not to
 > enforce them — so the two documents now say twenty-six in the same words.
 
+> **`IsAdministrator` stopped being reserved in this feature, and the table said otherwise until
+> 2026-09-03.** *"v1 has no admin surface to gate"* was true when it was written and was falsified by
+> §3.8 in the same document: `GET /Sessions` reads the flag **twice** — an administrator sees every
+> session where everybody else sees their own, and `controllableByUserId` naming anybody but the
+> caller from a caller who is not an administrator is the `403` that AC-4's second half and AC-15
+> both stand on. It is not a new decision and nothing changes in the implementation; it is a row
+> that went on describing the feature the day before this one. The correction is worth making
+> because a reader taking the row at its word would read AC-4 as having no request in 002 at all,
+> which is exactly what §5 spent this feature discovering was wrong. *(Found at the closing audit,
+> in the pass that asks whether every paragraph of §3 is tested: the flag's two effects are
+> asserted — `TestSessionsAnswersTheCallersOwnAndAnAdministratorsIsEverybodys`,
+> `TestControllableByUserIdNamingSomebodyElseFromARestrictedSeatIsTheGoldenRefusal` and AC-15's
+> matrix at the wire — and only the table disagreed with them.)*
+
 **The three transcoding flags moved into the enforced set on 2026-08-27**, when transcoding entered
 v1 ([roadmap](../../docs/roadmap.md#in-scope)). That is this rule working as written rather than an
 edit to it: the feature arrived, so the flags that restrict it stopped being unobservable, and a
@@ -302,6 +334,21 @@ mode, whether missing episodes are displayed, view ordering and exclusions, next
 `[spec: UserConfiguration]` The reference sends **16** properties in all, the rest being cast
 receiver, local-password, remembered track selections, played-item hiding, collection view and
 folder grouping. `[probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11, 2026-08-28]`
+
+> **The count of sixteen is measured, the reference's own source reads fifteen, and this document
+> keeps the measurement — recorded 2026-09-03 at this feature's closing audit.** `UserConfiguration`
+> declares `AudioLanguagePreference`, `SubtitleLanguagePreference` and `CastReceiverId` as nullable,
+> and the reference coerces only the **subtitle** one to the empty string
+> `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:426-447 @ v10.11.11]`, while the
+> audio preference is null on a fresh account
+> `[source: src/Jellyfin.Database/Jellyfin.Database.Implementations/Entities/User.cs:113 @ v10.11.11]`
+> and [behaviours §1.7](../../docs/compatibility/behaviours.md) omits a null. Read from source alone
+> a default account therefore sends **fifteen**, and v1 would have an extra member on the wire.
+> [AGENTS.md §1.3](../../AGENTS.md) makes the running server the tie-breaker and there is none here,
+> so the measurement stands, all three are declared as plain strings, sixteen travel, and the
+> contradiction is written down instead of being resolved on source evidence. It is
+> [U-30](../../docs/compatibility/reference-target.md), and one request settles it — the same
+> request that settles `CastReceiverId` at U-28.
 
 `204` on success. `401` unauthenticated. Unknown properties are ignored, not rejected.
 
@@ -732,6 +779,20 @@ surface.**
 | `GET /Sessions` | **L2** | Fixture with two sessions on two devices, **plus §3.8's parameter matrix**: `deviceId` in another case, empty, and matching nothing; the order, from a caller who is not an administrator, against a device that is not theirs; `activeWithinSeconds` at `0`, at a negative value and at one that excludes a row; and `controllableByUserId` naming the caller, naming somebody else, and named by an administrator |
 | `POST /Sessions/Capabilities/Full` | **L1** | Shape only; its effect is asserted through `/Sessions` |
 | The five token mechanisms | **L2** | Table-driven across three route classes, including the precedence pairs and the grammar table (AC-3) |
+
+> **What the L3 row's L2 half covers, written down 2026-09-03 at this feature's closing audit,
+> because *"L2 is met"* reads as more than it is.** A route reaches a level only as far as its
+> **states** are reachable, and 001's audit made the same distinction about `/System/Info`. On
+> `POST /Users/AuthenticateByName` the L2 half covers the `200` and all four refusals, each as
+> bytes against one golden, over a fixture of six accounts — and it does not cover the two rows §3.3
+> marks as *v1's own decision*: a **wrong password** and a **locked-out account** answer what this
+> project decided rather than what the reference answers, because §7's OQ-5 declines to measure
+> either at somebody's installation. Those are not levels this feature failed to reach; they are
+> answers nothing has been able to compare. The differential half of the row is deferred on this
+> table's own terms and closes the first time [010](../010-conformance-harness/spec.md) runs, over
+> the **ten** allowlist rows this endpoint already carries and the **two** on `GET /Sessions` —
+> plus `LastLoginDate`, which has no row anywhere in that file, on any route, and which the task
+> list hands to 010 with the three spellings it travels in.
 
 ## 7. Open questions
 

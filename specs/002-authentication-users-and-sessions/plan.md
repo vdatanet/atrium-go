@@ -1,7 +1,7 @@
 ---
 feature: 002-authentication-users-and-sessions
 title: Authentication, users and sessions — implementation plan
-status: Accepted
+status: Implemented
 created: 2026-09-03
 updated: 2026-09-03
 spec_status_required: Accepted
@@ -587,18 +587,25 @@ resolve them against):
    `401` there and a `200` here. The probe's measured pairs each carried a readable scheme word, so
    nothing measured contradicts either reading; *"a header that is present but yields nothing does
    not stop the search"* is this plan's own generalisation and it is what ships. **One request
-   settles it.**
+   settles it**, and it is [U-19](../../docs/compatibility/reference-target.md) — the register's
+   first row to measure, because it is a difference on an authenticated path reachable by a request
+   every client can send. T18 narrowed it as far as reading can: rewriting this reader to stop at a
+   present `Authorization` leaves all six measured precedence pairs green and fails only the four
+   rows where the first header is present and unreadable, of which this is the **only** candidate
+   difference, the other three mechanisms being read from their own fields on both servers.
 2. **The two query names are resolved by name there and by position here.** The reference reads
    `ApiKey` and consults `api_key` only when that is empty
    `[source: .../AuthorizationContext.cs:103-111 @ v10.11.11]`, so `?api_key=a&ApiKey=b` yields `b`
    there and `a` here. This is precisely the case §9 already names as *"the one place a client could
    observe an order nobody measured"*, and it now has a source reading — which is evidence, not a
-   measurement, and does not by itself move a decision this plan took deliberately.
+   measurement, and does not by itself move a decision this plan took deliberately. It is
+   [U-20](../../docs/compatibility/reference-target.md).
 3. **The reference reads a sixth field, `X-MediaBrowser-Token`, between `X-Emby-Token` and the query
    names** `[source: .../AuthorizationContext.cs:98-101 @ v10.11.11]`. Spec §3.1 measured and
    declares **five**; a sixth mechanism nothing has probed and no client analysis names is an
    endpoint-shaped stub in header form (Principle VI), so it is not read. A request carrying only
-   that header authenticates there and does not here.
+   that header authenticates there and does not here. It is
+   [U-21](../../docs/compatibility/reference-target.md).
 
 ### 6.2 Which routes require a token, and which merely accept one
 
@@ -625,8 +632,9 @@ there is no branch to get wrong.
 
 **Amended 2026-09-03, by T13, which served `/Users/Public`.** Four things this row did not say had
 to be decided or recorded to write the handler. Every one of them is read from the reference's own
-source and **none is measured**, so each is stated here rather than acted on, and the register at
-T23 is owed a row for all four.
+source and **none is measured**, so each is stated here rather than acted on. **All four are in the register now** — the order is
+[U-31](../../docs/compatibility/reference-target.md) and the three narrowings are U-32, written at
+T23.
 
 1. **The order is the route's decision, and it is the store's order.** T4 deliberately left it open:
    `UserStore.Users` orders by `username_folded, id` because
@@ -785,7 +793,7 @@ without saying what the order *returns*, and each had to be decided to write it:
   the login it just performed is unmeasured** — its update bypasses the entity it then serialises
   `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:614-627 @ v10.11.11]`, which reads
   as though it answers the *previous* `LastLoginDate`, and on a first login that would be no member
-  at all. It is one request to settle and it is the register's, at T23.
+  at all. It is one request to settle and it is [U-23](../../docs/compatibility/reference-target.md), written at T23 — on this project's one L3 body.
 
 **And the fold is this package's, spelled down.** `users.Fold` reduces a presented username to the
 `username_folded` column §4 declares; provisioning fills that column with the same function, and it
@@ -915,8 +923,9 @@ taken to write the structs:
   therefore non-optional here, which makes sixteen travel. **What the reference puts in them is
   ⚠️ UNVERIFIED**, and `CastReceiverId` is the one this server cannot match on value: 001 answers
   `/System/Info` with an empty `CastReceiverApplications` because Atrium ships no cast receiver, so
-  the only honest value is the empty string. This is the register's, at T23, not this section's to
-  resolve.
+  the only honest value is the empty string. This is [U-28](../../docs/compatibility/reference-target.md),
+  written at T23, not this section's to resolve — and the two provider identifiers beside it are
+  U-29, while the count of sixteen itself is U-30.
 - **`AccessSchedules` has an unspecified element type**, which is 001's rule for
   `CompletedInstallations` applied unchanged: v1 gives an operator no way to create one, so
   declaring the reference's element members would be a schema for a value nothing here can produce.
@@ -965,8 +974,9 @@ and two of them are findings rather than choices.
   applications at all — 001 answers `/System/Info` with an empty `CastReceiverApplications` — so
   replicating the condition would mean discarding **every** value this route is ever sent, against a
   §3.6 that stores and returns every property faithfully. Implemented as specified, asserted as a
-  divergence in U-14's shape, and **the register at T23 is owed the row**: this is the same member
-  T2 already recorded as the one whose *value* cannot match, now reached from the writing side.
+  divergence in U-14's shape, and **the row is [U-28](../../docs/compatibility/reference-target.md)**,
+  written at T23: this is the same member T2 already recorded as the one whose *value* cannot match,
+  now reached from the writing side, so one request settles both directions.
 - **What the store is handed is the re-encoded document and not the posted bytes, and no request can
   tell.** The read side decodes over the defaults too, so the normalisation happens twice and
   removing the first one changes nothing on the wire — a mutation that stored the posted bytes raw
@@ -1287,8 +1297,9 @@ route's body whichever task declared it.
 initialised empty `[source: MediaBrowser.Controller/Session/SessionInfo.cs:44-48 @ v10.11.11]`, so
 the reference sends all three on a session that has never played anything, where this server sends
 none. Spec §3.8 conditions `PlayState` on something playing and is followed; the difference is
-stated rather than accepted silently, and it is a register row 010's run would raise on this
-feature's one L3 body.
+stated rather than accepted silently, and it is [U-24](../../docs/compatibility/reference-target.md) —
+written at T23, and named there as an **absent member** rather than a differing value, which is what
+an allowlist entry cannot excuse. 010's run would raise it on this feature's one L3 body.
 
 **Amended 2026-09-03, by T16, which served both routes. Five things this section left open had to
 be decided, and three of them are findings.**
@@ -1309,7 +1320,7 @@ be decided, and three of them are findings.**
   §10). So a posted declaration's keys travel exactly as the client wrote them under **both**
   profiles, where the reference — which holds a real DTO here — would convert them under
   `profile="CamelCase"`. It is ⚠️ **UNVERIFIED**, no observed client both negotiates camelCase and
-  posts capabilities, and **the register at T23 is owed the row**. The alternative is a declared
+  posts capabilities, and the row is [U-37](../../docs/compatibility/reference-target.md), written at T23. The alternative is a declared
   model, which is behaviours §5.9's own closing mechanism and a bigger change than this observation
   justifies.
 - **The `id` query parameter is ignored, which is U-14's shape a second time.** The reference
@@ -1335,7 +1346,8 @@ be decided, and three of them are findings.**
   2147483647 binds here and fails the reference's binder. Accepting more than the reference is the
   safe direction — no request that succeeds there meets a refusal here — and narrowing at the edge
   would make T9's saturating window unreachable from the wire, which is the one arithmetic this
-  route can get wrong. Asserted as a divergence test; **the register is owed the row**.
+  route can get wrong. Asserted as a divergence test; the row is
+  [U-38](../../docs/compatibility/reference-target.md), written at T23.
 
 **And one thing this section's own wording made easy to get wrong, recorded because a test hid it
 first.** *"`LastActivityDate` advances on every authenticated request"* means the caller's **own**
@@ -1420,7 +1432,8 @@ gives that route two refusals and it has four, and the order between them is obs
   binder, which was measured one route over — a caller who may not act meets the policy's refusal
   for a path segment that is not an identifier at all ([009 §3.8](../009-playlists/spec.md),
   2026-09-01). Reading that onto this route is a **reading**: no request carrying both has been sent
-  to a running reference here, and the register at T23 is owed the row. It is asserted as a test
+  to a running reference here, and the row is [U-33](../../docs/compatibility/reference-target.md),
+  written at T23. It is asserted as a test
   because a handler that bound first would tell an unauthenticated caller which of its path segments
   this server dislikes, and no assertion about either refusal alone can see the order.
 - **The `Access`-to-response mapping now has one home.** 001 wrote the switch inside
@@ -1441,8 +1454,8 @@ gives that route two refusals and it has four, and the order between them is obs
   *playlist* identifier and reading it onto this route is a reading; because no identifier this API
   emits is written either way, so no conforming client reaches it; and because canonicalising a
   spelling this server never produces is a rule nobody has asked a running reference for. It is
-  asserted as a test in T13's and T15's shape rather than left in a comment, and the register at T23
-  is owed the row.
+  asserted as a test in T13's and T15's shape rather than left in a comment, and the row is
+  [U-34](../../docs/compatibility/reference-target.md), written at T23.
 
 **Amended 2026-09-03, by T15, which served `POST /Users/Configuration`. The table gives that route
 one refusal — the `401` on its first row — and it has two, because a body has to be read before it
@@ -1672,6 +1685,26 @@ margin is what makes it safe to run unconditionally on shared hardware: the gap 
 scheduling noise, and the gap it must catch is a whole derivation.
 *(Added 2026-09-03, at T6.)*
 
+**Amended 2026-09-03 at [T23](tasks.md#t23--the-closing-audit): the wall-clock half failed on CI, on
+a build where both paths hashed exactly once, and the fix is the *statistic* rather than the
+margin.** The paragraph above says the gap the check must survive is *"scheduling noise"*. On a
+shared runner that is the wrong model: a runner has **neighbours**, which start and stop, so its
+sample is bimodal rather than noisy around a mean. The failing run shows it plainly — six samples of
+each kind around 250 ms and three around 85 ms, medians of 245 ms and 193 ms, a 52 ms difference
+against a 48 ms margin `[measurement: GitHub Actions, go test ./..., 2026-09-03]`. Two medians drawn
+from a bimodal sample can land in different modes. The samples were already **interleaved**, and
+interleaving only cancels a monotone drift.
+
+The statistic is now the median of the **per-pair differences**, the pair being one refusal of each
+kind measured microseconds apart. On the same failing data that median is **17 ms** against the same
+48 ms margin. It is not a weakening, which is the half that matters and the half a reviewer should
+check: a path that stopped hashing differs by a whole derivation in *every* pair, so the median of
+the differences is a whole derivation rather than something an average could dilute. **Both of T6's
+mutations were re-run against the paired form and both still fail it** — the early return that
+skips the decoy, and the decoy derived at the previous constants. Widening the margin would have
+weakened the check; pairing does not touch it, and the margin is unchanged at a quarter of a
+derivation as measured on the machine running the test.
+
 ### 8.2 What this feature owes 001, and how each half is discharged
 
 001's closing audit put **AC-14** in this specification and rode two smaller notes on it.
@@ -1781,7 +1814,7 @@ That is deliberate too, and it is one line.
 | Timing equalisation is asserted with a wall clock in CI | Medium | A flaky test somebody deletes, taking ADR-0006's only check with it | §8.1's margin is a quarter of a derivation and the sample is nine; the mechanism half is deterministic and catches the same regression |
 | The user identifier is derived from the folded username | Low | A future rename would change every reference to that user | Stated in §6.9; v1 has no rename, and the feature that adds one inherits the line |
 | The session identifier deliberately differs from the reference's | Low | An allowlist row that stays rather than shrinks | Argued in §6.5 against the alternative, which is a three-way paired edit |
-| The credential reader is more generous than the reference's source in three unmeasured places (§6.1's amendment) | Medium | A request the reference answers `401` is answered `200` here, on the header every client sends | Recorded at §6.1 with source citations, ⚠️ UNVERIFIED in the code; three requests settle all three, and they belong in the register at T23 |
+| The credential reader is more generous than the reference's source in three unmeasured places (§6.1's amendment) | Medium | A request the reference answers `401` is answered `200` here, on the header every client sends | Recorded at §6.1 with source citations, ⚠️ UNVERIFIED in the code; three requests settle all three, and they are **U-19, U-20 and U-21**, written at T23. U-19 is the register's first row to measure: it is a difference on an authenticated path, on the header every client sends |
 | Four Argon2id verifications hold 256 MiB live | Medium | On the smallest host, beside SQLite and ffmpeg | ADR-0006 priced it and chose the ceiling; nothing here raises it |
 
 ## 10. Alternatives considered

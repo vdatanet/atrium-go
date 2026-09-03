@@ -89,11 +89,33 @@ type server struct {
 	log *log
 }
 
-// serverOption prepares the data directory before the server is started, which
-// is the only way this package can put an installation into a chosen state: it
-// cannot reach into the store, so it arranges what is on disk and starts the
-// server on it.
-type serverOption func(t *testing.T, dataDirectory string)
+// installationSetup is what an option may arrange before a server starts: the
+// data directory it will read, and the one command-line argument a test has a
+// reason to choose.
+//
+// It is a struct rather than a bare directory path because 002's closing audit
+// needed a server started at `debug`, and AC-11 says a password appears in no
+// log record **at any level** — a claim a fixture pinned to `info` cannot
+// assert. Everything else about the command line stays this harness's, so a
+// test cannot quietly start a server unlike the one every other test runs.
+type installationSetup struct {
+	// dataDirectory is the directory the server is started on. An option that
+	// puts an installation into a state writes into it.
+	dataDirectory string
+
+	// logLevel is the --log-level argument. It defaults to defaultLogLevel and
+	// withLogLevel is the only thing that moves it.
+	logLevel string
+}
+
+// defaultLogLevel is what every server in this package runs at unless a test
+// says otherwise.
+const defaultLogLevel = "info"
+
+// serverOption prepares an installation before the server is started, which is
+// the only way this package can put one into a chosen state: it cannot reach
+// into the store, so it arranges what is on disk and starts the server on it.
+type serverOption func(t *testing.T, setup *installationSetup)
 
 // withInstallationIdentity writes the identity file the server will read
 // instead of generating one.
@@ -105,12 +127,24 @@ type serverOption func(t *testing.T, dataDirectory string)
 // this test fails loudly with a generated identity in the body rather than
 // passing for the wrong reason.
 func withInstallationIdentity(id string) serverOption {
-	return func(t *testing.T, dataDirectory string) {
+	return func(t *testing.T, setup *installationSetup) {
 		t.Helper()
-		path := filepath.Join(dataDirectory, "installation-id")
+		path := filepath.Join(setup.dataDirectory, "installation-id")
 		if err := os.WriteFile(path, []byte(id+"\n"), 0o600); err != nil {
 			t.Fatalf("writing the installation identity: %v", err)
 		}
+	}
+}
+
+// withLogLevel starts the server at a level other than defaultLogLevel.
+//
+// There is exactly one reason to use it and it is 002 AC-11: a password must
+// appear in no log record **at any level**, and a server started at `info`
+// cannot fail on a `Debug` line carrying one. A test that reads the log for
+// anything else should not need this.
+func withLogLevel(level string) serverOption {
+	return func(_ *testing.T, setup *installationSetup) {
+		setup.logLevel = level
 	}
 }
 
@@ -125,17 +159,18 @@ func startServer(t *testing.T, options ...serverOption) *server {
 
 	// t.TempDir() already exists, which is what EnsureDataDirectory needs: it
 	// creates the final component only and refuses a missing parent.
-	dataDirectory := t.TempDir()
+	setup := &installationSetup{dataDirectory: t.TempDir(), logLevel: defaultLogLevel}
 	for _, option := range options {
-		option(t, dataDirectory)
+		option(t, setup)
 	}
+	dataDirectory := setup.dataDirectory
 
 	seeded := directoryContents(t, dataDirectory)
 
 	command := exec.Command(atriumBinary,
 		"--data-dir", dataDirectory,
 		"--bind-address", "127.0.0.1:0",
-		"--log-level", "info",
+		"--log-level", setup.logLevel,
 	)
 	// A developer's own ATRIUM_* variables must not reach a test server: every
 	// one of them is a configuration fallback, and a test that answers
@@ -316,6 +351,38 @@ func (l *log) text() string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return strings.Join(l.lines, "\n")
+}
+
+// settled waits until the server has stopped writing, and is what makes an
+// assertion *about* the log honest rather than merely green.
+//
+// collect reads the pipe in a goroutine, so a line the server wrote while it
+// was serving a request may not have been read by the time the response
+// arrived back at the caller. A test asserting that some string is **absent**
+// from the log would then be asserting about lines it never saw — the shape of
+// green that proves nothing (AGENTS.md §3), and here it would be a password
+// leak the check watched sail past.
+//
+// Quiet is the condition rather than a fixed wait: it returns as soon as the
+// line count has held still for one quiet period, and gives up at the ceiling
+// so that a server logging continuously cannot hang a test.
+func (l *log) settled(quiet, ceiling time.Duration) {
+	deadline := time.Now().Add(ceiling)
+	for {
+		l.mu.Lock()
+		before := len(l.lines)
+		l.mu.Unlock()
+
+		time.Sleep(quiet)
+
+		l.mu.Lock()
+		after := len(l.lines)
+		l.mu.Unlock()
+
+		if after == before || time.Now().After(deadline) {
+			return
+		}
+	}
 }
 
 // withoutAtriumEnvironment removes this project's own configuration fallbacks

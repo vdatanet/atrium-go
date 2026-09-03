@@ -121,6 +121,9 @@ func TestTheTokenMechanismsAtTheWire(t *testing.T) {
 	t.Run("the client identification grammar holds over both field names", func(t *testing.T) {
 		assertTheGrammarOverBothFieldNames(t, server, held)
 	})
+	t.Run("the identification header identifies a client and admits nobody", func(t *testing.T) {
+		assertTheIdentificationHeaderAloneAdmitsNobody(t, server, held)
+	})
 	t.Run("the image and delivery classes belong to features six and eight", func(t *testing.T) {
 		assertTheImageAndDeliveryClassesAreNotServed(t, server, held)
 	})
@@ -424,6 +427,55 @@ func assertTheGrammarOverBothFieldNames(t *testing.T, server *server, held crede
 				})
 			}
 		})
+	}
+}
+
+// spec 3.2's last paragraph, which had every neighbour asserted and no request
+// of its own until 002's closing audit.
+//
+// *"The header is accepted anywhere and authenticates nobody. Alongside a token
+// the request succeeds; carrying only this header and no token, an
+// authenticated route answers 401 with the same empty body as a request
+// carrying nothing at all"*
+// [probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11, 2026-08-26].
+//
+// The grammar table above sends this header carrying a `Token` and asserts what
+// the parser makes of it; the mechanism tests send a token with no header. The
+// request in between — **a perfectly readable header, every component of spec
+// 3.2 present, no `Token` at all** — is the one a real client sends before it
+// has logged in, and it is the one that tells "identifies" apart from "admits".
+//
+// **It is sent from the device that is holding a live session**, and that is
+// the whole design of the row. A session's identifier is derived from the
+// client name and the `DeviceId` (plan 6.5), both of which this header carries
+// — so a build that resolved a caller from the identity a request declares
+// rather than from the credential it presents would admit **this** request and
+// refuse a header naming a device nobody has logged in from. Measured: an
+// authenticator that falls back to a session lookup on the derived identity
+// passes this assertion when the device is an unused one and fails it when it
+// is the fixture's own
+// `[measurement: mutation of internal/httpapi.TokenAuthenticator.Authenticate,
+// Go 1.27.0, 2026-09-03]`.
+//
+// The two answers are compared as bytes rather than as statuses, because "the
+// same empty body as a request carrying nothing at all" is a claim about the
+// response and not about the code.
+func assertTheIdentificationHeaderAloneAdmitsNobody(t *testing.T, server *server, held credential) {
+	t.Helper()
+
+	identified := server.get(t, requiredRoute, goldenHost,
+		http.Header{"Authorization": {clientIdentification(held.device, "")}})
+	assertEmptyRefusal(t, identified, http.StatusUnauthorized,
+		"the identification header of a device holding a live session, carrying no Token")
+
+	// And it is the same response as no header at all, which is the half a
+	// status check cannot see.
+	nothing := server.get(t, requiredRoute, goldenHost, nil)
+	assertEmptyRefusal(t, nothing, http.StatusUnauthorized, "no credential at all")
+
+	if identified.status != nothing.status || string(identified.body) != string(nothing.body) {
+		t.Errorf("the identification header alone answered %d %q and no credential at all answered %d %q; spec 3.2 measures them as one response",
+			identified.status, identified.body, nothing.status, nothing.body)
 	}
 }
 

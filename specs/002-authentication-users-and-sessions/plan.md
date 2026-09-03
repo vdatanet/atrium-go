@@ -443,14 +443,45 @@ Derive(pw Plaintext) (record string, err error)
 // internal/sessions
 DeriveID(client, deviceID string) string     // §6.5
 
+type Caller struct {                         // added by T9, below
+    UserID          string
+    IsAdministrator bool
+}
+
 type Selection struct {                      // spec §3.8's three parameters, already bound
     DeviceID            string               // "" when absent or empty
     ControllableByUser  string               // "" when absent or empty
     ActiveWithinSeconds int                  // 0 when absent, and 0 means "do not apply"
 }
 
-Visible(all []Session, caller Caller, sel Selection, now units.Time) []Session
+Visible(all []ports.Session, caller Caller, sel Selection, now units.Time) []ports.Session
 ```
+
+**Amended 2026-09-03, by T9, which wrote `Visible`.** ~~`Visible(all []Session, caller Caller, …)`~~
+wrote its second parameter as `Caller` inside the `internal/sessions` block while the only `Caller`
+this section declares is in the `internal/httpapi` block two blocks above, carrying a
+`users.Policy`. **They cannot be one type**, and T9 is where that had to be settled — the same shape
+as T4's *"where do the four types live"* and T7's `CreateUser`.
+
+`internal/sessions` may import neither of the packages that would make them one. `internal/httpapi`
+is the edge, and [architecture §2](../../docs/architecture.md#2-layers-and-the-direction-of-dependency)
+keeps HTTP out of the domain; `internal/users` is the other domain package, and §3 says in terms
+that `sessions` *"knows a user by identifier and never the reverse"* — a `users.Policy` in this
+signature would make every importer of the session model reach the credential verifier, which is the
+join §3 split the two packages to avoid. So the edge reduces its own `Caller` to this one at the
+call site, in one visible line, rather than the domain reaching up for a type it must not see.
+
+**`IsAdministrator` is a `bool` and not a policy**, which is the same argument one layer down: the
+rule reads exactly one flag `[source: Emby.Server.Implementations/Session/SessionManager.cs:1967 @ v10.11.11]`,
+and a parameter carrying twenty-eight would invite a second branch to grow in the domain that
+belongs at the edge. The zero value fails in the safe direction — a caller nobody filled in is a
+non-administrator with no sessions of their own, so it answers `[]` rather than everybody's — which
+is the same property `Authentication{}` has above and is asserted under that name.
+
+**`Visible` returns `[]ports.Session` and never `nil`.** The list is what the route serialises, and
+`wire.Write` writes a nil slice as `null`; spec §3.8 answers `[]`. That is a difference invisible to
+anything that parses the body (Principle VIII), so the shape is decided in the function rather than
+patched at the handler.
 
 `Plaintext` is ADR-0006's type whose `String` and `slog.LogValue` return a redaction. It is declared
 in `internal/users` because the domain is where it is verified, and **nothing outside that package
@@ -988,10 +1019,24 @@ this plan.** [Spec §3.8](spec.md#38-sessions) now declares all three, and behav
   `sel.ActiveWithinSeconds` when it is greater than zero. **The order is written this way because
   the reference's is, and not because a test can catch it the wrong way round** — spec §3.8 records
   what writing the criterion taught: `deviceId` and the visibility rule are predicates over one list
-  and predicates commute, so no request tells the two sequences apart. What the test can assert is
+  and predicates commute, so no request tells the two sequences apart. ~~What the test can assert is
   the combination — a request carrying `deviceId` *and* `controllableByUserId` still narrows on the
-  device — and it is written under that name rather than under "the order", so nobody later reads a
-  green test as proof of something it never checked.
+  device —~~ **What the test can assert is the combination, and T9 measured that it is weaker than
+  this sentence claimed** — it is written under that name rather than under "the order", so nobody
+  later reads a green test as proof of something it never checked.
+
+  **Amended 2026-09-03, by T9, which wrote the case.** *"Still narrows on the device"* is not
+  observable either, and for the reason the very next bullet gives: the early return makes a
+  non-empty `sel.ControllableByUser` answer `[]` **whatever `deviceId` narrowed to**, so the two
+  sequences agree here as well. This is the same claim spec §3.8 already lost once, one bullet
+  further down, and it survived a second writing only because the test tried to fail on it. What the
+  combination case does catch is real and is two wrong implementations, which is why it stays and is
+  named for the combination rather than for the order: a build that **ignores**
+  `controllableByUserId` — plan's own named failure mode, answering the caller's own session where
+  the reference answers nothing — and one that lets it **widen** the list back, which is what a rule
+  appended rather than substituted would do. Both were run as mutations and both go red. The day a
+  feature attaches a control channel the case becomes discriminating about the order too, and
+  `visible_test.go` says so where whoever writes that feature will read it.
 - **The `403` is the handler's and the predicate is one line.** `controllableByUserId` naming
   anybody but the caller, from a caller who is not an administrator, is refused before the domain is
   asked at all — the reference raises it in the controller, ahead of the session manager

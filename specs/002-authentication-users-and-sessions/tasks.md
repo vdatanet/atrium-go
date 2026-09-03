@@ -242,7 +242,7 @@ still owe.
 
 ## T9 — `internal/sessions`: the derived identity, and one ordered `Visible`
 
-- [ ] **Changes:** `internal/sessions` — `DeriveID(client, deviceID)` of [plan §6.5](plan.md#65-what-an-authentication-writes-two-identities-and-one-replacement),
+- [x] **Changes:** `internal/sessions` — `DeriveID(client, deviceID)` of [plan §6.5](plan.md#65-what-an-authentication-writes-two-identities-and-one-replacement),
   the `Selection` of plan §5, and `Visible(all, caller, sel, now)` as **one** function applying
   `deviceId`, then the visibility rule, then `activeWithinSeconds`.
 - **Depends on:** T4
@@ -264,6 +264,17 @@ still owe.
   commute, no request tells the two sequences apart (spec §3.8), and a case named for the order would
   pass while proving something else — which is the claim writing AC-15 already cost this feature
   once.
+- **Amended 2026-09-03, by the task itself, in two places and both in [plan.md](plan.md).** §5 owed
+  a decision this line reads straight past: `Visible`'s `Caller` and `Authentication`'s `Caller`
+  cannot be one type, because `internal/sessions` may import neither the edge that declares the
+  second nor the `internal/users` its `Policy` comes from. It is `sessions.Caller{UserID,
+  IsAdministrator}` and the edge reduces its own to it in one line at the call site; §5 carries the
+  argument. And §6.10's *"a request carrying `deviceId` and `controllableByUserId` still narrows on
+  the device"* is **not observable either** — the early return answers `[]` whatever `deviceId`
+  narrowed to, so the two sequences agree there as well. That is the same claim spec §3.8 already
+  lost one paragraph earlier, written a second time in the plan and caught only because the case was
+  made to fail. The case stays, under the same name, for the two wrong builds it does catch: one
+  that ignores the parameter and one that lets it widen the list back.
 - **Spec reference:** §3.8, AC-15; plan §5, §6.5, §6.10.
 
 ## T10 — The `Authenticator`, filled and widened

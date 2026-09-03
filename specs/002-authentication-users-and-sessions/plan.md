@@ -920,6 +920,37 @@ what spec §3.5 already says v1 sends, now with a reason — and `EnableAutoLogi
 non-nullable column, so it travels for every account although the DTO declares it nullable. v1
 stores no such column and no route sets it, so it is `false` everywhere.
 
+**Amended 2026-09-03, by T15, which is the first task to *write* one of these two documents rather
+than read it.** This section describes building the user object and had nothing to say about the
+route that replaces half of it; three things had to be decided to write `POST /Users/Configuration`,
+and two of them are findings rather than choices.
+
+- **The decode over `DefaultConfiguration()` is what makes the route a replacement**, and the
+  reference agrees for fifteen of the sixteen properties: its binder constructs a fresh
+  `UserConfiguration` and the update assigns them from it unconditionally
+  `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:760-799 @ v10.11.11]`, so a property
+  the client omitted returns to its default there as it does here. The wrong implementation is a
+  decode over the **stored** document, and it passes every round-trip assertion ever written —
+  everything posted is still there afterwards; what it gets wrong is what was not posted. It is
+  caught by one test and only one.
+- **The sixteenth property is `CastReceiverId`, and the reference does not replace it
+  unconditionally.** A posted value is kept only when it is non-empty **and** names a cast receiver
+  application the installation's own configuration declares, so an unknown one leaves the stored
+  value alone `[source: .../UserManager.cs:785-789 @ v10.11.11]`. Atrium declares no cast receiver
+  applications at all — 001 answers `/System/Info` with an empty `CastReceiverApplications` — so
+  replicating the condition would mean discarding **every** value this route is ever sent, against a
+  §3.6 that stores and returns every property faithfully. Implemented as specified, asserted as a
+  divergence in U-14's shape, and **the register at T23 is owed the row**: this is the same member
+  T2 already recorded as the one whose *value* cannot match, now reached from the writing side.
+- **What the store is handed is the re-encoded document and not the posted bytes, and no request can
+  tell.** The read side decodes over the defaults too, so the normalisation happens twice and
+  removing the first one changes nothing on the wire — a mutation that stored the posted bytes raw
+  **survived the whole suite**. It is `ports.UserStore.ReplaceConfiguration`'s own stated contract,
+  and it is now asserted where it lives: by reading the account back and checking the stored
+  document's member names. That is T7's finding a second time — *an assertion phrased in the
+  vocabulary the wire uses cannot see state the wire does not carry* — and it is the only assertion
+  in this route's tests that reads anything but a response.
+
 ### 6.7 Disabled, locked out, and at the session ceiling
 
 The three refusals that are not about the password, in the order the login path tests them:
@@ -1300,6 +1331,30 @@ gives that route two refusals and it has four, and the order between them is obs
   spelling this server never produces is a rule nobody has asked a running reference for. It is
   asserted as a test in T13's and T15's shape rather than left in a comment, and the register at T23
   is owed the row.
+
+**Amended 2026-09-03, by T15, which served `POST /Users/Configuration`. The table gives that route
+one refusal — the `401` on its first row — and it has two, because a body has to be read before it
+can be stored.**
+
+- **A body that is not JSON is the validation `400`, keyed `"$"` and `userConfig`.** Spec §3.6 names
+  `204` and `401` and nothing else, so this row is the login route's rule applied to a second route
+  rather than a measurement of this one: the reference's parameter is `[FromBody, Required]`
+  `[source: Jellyfin.Api/Controllers/UserController.cs:492-494 @ v10.11.11]`, and the action
+  parameter's own name is `userConfig` where the login route's is `request` — two routes, two names,
+  and neither is guessable from the other. The alternatives were both worse than an unspecified
+  refusal: storing the defaults for a document nobody could read is the same silent wrong write U-14
+  already costs this route once, and a `500` blames the server for a request.
+- **The message under `"$"` is the deserialiser's own and not the domain's wrapper.** The
+  configuration is decoded by `internal/users`, which wraps its decoder's error with its package
+  name; the handler unwraps before it writes. This is not about matching the reference — §1.11
+  already declares that half unmatchable, the message being Go's where the reference's is .NET's —
+  it is about **two of this server's own routes describing one unreadable document in one spelling**,
+  which is a difference between Atrium and Atrium before it is one between Atrium and Jellyfin. It
+  is asserted by comparing the two routes' answers to the same bytes rather than by transcribing a
+  message.
+- **The credential is read before the body is bound**, which is T14's order on this route's own two
+  refusals and the same reading of 009 §3.8, 2026-09-01. Asserted for the reason T14 asserts it: no
+  claim about either refusal alone can see an order.
 
 ## 8. Testing strategy
 

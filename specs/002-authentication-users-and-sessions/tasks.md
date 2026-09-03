@@ -446,7 +446,7 @@ still owe.
 
 ## T15 — `POST /Users/Configuration`
 
-- [ ] **Changes:** `internal/httpapi` — the handler, replacing the **authenticated caller's**
+- [x] **Changes:** `internal/httpapi` — the handler, replacing the **authenticated caller's**
   configuration and answering `204` with no body.
 - **Depends on:** T10, T13
 - **Verified by:** all sixteen properties posted and read back through `/Users/Me` unchanged; an
@@ -460,6 +460,34 @@ still owe.
   rather than as a comment is what makes the day the probe lands a **failing test naming the
   behaviour that moved** instead of a rediscovery.
 - **Spec reference:** §3.6, AC-8; plan §9; U-14.
+- **Amended 2026-09-03, on landing. Three things this line did not name had to be decided, and two
+  of them are findings.**
+  - **The route has a second refusal.** Spec §3.6 names `204` and `401`; a body that is not JSON is
+    neither, and storing the defaults for a document nobody could read would be the same silent
+    wrong write U-14 already costs this route once. It is the login route's validation `400` with
+    one word changed — the action parameter is `userConfig` where the login route's is `request`
+    `[source: Jellyfin.Api/Controllers/UserController.cs:492-494 @ v10.11.11]` — and the credential
+    is read **before** the body is bound, which is T14's order on its own two refusals. Both are in
+    [plan §7](plan.md#7-failure-handling)'s amendment. The message under `"$"` is asserted to be the
+    **same text the login route sends for the same bytes**, which is a rule about two of this
+    server's own routes rather than about the reference: the domain wraps its decoder's error with
+    its package name, and a handler that passed the wrapper through would answer one unreadable
+    document in two spellings.
+  - **`CastReceiverId` is a second divergence on this route, in U-14's own shape, and it is written
+    as a test for the same reason.** The reference replaces fifteen of the sixteen properties
+    unconditionally and keeps a posted `CastReceiverId` **only** when the installation declares a
+    cast receiver application with that identifier
+    `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:760-799,785-789 @ v10.11.11]`.
+    Atrium declares none, so replicating the condition would discard every value this route is ever
+    sent, against a §3.6 that stores every property faithfully. **The register at T23 is owed the
+    row.**
+  - **One mutation survived and became a test.** Handing the store the *posted bytes* instead of the
+    re-encoded document passes every assertion about a response — the read side decodes over the
+    defaults too, so the normalisation happens twice and removing the first is invisible on the
+    wire. It is `ReplaceConfiguration`'s own contract, and it is now asserted by reading the account
+    back out of the store: T7's finding a second time, that an assertion phrased in the wire's
+    vocabulary cannot see state the wire does not carry. [plan §6.6](plan.md#66-building-the-user-object)
+    carries all three.
 
 ## T16 — `POST /Sessions/Capabilities/Full` and `GET /Sessions`
 

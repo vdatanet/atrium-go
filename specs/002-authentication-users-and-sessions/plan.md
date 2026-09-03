@@ -119,13 +119,19 @@ by construction, and named there so it cannot be lost.
 | Module | Change | Responsibility |
 |---|---|---|
 | `internal/users` | new | The domain of accounts: the user, its policy, its configuration, credential verification, the failed-attempt counter and the lockout rule. Imports no HTTP. |
-| `internal/sessions` | new | The domain of sessions and tokens: identity derivation, activity, the declared capabilities, and what a caller may see of somebody else's session. |
+| `internal/sessions` | new | The domain of sessions and tokens: identity derivation, activity, the declared capabilities, what a caller may see of somebody else's session, and — since spec §3.8 declared them — the route's three request parameters **and the order they apply in**. |
 | `internal/ports` | extended | `Clock` (declared by 001's plan §5, never written; this feature is its first caller), and the two store interfaces the packages above declare. |
 | `internal/store/sqlite` | extended | One migration in the **precious** lineage, and the readers and writers behind the two new ports. |
 | `internal/httpapi` | extended | The credential reader and the header grammar (§6.1, §6.3); the `Authenticator` implementation; the seven handlers; the three refusal shapes 001 could not reach. |
 | `internal/app` | extended | Wiring, plus the provisioning subcommand (§6.9). |
 | `cmd/atrium` | extended | One dispatch on the first argument, and nothing else. |
 | `conformance/` | extended | The seven rows' L1 and L2 evidence, over an installation the fixture provisions before the server starts. |
+
+**Amended 2026-09-03, by spec §3.8's parameter declaration.** `internal/sessions`' row said *"what a
+caller may see of somebody else's session"*, which was the whole of what the route decided when the
+route took no parameters. It now decides three things in a fixed order, and the order is observable
+(§6.10), so the row names it: a package whose responsibility is stated as *visibility* invites a
+handler to do the filtering itself and get the order wrong.
 
 **Why `users` and `sessions` are two packages.** A session outlives the credential that opened it
 and is read by features that never look at an account:
@@ -312,6 +318,15 @@ type Authentication struct {
 Authenticator interface { Authenticate(*http.Request) (Authentication, error) }
 ```
 
+**Amended 2026-09-03, by spec §3.8's parameter declaration.** `Visible` took ~~`(all []Session,
+caller Caller)`~~ until this change, because the route took no parameters. It now takes the bound
+`Selection` and the clock, and it stays **one function** rather than a filter the handler composes
+with a visibility rule. That is the whole lesson of spec §3.8: the three apply in an order a client
+can observe — `deviceId` before visibility, `activeWithinSeconds` after it — and two exported
+functions are two chances to compose them the wrong way round, in a package whose test would still
+pass because each half is right. `ActiveWithinSeconds` is an `int` and not a pointer: spec §3.8
+makes `0` and absent the same request, so the zero value already means what the wire means.
+
 **The invariant 001 built on is kept, and it is the reason the struct is shaped this way.** 001's
 §6.10 relies on `AccessUnauthenticated` being the zero value, so that a nil authenticator — and any
 future failure to wire one — admits nobody. `Authentication{}` still means *unauthenticated with no
@@ -338,7 +353,14 @@ Derive(pw Plaintext) (record string, err error)
 
 // internal/sessions
 DeriveID(client, deviceID string) string     // §6.5
-Visible(all []Session, caller Caller) []Session
+
+type Selection struct {                      // spec §3.8's three parameters, already bound
+    DeviceID            string               // "" when absent or empty
+    ControllableByUser  string               // "" when absent or empty
+    ActiveWithinSeconds int                  // 0 when absent, and 0 means "do not apply"
+}
+
+Visible(all []Session, caller Caller, sel Selection, now units.Time) []Session
 ```
 
 `Plaintext` is ADR-0006's type whose `String` and `slog.LogValue` return a redaction. It is declared
@@ -703,7 +725,8 @@ before it does.
   list and not a copy of the object.
 - **Visibility is a domain function over the whole list**: the caller's own sessions always, every
   session for an administrator. It takes the list and the caller rather than querying per caller, so
-  the rule is a pure function with a table-driven test.
+  the rule is a pure function with a table-driven test. ~~That is the whole of what this route
+  decides.~~ **It decides three things now, in the order below** — the function's shape is §5's.
 
 **This route is owed three parameters that this feature has not specified, and the task list must
 not start before they are.** [behaviours §2.25](../../docs/compatibility/behaviours.md#225-get-sessions-three-filters-are-two-filters-and-a-visibility-rule)
@@ -716,6 +739,46 @@ as the one thing 002's spec still owes before its task list is written. The half
 than tidiness is the security sentence: `deviceId` narrows the list **before** the visibility rule,
 so a non-administrator naming somebody else's device gets an empty `200`, while
 `controllableByUserId` naming anybody else is a `403`.
+
+**Resolved 2026-09-03, in the change this plan asked for — and here is what the resolution costs
+this plan.** [Spec §3.8](spec.md#38-sessions) now declares all three, and behaviours §2.25's
+*"Atrium does: none of it"* is corrected with it. What that turns into here:
+
+- **One ordered function, not a filter and a rule.** `sessions.Visible(all, caller, sel, now)` (§5)
+  applies `sel.DeviceID` to the whole list, *then* the visibility rule, *then*
+  `sel.ActiveWithinSeconds` when it is greater than zero. **The order is written this way because
+  the reference's is, and not because a test can catch it the wrong way round** — spec §3.8 records
+  what writing the criterion taught: `deviceId` and the visibility rule are predicates over one list
+  and predicates commute, so no request tells the two sequences apart. What the test can assert is
+  the combination — a request carrying `deviceId` *and* `controllableByUserId` still narrows on the
+  device — and it is written under that name rather than under "the order", so nobody later reads a
+  green test as proof of something it never checked.
+- **The `403` is the handler's and the predicate is one line.** `controllableByUserId` naming
+  anybody but the caller, from a caller who is not an administrator, is refused before the domain is
+  asked at all — the reference raises it in the controller, ahead of the session manager
+  `[source: Jellyfin.Api/Controllers/SessionController.cs:60-61 @ v10.11.11]`, and here it is
+  §7's `WriteControllerRefusal` for the same reason 001 gives about shapes: a refusal decided in the
+  domain would have to travel back out as a status the domain does not own. The predicate — *is this
+  identifier the caller's own, or is the caller an administrator* — reads `Caller.Policy`, which §5
+  already puts on the caller for exactly this branch.
+- **`controllableByUserId` filters nothing here, and the plan does not pretend otherwise.** Spec
+  §3.8 argues that the list is always empty because v1 attaches no control channel, so `Visible`
+  returns early for a non-empty `sel.ControllableByUser` rather than implementing three clauses that
+  cannot be observed. **The early return is where the surprise lives** — it is the one branch in
+  this feature whose correctness is an argument rather than a comparison — so it carries the
+  argument in a comment and the test asserts the *reason*: a fixture session that declares
+  `SupportsMediaControl: true` is still absent from the answer, because the declaration is the
+  client's and the flag is the server's (spec §3.8).
+- **These are the first route-keyed entries `httpapi.QuerySpellings` gets.** 001 plan §6.2 shipped
+  the canonicalisation stage with an **empty** map and said *"its first source arrives with the
+  first parameter"*; this is that arrival, and it is three names on one route. §6.1's two query
+  token names are not entries — they are read on every route rather than declared by one — so
+  nothing was there to fold before this.
+- **U-12 bites here first.** The register's row about a query pair carrying a semicolon says it is
+  *"owed by the first feature that reads a query **value** rather than folding a name"*. §6.1
+  already reads two, but a discarded `ApiKey` pair fails closed as a `401`; a discarded `deviceId`
+  fails **open**, as a wider list the client cannot tell from a correct one. The row is not amended
+  — it anticipated this — but this is the request that makes it worth a probe.
 
 ## 7. Failure handling
 
@@ -733,6 +796,8 @@ Every refusal in this feature, with the shape and where it comes from. The first
 | A body that is not JSON, or a required member missing, on the login route | Decode | `400`, RFC 9457 problem details, `application/json; charset=utf-8` — **not** `application/problem+json` — with `errors` keyed `"$"` and the action parameter's own name, which is `request` `[source: Jellyfin.Api/Controllers/UserController.cs:211 @ v10.11.11]`. This is behaviours §1.11's measured **rule** applied to this route, not a measurement of this route | — |
 | `GET /Users/{userId}` naming nobody | Lookup | `404`, the JSON-encoded bare string `"User not found"`, 16 bytes, `application/json; charset=utf-8` — the same body whoever asked | — |
 | `GET /Users/{userId}` with an identifier that is not one | Bind | `400`, the validation body keyed on the parameter's **declared** spelling: `{"userId": ["The value 'x' is not valid."]}` | — |
+| `GET /Sessions` naming another user in `controllableByUserId`, from a caller who is not an administrator | Handler, §6.10, before the domain is asked | `403`, `text/plain` with no charset, the same 25 bytes — `WriteControllerRefusal`. The status and the media type are measured `[probe: tools/probe_session_filters.py, Jellyfin 10.11.11, 2026-08-29]`; **the bytes are §1.11's rule applied**, and are register U-18 | Caller names themselves, or an administrator asks |
+| `GET /Sessions` with an `activeWithinSeconds` that is not an integer, or a `controllableByUserId` that is not an identifier | Bind | `400`, the same validation body as the row above, keyed on the parameter's own spelling. **⚠️ UNVERIFIED — register U-17**: spec §3.8 marks it, and it is the reading that §1.12 forgives a *token* and refuses a *type* | — |
 | The store is unreadable while authenticating | Port error | `500`, empty — **never `401`**. 001's rule, and the reason is that a client told `401` discards a credential that was fine | — |
 | Four verifications already in flight | §6.4 | **Waits.** Never a status | — |
 
@@ -761,7 +826,7 @@ is not met by a test about the mechanism that serves it, however good that test 
 | 1 | L2, `conformance/` | Provision, authenticate, assert `200`, a 32-hex `AccessToken` by shape, and the `User`/`SessionInfo` members present. A golden holds the body with the two derived members stated (§8.2) |
 | 2 | L1/L2 golden, `conformance/` | Three requests, three statuses, **one** golden body compared by all three — which is what makes "the same 25 bytes" an assertion rather than three assertions written alike. `Content-Type: text/plain` with **no** charset asserted as a field value |
 | 3 | L2, `conformance/` | Table-driven: five mechanisms × two route classes (a required route, `/Users/Public`), plus the four precedence pairs in both directions, plus the grammar table of §6.3. The image and delivery classes are 006's and 008's and are named as not-this-feature's |
-| 4 | L2, `conformance/` | The `401` half over the wire. **The second half — "a valid token lacking permission is `403`" — has no request in this feature**: none of the seven routes gates on a permission, `/Users/{userId}` refuses nobody, and `/System/Info` admits any authenticated caller once setup is complete — its policy requires no administrator `[source: Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs:78 @ v10.11.11]` and succeeds for any caller in the user role `[source: Jellyfin.Api/Auth/FirstTimeSetupPolicy/FirstTimeSetupHandler.cs:46-50 @ v10.11.11]`. It is proven at the domain over `AccessForbidden` and recorded as a criterion **partly out of reach**, not ticked |
+| 4 | L2, `conformance/` | The `401` half over the wire. ~~**The second half — "a valid token lacking permission is `403`" — has no request in this feature**~~ **Amended 2026-09-03: it has one, and it is AC-15's — `GET /Sessions?controllableByUserId=` naming somebody else, from a caller who is not an administrator, is a `403` at the wire. Both halves are `conformance/` now, and the paragraph below survives as the reason the *domain* assertion stays.** The reasoning it was recorded with, and which still holds of the other six routes: none of them gates on a permission, `/Users/{userId}` refuses nobody, and `/System/Info` admits any authenticated caller once setup is complete — its policy requires no administrator `[source: Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs:78 @ v10.11.11]` and succeeds for any caller in the user role `[source: Jellyfin.Api/Auth/FirstTimeSetupPolicy/FirstTimeSetupHandler.cs:46-50 @ v10.11.11]`. It is proven at the domain over `AccessForbidden` — which stays, because the authenticator's own `403` for a token whose user was disabled has no wire request either way — and was recorded as a criterion **partly out of reach**, ~~not ticked~~ **which it no longer is** |
 | 5 | L2, `conformance/` | Authenticate twice from one `DeviceId`; the first token is then `401` and `/Sessions` shows one row |
 | 6 | L2, `conformance/` | Two fixtures: one with a hidden user (excluded, others whole) and one where every user is hidden (`[]`). Byte-compared against the authenticated reading of the same users |
 | 7 | L2, `conformance/` | The caller matrix: every pair of seat and subject, the identifier nobody has, the malformed one, and no credential. **The administrator's object as read by a restricted stranger is compared byte for byte with the administrator's own reading** — the measurement §3.7 records is an equality, so the test is one |
@@ -772,6 +837,7 @@ is not met by a test about the mechanism that serves it, however good that test 
 | 12 | L2, `conformance/` | `/Users/Me` whole, configuration and policy included |
 | 13 | L2, `conformance/` | The `204` with no body; replacement rather than merge; `LastActivityDate` advancing across two requests; and the `MaxActiveSessions` row **as the specification writes it**, with §6.7's contradiction named in the test's own comment |
 | 14 | L2, `conformance/` | §8.2 |
+| 15 | L2, `conformance/` | Six requests on one fixture: `deviceId` in another case and matching a row; `deviceId=` empty; a `deviceId` nothing matches; `activeWithinSeconds` at `0`, at `-5` and at a value that excludes a row; `controllableByUserId` naming the caller; and naming somebody else from a restricted seat, whose `403` is byte-compared with AC-2's golden. **The combination is its own case** — `deviceId` and `controllableByUserId` together — because that is the only part of the order a request can see (§6.10) |
 
 **Fixtures.** One provisioning helper in `conformance/`, calling the subcommand, producing: an
 administrator with a password; a restricted non-administrator with a password; a hidden user; a
@@ -884,7 +950,7 @@ That is deliberate too, and it is one line.
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | `MaxActiveSessions` is implemented as the spec writes it and the reference refuses instead | **Certain**, if the source reading is right | One `403` a client sees as a success, and another device logged out | U-13, and one request settles it. §6.7 |
-| `GET /Sessions` ships with no parameters while the video client sends `deviceId` today | High | A client's filter silently ignored, which behaviours §1.12 makes correct-looking | The specification owes the three parameters *before* the task list; named in §6.10 and in the handover |
+| ~~`GET /Sessions` ships with no parameters while the video client sends `deviceId` today~~ **Retired 2026-09-03: spec §3.8 declares all three** | ~~High~~ | A client's filter silently ignored, which behaviours §1.12 makes correct-looking | **Taken, not mitigated.** §6.10 carries what the declaration costs this plan; what remains is U-17 and U-18, two register rows and four requests |
 | `POST /Users/Configuration` takes a `userId` the specification does not mention `[source: Jellyfin.Api/Controllers/UserController.cs:488-511 @ v10.11.11]` | High | An administrator naming another user updates **their own** configuration here and that user's there — a silent wrong write, not an error | Implemented as specified (the caller's own); recorded as U-14; one request settles both the parameter and its `403` |
 | Two policy flags gate **authentication** in the reference and are in v1's unenforced 28 | Medium | A user restricted to the local network, or to a schedule, logs in from anywhere | Recorded as U-15 and as a spec amendment (§11); enforcing needs a refusal shape nothing has measured |
 | Timing equalisation is asserted with a wall clock in CI | Medium | A flaky test somebody deletes, taking ADR-0006's only check with it | §8.1's margin is a quarter of a derivation and the sample is nine; the mechanism half is deterministic and catches the same regression |
@@ -936,7 +1002,8 @@ input rather than softening the comparison.
 
 ## 11. What this change amended in `spec.md`, and what forced each one
 
-Four edits, all in this change, all dated in the front matter's `amended:` line.
+~~Four edits, all in this change~~ **Four edits in the change that wrote this plan, and a fifth in the
+change that followed it** — all dated in the specification's front-matter `amended:` line.
 
 1. **§3.9 is new — an installation becomes set up when it is provisioned.** Forced by AC-14: on an
    installation whose setup is outstanding, `/System/Info` admits a request carrying no token, so
@@ -965,3 +1032,31 @@ Four edits, all in this change, all dated in the front matter's `amended:` line.
 register**, U-13 to U-16: the `MaxActiveSessions` contradiction, the unspecified `userId` on
 `POST /Users/Configuration`, the two authentication-gating policy flags, and what `/Sessions` shows
 when two users share one device and client.
+
+**Amended 2026-09-03, by the change that declares `GET /Sessions`' three request parameters — a
+fifth spec edit, and the plan edits it forced.** §6.10 named the declaration as the one thing 002's
+specification owed before its task list. It is taken, in its own change, and it is recorded here
+beside the four above rather than only in the document it changed.
+
+5. **Spec §3.8 declares `controllableByUserId`, `deviceId` and `activeWithinSeconds`, §5 gains
+   AC-15, and §6's row for the route names the matrix.** Forced by
+   [behaviours §2.25](../../docs/compatibility/behaviours.md#225-get-sessions-three-filters-are-two-filters-and-a-visibility-rule),
+   which has carried the measurement since 2026-08-29 and says the three are *"specified in 002, in
+   the change that adds them"*, and by the video client, which sends `deviceId` today. What a route
+   accepts and what it does with it is WHAT, and §6.10 could not plan a handler across the gap.
+   behaviours §2.25's *"Atrium does: none of it"* is corrected in the same change, and two cases the
+   measurement does not reach are marked `⚠️ UNVERIFIED` in the specification and registered as
+   **U-17** and **U-18** rather than answered.
+
+**And it cost one claim, which is the finding.** The natural reading of §2.25 — and this plan's own
+first wording — is that the *order* is observable. It is not: `deviceId` and the visibility rule are
+predicates over one list, and predicates commute, so no request tells the two sequences apart. What
+a client can see is that the two parameters naming somebody else's property answer differently — an
+empty `200` and a `403` — and that `deviceId` still narrows a request that also carries
+`controllableByUserId`. AC-15 and §8's row for it assert that and say so, because a criterion named
+for the order would have passed while proving something else.
+
+**Five sections of this plan moved with it**: §3's `internal/sessions` row, §5's `Visible` signature
+and the new `Selection`, §6.10, §7's two new refusal rows, and §8's rows for AC-4 and AC-15. **§9's
+`GET /Sessions` risk is retired** — it was the risk that this change would not be made, and AC-4's
+second half stopped being partly out of reach on the same request.

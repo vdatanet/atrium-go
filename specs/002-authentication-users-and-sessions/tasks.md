@@ -617,6 +617,11 @@ still owe.
   second authentication rather than growing a list — T7's rule about the wire's vocabulary, met from
   the other side: the row count cannot see a state the store forbids. What it does assert is that the
   surviving row is the replacement rather than the first login's left behind.
+  **And a fourth thing, which is a rule for T19–T21 rather than a correction: one installation per
+  criterion is too expensive to be free.** Nine of these fixtures in parallel failed CI in
+  `internal/users` rather than here, on the timing equalisation's margin; plan §8's amendment carries
+  the numbers. Criteria that do not disturb one another share an installation and stay separate
+  subtests.
 - **Spec reference:** AC-1, AC-2, AC-3, AC-5; §6; plan §8.
 
 ## T19 — `conformance/`: the user routes over the wire

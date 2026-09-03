@@ -46,10 +46,10 @@ type tokenMechanism struct {
 // The five, in the order 002 spec 3.1 measures them resolving.
 var (
 	viaAuthorization = tokenMechanism{"Authorization", func(token string, header http.Header, _ *string) {
-		header.Set("Authorization", clientIdentification("mechanisms", token))
+		header.Set("Authorization", clientIdentification(mechanismsDevice, token))
 	}}
 	viaEmbyAuthorization = tokenMechanism{"X-Emby-Authorization", func(token string, header http.Header, _ *string) {
-		header.Set("X-Emby-Authorization", clientIdentification("mechanisms", token))
+		header.Set("X-Emby-Authorization", clientIdentification(mechanismsDevice, token))
 	}}
 	viaEmbyToken = tokenMechanism{"X-Emby-Token", func(token string, header http.Header, _ *string) {
 		header.Set("X-Emby-Token", token)
@@ -86,6 +86,50 @@ func requestWith(t *testing.T, s *server, path string, place func(header http.He
 	return s.get(t, path, goldenHost, header)
 }
 
+// 002 AC-3, on one installation and one credential.
+//
+// # Why one server and one login for six subtests
+//
+// authentication_test.go gives the reason in full: provisioning plan 8's
+// fixture costs six Argon2id derivations at 64 MiB each, and a test function
+// per row of AC-3 would have this package holding nine such installations open
+// at once — which is enough parallel load to disturb internal/users' timing
+// equalisation, the one check ADR-0006's argument stands on. None of these
+// rows writes anything, so they share, and each stays a named subtest.
+//
+// The login is shared for a second reason that has nothing to do with cost: a
+// second authentication from one DeviceId revokes the first token (plan 6.5),
+// so parallel tests logging in from one device would log each other out.
+func TestTheTokenMechanismsAtTheWire(t *testing.T) {
+	t.Parallel()
+
+	server := newInstallation(t)
+	held := logIn(t, server, mechanismsDevice, restrictedAccount, fixturePassword)
+
+	t.Run("the five mechanisms authenticate one request identically", func(t *testing.T) {
+		assertTheFiveMechanismsAgree(t, server, held)
+	})
+	t.Run("presenting a token changes nothing on a route that requires none", func(t *testing.T) {
+		assertACredentialChangesNothingOnThePublicRoute(t, server, held)
+	})
+	t.Run("the precedence between two live mechanisms holds", func(t *testing.T) {
+		assertThePrecedence(t, server, held)
+	})
+	t.Run("a header that yields nothing does not stop the search", func(t *testing.T) {
+		assertTheSearchContinuesPastAnUnreadableHeader(t, server, held)
+	})
+	t.Run("the client identification grammar holds over both field names", func(t *testing.T) {
+		assertTheGrammarOverBothFieldNames(t, server, held)
+	})
+	t.Run("the image and delivery classes belong to features six and eight", func(t *testing.T) {
+		assertTheImageAndDeliveryClassesAreNotServed(t, server, held)
+	})
+}
+
+// mechanismsDevice is the DeviceId every request in this file identifies from.
+// One device, because one login (see above).
+const mechanismsDevice = "mechanisms"
+
 // AC-3's first half: all five mechanisms authenticate the same request
 // identically on a route that requires a token.
 //
@@ -96,11 +140,8 @@ func requestWith(t *testing.T, s *server, path string, place func(header http.He
 // restricted seat rather than to the administrator: /Users/Me answers the
 // caller's own object, so a mechanism that fell back to "somebody" would answer
 // a different object rather than the same one.
-func TestTheFiveMechanismsAuthenticateOneRequestIdentically(t *testing.T) {
-	t.Parallel()
-
-	server := newInstallation(t)
-	held := logIn(t, server, "mechanisms", restrictedAccount, fixturePassword)
+func assertTheFiveMechanismsAgree(t *testing.T, server *server, held credential) {
+	t.Helper()
 
 	var first []byte
 	for _, mechanism := range allMechanisms() {
@@ -134,52 +175,48 @@ func TestTheFiveMechanismsAuthenticateOneRequestIdentically(t *testing.T) {
 // The same five on a route that reads no credential, where the criterion is
 // that presenting one is never itself a reason to refuse — and never a reason
 // to answer differently either (002 spec 3.4's measured byte-equality).
-//
-// Run over two installations. The one with six accounts answers a list with
-// something in it; the all-hidden one answers `[]`, which is the case where a
-// handler that consulted the credential would be most tempted to. AC-6's own
-// assertions over that fixture — the exclusion, and the comparison with an
-// authenticated reading of the same users — belong to T19; what is asserted
-// here is only that the credential changes nothing.
-func TestPresentingATokenChangesNothingOnARouteThatRequiresNone(t *testing.T) {
-	t.Parallel()
+func assertACredentialChangesNothingOnThePublicRoute(t *testing.T, server *server, held credential) {
+	t.Helper()
 
-	for _, installation := range []struct {
-		name  string
-		start func(t *testing.T) *server
-	}{
-		{"six accounts", func(t *testing.T) *server { return newInstallation(t) }},
-		{"every account hidden", func(t *testing.T) *server { return newAllHiddenInstallation(t) }},
-	} {
-		t.Run(installation.name, func(t *testing.T) {
-			t.Parallel()
+	anonymous := server.get(t, unauthenticatedRoute, goldenHost, nil)
+	if anonymous.status != http.StatusOK {
+		t.Fatalf("%s without a credential: status %d, want %d\nbody: %s",
+			unauthenticatedRoute, anonymous.status, http.StatusOK, anonymous.body)
+	}
 
-			server := installation.start(t)
-			held := logIn(t, server, "mechanisms", hiddenAccount, fixturePassword)
-
-			anonymous := server.get(t, unauthenticatedRoute, goldenHost, nil)
-			if anonymous.status != http.StatusOK {
-				t.Fatalf("%s without a credential: status %d, want %d\nbody: %s",
-					unauthenticatedRoute, anonymous.status, http.StatusOK, anonymous.body)
+	for _, mechanism := range allMechanisms() {
+		t.Run(mechanism.name, func(t *testing.T) {
+			got := requestWith(t, server, unauthenticatedRoute, func(header http.Header, query *string) {
+				mechanism.place(held.token, header, query)
+			})
+			if got.status != http.StatusOK {
+				t.Fatalf("%s carrying %s: status %d, want %d\nbody: %s",
+					unauthenticatedRoute, mechanism.name, got.status, http.StatusOK, got.body)
 			}
-
-			for _, mechanism := range allMechanisms() {
-				t.Run(mechanism.name, func(t *testing.T) {
-					got := requestWith(t, server, unauthenticatedRoute, func(header http.Header, query *string) {
-						mechanism.place(held.token, header, query)
-					})
-					if got.status != http.StatusOK {
-						t.Fatalf("%s carrying %s: status %d, want %d\nbody: %s",
-							unauthenticatedRoute, mechanism.name, got.status, http.StatusOK, got.body)
-					}
-					if !bytes.Equal(got.body, anonymous.body) {
-						t.Errorf("%s answered different bytes from the anonymous reading.\n got %s\nwant %s",
-							mechanism.name, got.body, anonymous.body)
-					}
-				})
+			if !bytes.Equal(got.body, anonymous.body) {
+				t.Errorf("%s answered different bytes from the anonymous reading.\n got %s\nwant %s",
+					mechanism.name, got.body, anonymous.body)
 			}
 		})
 	}
+}
+
+// The same criterion on the installation where every account is hidden, which
+// is 002 plan 8's second fixture and the case a handler that consulted the
+// credential is most tempted by: the anonymous reading is `[]`, so a build that
+// disclosed a hidden account to a caller holding a token would answer a list
+// where an empty one is what a client gets — measured, that mutation fails here
+// as well as on the six-account fixture.
+//
+// AC-6's own assertions over this fixture — the exclusion itself, and the byte
+// comparison with an authenticated reading of the same users — belong to T19.
+// What is asserted here is only AC-3's clause: the credential changes nothing.
+func TestPresentingATokenChangesNothingWhenEveryUserIsHidden(t *testing.T) {
+	t.Parallel()
+
+	server := newAllHiddenInstallation(t)
+	held := logIn(t, server, mechanismsDevice, hiddenAccount, fixturePassword)
+	assertACredentialChangesNothingOnThePublicRoute(t, server, held)
 }
 
 // unknownToken is a well-formed credential this server never issued: 32
@@ -207,11 +244,8 @@ const unknownToken = "ffffffffffffffffffffffffffffffff"
 // (behaviours 2.4) and are labelled so nobody reads them as measurements. No
 // pair here rests on plan 6.1's unmeasured generalisation — the row that does
 // is the next test, and it is separated for exactly that reason.
-func TestThePrecedenceBetweenTwoLiveMechanismsHoldsAtTheWire(t *testing.T) {
-	t.Parallel()
-
-	server := newInstallation(t)
-	held := logIn(t, server, "mechanisms", restrictedAccount, fixturePassword)
+func assertThePrecedence(t *testing.T, server *server, held credential) {
+	t.Helper()
 
 	for _, pair := range []struct {
 		winner, loser tokenMechanism
@@ -267,11 +301,8 @@ func TestThePrecedenceBetweenTwoLiveMechanismsHoldsAtTheWire(t *testing.T) {
 // unreadable Authorization beside any of them authenticates on both servers.
 // They are here because they are the rows an `if hasHeader { return }`
 // implementation fails, which is the mistake the rule exists to prevent.
-func TestAHeaderThatYieldsNothingDoesNotStopTheSearchAtTheWire(t *testing.T) {
-	t.Parallel()
-
-	server := newInstallation(t)
-	held := logIn(t, server, "mechanisms", restrictedAccount, fixturePassword)
+func assertTheSearchContinuesPastAnUnreadableHeader(t *testing.T, server *server, held credential) {
+	t.Helper()
 
 	for _, row := range []struct {
 		name       string
@@ -314,11 +345,9 @@ func TestAHeaderThatYieldsNothingDoesNotStopTheSearchAtTheWire(t *testing.T) {
 // fails against the reference (behaviours 6's non-improvements). At the wire
 // that becomes 401 — the token was not read, so the request carries no
 // credential at all.
-func TestTheClientIdentificationGrammarHoldsOverBothFieldNamesAtTheWire(t *testing.T) {
-	t.Parallel()
+func assertTheGrammarOverBothFieldNames(t *testing.T, server *server, held credential) {
+	t.Helper()
 
-	server := newInstallation(t)
-	held := logIn(t, server, "mechanisms", restrictedAccount, fixturePassword)
 	token := held.token
 
 	for _, field := range []string{"Authorization", "X-Emby-Authorization"} {
@@ -397,11 +426,8 @@ func TestTheClientIdentificationGrammarHoldsOverBothFieldNamesAtTheWire(t *testi
 // named consumer in v1 is not routed at all, so both classes answer 404 here —
 // and the day either is served, this test fails and whoever served it inherits
 // AC-3's second sentence along with the route.
-func TestTheImageAndDeliveryClassesOfAcThreeBelongToFeaturesSixAndEight(t *testing.T) {
-	t.Parallel()
-
-	server := newInstallation(t)
-	held := logIn(t, server, "mechanisms", restrictedAccount, fixturePassword)
+func assertTheImageAndDeliveryClassesAreNotServed(t *testing.T, server *server, held credential) {
+	t.Helper()
 
 	for _, path := range []string{
 		// One path of each class, spelled as api-surface-v1.md spells the rows

@@ -34,6 +34,35 @@ var accessToken = regexp.MustCompile(`^[0-9a-f]{32}$`)
 // one particular run.
 const goldenLoginDevice = "golden-login"
 
+// 002 AC-1 and AC-2, on one installation.
+//
+// # Why they share a server rather than each starting one
+//
+// Provisioning 002 plan 8's fixture costs six Argon2id derivations, each
+// holding a 64 MiB arena (ADR-0006's measured parameters). A test function per
+// criterion would run nine such installations at once on a two-core runner, and
+// the interference is measurable somewhere it matters: internal/users' timing
+// equalisation — the one check ADR-0006's argument stands on — compares medians
+// with a margin sized for scheduling noise, and enough of this package
+// provisioning in parallel is no longer noise. Criteria that do not disturb one
+// another therefore share an installation, and stay separate subtests so a
+// failure still names one criterion.
+//
+// These two do not disturb one another: AC-2's three requests are all refusals,
+// and a refusal opens no session and issues no token.
+func TestTheAuthenticationRouteAtTheWire(t *testing.T) {
+	t.Parallel()
+
+	server := newInstallation(t, withInstallationIdentity(goldenInstallationIdentity))
+
+	t.Run("a successful authentication matches its golden", func(t *testing.T) {
+		assertTheGoldenAuthentication(t, server)
+	})
+	t.Run("the three measured refusals carry one body and three statuses", func(t *testing.T) {
+		assertTheThreeMeasuredRefusals(t, server)
+	})
+}
+
 // AC-1 at the wire, as a byte-compared golden.
 //
 // # What the golden states, and why three members are stated rather than two
@@ -64,10 +93,8 @@ const goldenLoginDevice = "golden-login"
 // User, PascalCase throughout, `LastPlaybackCheckIn` as .NET's minimum date
 // rather than null, empty arrays as `[]` rather than `null`, and
 // `SupportsMediaControl` as the boolean false rather than the string.
-func TestAnAuthenticationMatchesItsGolden(t *testing.T) {
-	t.Parallel()
-
-	server := newInstallation(t, withInstallationIdentity(goldenInstallationIdentity))
+func assertTheGoldenAuthentication(t *testing.T, server *server) {
+	t.Helper()
 
 	// The window the two dates must fall inside. Read around the request and
 	// widened by a second at each end, because the server's clock and this
@@ -159,10 +186,8 @@ func statedDate(t *testing.T, member, raw string, before, after time.Time) strin
 // the absence of the parameter is the part a client sees. A Contains check for
 // "text/plain" passes on `text/plain; charset=utf-8`, which is a different
 // field, so the whole value is compared.
-func TestTheThreeMeasuredRefusalsCarryOneBodyAndThreeStatuses(t *testing.T) {
-	t.Parallel()
-
-	server := newInstallation(t)
+func assertTheThreeMeasuredRefusals(t *testing.T, server *server) {
+	t.Helper()
 
 	for _, row := range []struct {
 		name   string

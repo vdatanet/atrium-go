@@ -1500,6 +1500,20 @@ one line for that reason** — §6.9 already carries T7's finding; this is where
 The hidden account is the bare one; the visible five each carry `--hidden=false`; and "every user is
 hidden" needs no flags at all.
 
+**And the fixture is expensive enough to interfere with §8.1, which decides how the tests are
+grouped.** Provisioning it costs six Argon2id derivations, each holding a 64 MiB arena. Written as
+one test function per criterion, T18's nine installations stood up in parallel and the first CI run
+failed — not in `conformance/`, which passed, but in `internal/users`, where
+`TestTheTwoRefusalsCannotBeToldApartWithAStopwatch` measured **71.3 ms against 107.5 ms with a
+17.8 ms margin**, its samples alternating between 50 ms and 231 ms
+`[measurement: GitHub Actions, go test ./..., 2026-09-03]`. §8.1 chose that margin to survive
+*scheduling noise*, and enough of this package provisioning at once stops being noise. Criteria that
+do not disturb one another therefore **share an installation and stay separate subtests** — which
+took the package from nine fixtures to three and its own runtime from 8.8 s to 3.6 s
+`[measurement: go test -count=1 ./conformance, Go 1.27.0 darwin/arm64, 2026-09-03]`. Every later
+`conformance/` task inherits the rule: a new installation per criterion is a cost paid by a test in
+another package.
+
 ### 8.1 The timing equalisation, which is the one check ADR-0006's argument stands on
 
 ADR-0006 records that *"the timing equalisation is specified here and asserted nowhere"* and hands

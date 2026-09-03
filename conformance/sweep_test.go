@@ -39,16 +39,20 @@ import (
 // interface has no fields to reflect over. Whatever a later feature puts in
 // one is swept here or nowhere.
 //
-// # Where the two halves could leave a gap
+// # Where the two halves could leave a gap, and what closes it
 //
 // A field is swept by neither if it is in no registered response model *and*
 // in no body this file requests. The first clause is closed in the other half,
-// which checks its registry against the router. **The second is open, and it is
-// this file's weakness: sweptResponses below is a hand-written list.** T20 is
-// the check that the router serves exactly surface.yaml's implemented rows;
-// nothing yet ties this list to that one. Until something does, a feature that
-// adds a route adds a row here — and its model's *names* are still swept by the
-// other half meanwhile, so what would go unswept is the values, not the schema.
+// which checks its registry against the router.
+//
+// **The second was open until T20 and is now closed**, which is worth saying
+// plainly because this file used to say the opposite. sweptResponses below is
+// still a hand-written list — it has to be, since a request needs a method, a
+// path and an Accept header that no table carries — but it is no longer only
+// checked against another hand-written list of the same routes:
+// TestTheSweepReachesEveryRouteTheServerServes in routes_test.go requires every
+// row the *running server* answers to appear here. A route added and not swept
+// now fails this package.
 //
 // architecture 8 carries the amendment, dated.
 
@@ -118,38 +122,6 @@ func TestEveryResponseSweepsClean(t *testing.T) {
 				t.Errorf("%s %s: %s", swept.method, swept.path, found)
 			}
 		})
-	}
-}
-
-// TestTheSweepReachedEveryRouteThisFeatureServes is the coverage half of the
-// list above.
-//
-// A hand-written list of requests is worth exactly as much as its completeness,
-// and the failure it invites is a route added and not swept. This cannot check
-// the router — that is T20's, and this package has no way to enumerate what is
-// registered — so it checks the next best thing: that every path and method
-// feature 001 declares appears in the list at least once. A fifth route added
-// without a row here still slips past, and that is said plainly in this file's
-// opening comment rather than hidden behind a passing test.
-func TestTheSweepReachedEveryRouteThisFeatureServes(t *testing.T) {
-	t.Parallel()
-
-	wanted := []string{
-		http.MethodGet + " " + publicSystemInfoPath,
-		http.MethodGet + " " + systemInfoPath,
-		http.MethodGet + " " + pingPath,
-		http.MethodPost + " " + pingPath,
-	}
-
-	swept := map[string]bool{}
-	for _, response := range sweptResponses {
-		swept[response.method+" "+response.path] = true
-	}
-
-	for _, route := range wanted {
-		if !swept[route] {
-			t.Errorf("no swept response covers %s, so nothing sweeps the values it sends", route)
-		}
 	}
 }
 

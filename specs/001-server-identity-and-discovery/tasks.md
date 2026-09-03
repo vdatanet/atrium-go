@@ -514,11 +514,39 @@ list is long for four routes.
 
 ## T20 — The L0 registration check
 
-- [ ] **Changes:** `conformance` — assert the router exposes **exactly** the `surface.yaml` rows
+- [x] **Changes:** ~~`conformance`~~ **`conformance` *and* `internal/httpapi`, split — see the
+  amendment** — assert the router exposes **exactly** the `surface.yaml` rows
   whose owning feature is implemented, and nothing outside `surface.yaml` at all.
+- **Amended 2026-09-03, on doing it:** three things, and the first is the one the wording left
+  entirely open.
+  **"Implemented" is derived, not listed.** A list of implemented features written into either
+  half would be right until 002 lands and then quietly wrong — and a stale list makes the check
+  silent about exactly the rows it has stopped knowing about. Both halves apply one rule instead:
+  **a feature the server serves any row of must serve every row of it.** A feature with no row
+  served is one this build does not implement, which is a reading of the server rather than a
+  claim about the roadmap. Today that rule reads `001` off the wire and off the router, and it
+  will read `002` the day 002 lands without anybody editing a test. Its blind spot — a feature
+  implemented and serving *none* of its rows — is named in `plan.md` §8.5 rather than left
+  implicit.
+  **The check is two checks in two directories**, because `conformance/` may not import
+  `internal/surface` (T8's note, [architecture §3](../../docs/architecture.md#3-repository-layout)).
+  Registration walks `Pipeline.Router()` from `internal/httpapi`; reachability issues a real
+  request per row from `conformance/`, reading the row list out of
+  `docs/compatibility/surface.yaml` with a strict reader of its own rather than a generated copy
+  that would go stale silently. `plan.md` §8.5 and `docs/architecture.md` §8 both carry the
+  reasoning.
+  **The registration half had a hole of its own, and it is now closed by reflection.** `Routes`
+  registers whatever the `Handlers` value it is given contains, and the test builds that value —
+  so a feature adding a field and filling it in `cmd/atrium`'s wiring would register routes this
+  check never walked. Every field of `Handlers` is therefore required to be set, which makes
+  adding one fail the check until the check is taught about it.
 - **Depends on:** T8, T16, T17, T18
 - **Verified by:** the four 001 rows are served; a route registered without a row fails the test;
   a row whose feature is implemented and which is not served fails it too.
+- **Also closed here:** T19's open gap. The wire sweep's request list was hand-written and tied to
+  nothing; every row the running server answers must now appear in it, so a route added and not
+  swept fails `conformance/`. `docs/architecture.md` §8 and `conformance/sweep_test.go` both said
+  the gap was open and now say what closed it.
 - **Spec reference:** §3.6, AC-11; Principle VI.
 
 ## T21 — The closing audit

@@ -562,6 +562,28 @@ readiness gate → response-time stamp → Server header → path canonicalisati
 The readiness gate is outermost because §3.5 exempts nothing, the stamp must wrap what it claims to
 time, and canonicalisation must precede routing because it rewrites what the router matches.
 
+**Amended 2026-09-03, at T12 — this order and T14's own acceptance cannot both hold, and which of
+them moves is T14's decision rather than T12's.**
+
+A middleware that answers without calling the next handler is never reached by anything below it.
+The order above puts the readiness gate *above* the response-time stamp, so a `503` from the gate
+carries neither `X-Response-Time-ms` nor `Server` — while [T14](tasks.md)'s *Verified by* line asks
+for exactly the opposite: *"a `503` from the gate still carries the response-time stamp and
+`Server`"*. `TestAStageOutsideTheStampIsNotStamped` asserts the constraint rather than describing
+it, so whichever way it is resolved, it is resolved deliberately.
+
+There are two ways out and **the reference has already taken the first**: its response-time
+middleware is registered near the outside of the main pipeline and its startup gate well inside it
+`[source: Jellyfin.Server/Startup.cs:163,217 @ v10.11.11]`, so the `503` that pipeline answers while
+the server is loading is stamped. The second is a gate that writes both headers itself, which is the
+per-handler duplication §1 exists to prevent — and it would have to be repeated by every later stage
+that refuses. Neither costs anything against §3.5: a gate one stage further in still exempts no
+route, because nothing between the two stages routes.
+
+T12 ships two stages that satisfy either reading: both are ordinary `Wrap` middlewares, and the
+stamp is a `ResponseWriter` decorator rather than a handler, so anything *inside* it is stamped
+whatever wrote the response.
+
 ## 7. Failure handling
 
 | Failure | Detection | Response | Recovery |

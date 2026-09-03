@@ -212,13 +212,22 @@ func TestARouterThatServesNothingFailsTheRegistrationCheck(t *testing.T) {
 // would need a store.
 //
 // The fakes are irrelevant to this check: what is registered depends on which
-// fields are non-nil, not on what any handler answers.
+// fields are non-nil, not on what any handler answers. 002's two handlers
+// refuse to be built without their ports, so they are built over a real store
+// on a temporary directory rather than over a stand-in — which costs a
+// migration per call and buys the same thing a fake would.
 func everyHandler(t *testing.T) httpapi.Handlers {
 	t.Helper()
+
+	store := openStore(t)
+	clock := &settableClock{at: aTestInstant}
+
 	return httpapi.Handlers{
 		System: newSystemHandlerFrom(t, httpapi.SystemHandlerConfig{
 			Installations: &fakeInstallations{installation: freshInstallation},
 		}),
+		Users:    newUsersHandler(t, store, clock),
+		Sessions: newSessionsHandler(t, store, clock),
 	}
 }
 

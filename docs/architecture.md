@@ -371,6 +371,17 @@ of this gap was addressed to:** the wire half's request list is still hand-writt
 request needs a method, a path and an `Accept` header that no table carries, but every row the
 running server answers must now appear in it. A route added and not swept fails `conformance/`.
 
+**Amended 2026-09-03, at 002's T17, which is the first feature to add rows under that tie.** The tie
+*requires* the requests and does not write them: registering 002's seven rows failed `conformance/`
+with seven findings until the seven were written by hand. What a request needs turned out to be more
+than a method, a path and an `Accept` header — three of the seven read a **body**, five need a
+**credential** this server issued, and one has a **path parameter** whose value is derived from an
+account name — so the wire half now provisions an installation and authenticates against it before
+it sweeps anything. Two consequences worth carrying forward: a route answering `204` is in the list
+with **no body to sweep**, stated as a row rather than left out, and a body that is empty for a
+reason no request could change (an empty listing, a session list with no sessions) sweeps clean
+while proving nothing, so the fixture is required to produce bodies with members in them.
+
 **Goldens are reviewed, never blindly regenerated.** An update flag exists; a diff in a golden file
 is a contract change and is read like one in review.
 

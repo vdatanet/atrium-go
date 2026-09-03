@@ -558,7 +558,7 @@ still owe.
 
 ## T17 — Register the seven rows, in one change
 
-- [ ] **Changes:** `internal/httpapi` — `Handlers` gains its fields for this feature, `Routes`
+- [x] **Changes:** `internal/httpapi` — `Handlers` gains its fields for this feature, `Routes`
   registers all **seven** of 002's `surface.yaml` rows, `everyHandler` fills the new fields (one
   line, and deliberately a failing check until it does — plan §8.4), and `conformance/`'s wire sweep
   gains the seven requests.

@@ -14,6 +14,7 @@ import (
 	"github.com/vdatanet/atrium-go/internal/store/sqlite"
 	"github.com/vdatanet/atrium-go/internal/surface"
 	"github.com/vdatanet/atrium-go/internal/system"
+	"github.com/vdatanet/atrium-go/internal/users"
 )
 
 // Run is the whole process: configuration, logging, the server, and its stop.
@@ -101,22 +102,64 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	// plan 6.6 states as the deliberate answer for an installation with none of
 	// the three. The flags that fill it in are the feature that adds them.
 	//
-	// No Authenticator, and that is the honest value rather than a gap: this
-	// build has issued no token and knows no user, so it recognises no
-	// credential and /System/Info answers 401 to every request once setup is
-	// complete (spec 3.2). 002 fills it.
+	// The clock and the authenticator, which three of the four handlers below
+	// share. One authenticator rather than one per handler: 002 plan 5 makes
+	// resolving a credential one question with one answer, and two readers of
+	// one credential can disagree.
+	clock := SystemClock()
+	authenticator, err := httpapi.NewTokenAuthenticator(httpapi.TokenAuthenticatorConfig{
+		Sessions: store,
+		Accounts: store,
+		Clock:    clock,
+	})
+	if err != nil {
+		return err
+	}
+
+	// ~~No Authenticator, and that is the honest value rather than a gap: this
+	// build has issued no token and knows no user~~ **002 filled it.** The port
+	// 001 declared is the real one now, so /System/Info answers 200 to a token
+	// this server issued and 401 to a request carrying none, once setup is
+	// complete (001 spec 3.2, 002 AC-14).
 	systemHandler, err := httpapi.NewSystemHandler(httpapi.SystemHandlerConfig{
 		InstallationID: installationID,
 		Installations:  store,
 		Addresses:      system.AddressConfig{},
 		Paths:          system.PathsFor(cfg.DataDirectory),
 		HTTPPort:       func() int { return int(listeningPort.Load()) },
+		Authenticator:  authenticator,
 	})
 	if err != nil {
 		return err
 	}
 
-	routes, err := httpapi.Routes(surface.V1(), httpapi.Handlers{System: systemHandler})
+	usersHandler, err := httpapi.NewUsersHandler(httpapi.UsersHandlerConfig{
+		InstallationID: installationID,
+		Login:          users.NewLogin(store, clock),
+		Accounts:       store,
+		Sessions:       store,
+		Clock:          clock,
+		Authenticator:  authenticator,
+	})
+	if err != nil {
+		return err
+	}
+
+	sessionsHandler, err := httpapi.NewSessionsHandler(httpapi.SessionsHandlerConfig{
+		Sessions:      store,
+		Accounts:      store,
+		Authenticator: authenticator,
+		Clock:         clock,
+	})
+	if err != nil {
+		return err
+	}
+
+	routes, err := httpapi.Routes(surface.V1(), httpapi.Handlers{
+		System:   systemHandler,
+		Users:    usersHandler,
+		Sessions: sessionsHandler,
+	})
 	if err != nil {
 		return err
 	}
@@ -125,9 +168,10 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	// read the route table refuse a table they cannot fold, and plan 7 makes
 	// that a failure to start rather than a route that quietly never matches.
 	//
-	// All four rows of 001 are registered now, so the paths this server
-	// answers are exactly the ones surface.yaml gives feature 001; every other
-	// path the table names is answered by the router's own refusal. The
+	// ~~All four rows of 001~~ **All eleven rows of 001 and 002** are
+	// registered now, so the paths this server answers are exactly the ones
+	// surface.yaml gives those two features; every other path the table names
+	// is answered by the router's own refusal. The
 	// pipeline is the whole pipeline: the gate, the two headers, both
 	// canonicalisers and the refusal shapes are what this binary serves.
 	pipeline, err := httpapi.NewPipeline(surface.V1(), httpapi.V1QuerySpellings(), routes)

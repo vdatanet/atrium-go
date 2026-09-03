@@ -5,7 +5,7 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-03
 accepted: 2026-08-26
-amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid. 2026-09-03 at 001's closing audit (001 T21) - section 5 gains AC-14, the half of 001 AC-5 that needs a credential only this feature can issue, together with the two assertions 001 parked at a lower level for the same reason. 2026-09-03 by this feature's own plan, in four places: section 3.9 and a section 4 row are new, because nothing in v1 completes setup and AC-14 would otherwise be met by a request carrying no token at all; section 3.5 records that two of the twenty-eight unenforced policy flags are enforced by the reference at authentication itself, so "they all gate features v1 does not have" holds for twenty-six; section 5's two carried conditions are corrected, because neither "when this feature can complete setup over HTTP" nor "when the rename endpoint lands" can ever be met - no v1 row does either; and OQ-6 records what the reference's source says about the -1 sentinel while staying open, because the running server has not been asked
+amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid. 2026-09-03 at 001's closing audit (001 T21) - section 5 gains AC-14, the half of 001 AC-5 that needs a credential only this feature can issue, together with the two assertions 001 parked at a lower level for the same reason. 2026-09-03 by this feature's own plan, in four places: section 3.9 and a section 4 row are new, because nothing in v1 completes setup and AC-14 would otherwise be met by a request carrying no token at all; section 3.5 records that two of the twenty-eight unenforced policy flags are enforced by the reference at authentication itself, so "they all gate features v1 does not have" holds for twenty-six; section 5's two carried conditions are corrected, because neither "when this feature can complete setup over HTTP" nor "when the rename endpoint lands" can ever be met - no v1 row does either; and OQ-6 records what the reference's source says about the -1 sentinel while staying open, because the running server has not been asked. 2026-09-03 again, in the change that follows that plan - section 3.8 declares `GET /Sessions`' three request parameters, section 5 gains AC-15 and records that AC-4's second half finally has a request, and section 6's row for the route names the matrix that proves it. What forced it: behaviours 2.25 has carried the measurement since 2026-08-29 and says in terms that the three are "specified in 002, in the change that adds them", the video client sends `deviceId` today, and a task list cannot be written across the gap. The refusal is the load-bearing half - naming another user's device is an empty `200` while naming another user in `controllableByUserId` is a `403`, and a route declaring neither answers both with a `200` the client reads as success. And one claim did not survive being written down: the *order* of `deviceId` and the visibility rule is NOT observable, because predicates over one list commute - what a client can see is the combination with `controllableByUserId`, which is what AC-15 asserts - and behaviours 2.25's "Atrium does: none of it" is corrected in the same change. Two cases the measurement does not reach are marked UNVERIFIED and registered as U-17 and U-18 rather than answered
 depends_on: [001]
 ---
 
@@ -381,6 +381,104 @@ level for a session that posted `SupportsMediaControl: true`, while echoing that
 judgement about it. `PlayableMediaTypes` and `SupportedCommands` *are* hoisted from the declaration
 verbatim.
 
+**`GET /Sessions` accepts three parameters, and they are not three filters.** The reference declares
+`controllableByUserId`, `deviceId` and `activeWithinSeconds`
+`[source: Jellyfin.Api/Controllers/SessionController.cs:52-59 @ v10.11.11]` and applies them in a
+fixed order whose observable half is narrower than it looks — below
+`[probe: tools/probe_session_filters.py, Jellyfin 10.11.11, 2026-08-29]`. The names match without
+regard to case, as every parameter name does
+([behaviours §1.15](../../docs/compatibility/behaviours.md#115-query-parameter-names-match-case-insensitively));
+the spellings above are the declared ones.
+
+| Parameter | What it does to the result |
+|---|---|
+| `deviceId` | Narrows the **whole** list **first**, before the rule about whose sessions the caller may see, keeping the sessions whose `DeviceId` matches — compared **without regard to case**. A value nothing matches is `200` with `[]` |
+| `activeWithinSeconds` | Applied **last**, after visibility, and only when greater than zero: it keeps the sessions whose `LastActivityDate` is no older than that many seconds |
+| `controllableByUserId` | **Not a filter.** It replaces the caller's own visibility rule with a different one — the sessions the named user is allowed to remote-control — and refuses some callers outright, below |
+
+**What the order buys, and what it does not.** behaviours §2.25 records the order the reference
+applies these in, and it is worth being exact about which part of it a client can see. `deviceId`
+and the visibility rule are both predicates over one list, so they **commute**: a caller who is not
+an administrator naming somebody else's device is answered `200` with `[]` whichever ran first, and
+`activeWithinSeconds` running last is the same kind of no-difference. So the sequence is not by
+itself the observable thing, and a criterion that claimed to tell the two orders apart on `deviceId`
+alone would be asserting something no request can distinguish.
+
+**What is observable is that the two parameters answer differently.** Naming another user's
+**device** is an empty `200`; naming another **user** in `controllableByUserId` is a `403`. One
+route, two parameters that name somebody else's property, two answers — and the empty list is not a
+redaction of the refusal, it is the ordinary result of a filter that matched a row the caller may
+not see. The sequence does become visible in one place, which is the combination: `deviceId`
+narrows the list **before** `controllableByUserId` replaces the visibility rule, so the two apply
+together rather than the second discarding the first.
+
+**Absent, empty, and values that are none of the above.**
+[behaviours §1.12](../../docs/compatibility/behaviours.md#112-an-unrecognised-query-value-is-ignored-not-rejected)'s
+ignore-don't-reject rule is the rule here, and its line is token-versus-type:
+
+| The request carries | The answer |
+|---|---|
+| None of the three | Every session the caller may see, as above |
+| `deviceId=` — empty | Ignored: the parameter is treated as absent, not as a device nothing is named after `[probe: tools/probe_session_filters.py, Jellyfin 10.11.11, 2026-08-29]` |
+| `activeWithinSeconds=0`, or any negative value | Ignored: the unfiltered list, not a refusal `[probe: tools/probe_session_filters.py, Jellyfin 10.11.11, 2026-08-29]` |
+| `controllableByUserId` naming the caller | Accepted from any caller, administrator or not |
+| `controllableByUserId` naming anybody else, from a caller who is **not** an administrator | `403`, the controller's own refusal shape — `text/plain` with no charset and the same 25 bytes as §3.3's refusals. The status and the media type are measured `[probe: tools/probe_session_filters.py, Jellyfin 10.11.11, 2026-08-29]`; the bytes are [behaviours §1.11](../../docs/compatibility/behaviours.md#111-there-are-four-error-shapes-not-one)'s measured rule applied to a refusal the reference raises the same way, and they are **owed a request of their own** (register U-18) |
+| A parameter this route does not declare | Ignored, as everywhere |
+| `activeWithinSeconds` that is not an integer, or `controllableByUserId` that is not an identifier | ⚠️ **UNVERIFIED.** v1 answers `400` with the validation body keyed on the parameter's own spelling — the shape §3.7 measured for `userId` — because §1.12 forgives an unrecognised *token* and refuses a value that cannot parse as its declared *type*. Neither has been sent on this route: register U-17 |
+| `controllableByUserId=` — empty | ⚠️ **UNVERIFIED.** v1 treats it as absent, which is the direction the measured `deviceId` row takes: register U-17 |
+
+**What v1 answers for `controllableByUserId`, and why it is not a gap.** v1 accepts the parameter,
+sends the `403` above, and otherwise answers `200` with `[]` — for every caller, including an
+administrator. That is not a filter left unimplemented: the first clause of the rule is that a
+session is remote-controllable only while a live control channel is attached to it
+`[source: MediaBrowser.Controller/Session/SessionInfo.cs:246-266 @ v10.11.11]`, v1 has no such
+channel, and this section already reports `SupportsRemoteControl: false` on every session — which
+is measured to be what the reference reports for a request-response client too
+([behaviours §2.14](../../docs/compatibility/behaviours.md#214-a-clients-declared-capabilities-and-the-servers-flags-are-different-values)).
+The rule's three later clauses — the named user's shared-device setting, the caller's
+remote-control permission, and per-device access — therefore decide nothing observable here, and
+this specification does not state them. They belong to whichever feature first attaches a control
+channel, and until one does they cannot be told apart from the empty list.
+
+**Why all three are declared when one consumer sends one.**
+
+- **`deviceId` has a consumer today.** The video client verifies that a stream really is being
+  copied rather than transcoded by asking `GET /Sessions?deviceId=…` and reading the transcoding
+  fields off the session whose `NowPlayingItem.Id` matches
+  ([client-atrium-tvos §4.4](../../docs/compatibility/client-atrium-tvos.md#44-get-sessions-takes-no-deviceid-and-the-client-sends-one)).
+  A route that drops the parameter answers a wider list, which §1.12 makes look correct, and the
+  client then matches on the item alone — so an administrator on a busy server can read **another
+  device's** session as its own. That analysis called it *"a degradation, not a break"* against a
+  server whose route declared nothing; declaring the parameter removes the degradation instead of
+  documenting it.
+- **`activeWithinSeconds` has no observed consumer**, and it is one comparison against a field this
+  section already carries. Not answering it is a delta with nothing on the other side of the
+  scale: the same request returns fewer rows there and more here.
+- **`controllableByUserId` earns its place on the `403` rather than on the list.** The refusal is
+  observable whatever v1 does with the list, and a route that ignored the parameter would answer
+  `200` — with the caller's own sessions — where the reference refuses. A client that branches on
+  that refusal would take the success path.
+
+> **Added 2026-09-03, forced by this feature's own plan.** This section declared no parameter on
+> this route from the day 002 was written, and
+> [behaviours §2.25](../../docs/compatibility/behaviours.md#225-get-sessions-three-filters-are-two-filters-and-a-visibility-rule)
+> has carried the measurement since 2026-08-29 while saying in terms that the three are *"specified
+> in 002, in the change that adds them"*. The plan reached its own `/Sessions` section, found that
+> it could not plan a handler for parameters no specification declares without writing WHAT into a
+> HOW, and named this as the one thing the specification owed **before** the task list.
+> ~~*"Atrium does: none of it — v1 declares no parameter on this route"*~~ was a true sentence about
+> this document and is no longer one; behaviours §2.25 is corrected in the same change. What makes
+> it more than tidiness is the refusal: a client asking about somebody else's session is answered an
+> empty list on one parameter and a `403` on another, and a route that declared neither answers
+> `200` with the caller's own sessions to both — a success where the reference refuses.
+>
+> **Writing it down cost one claim.** The sentence this section reached for first was that the
+> *order* is observable, which is how §2.25's own wording reads. It is not: `deviceId` and the
+> visibility rule are predicates over one list and predicates commute, so the empty `200` arrives
+> whichever ran first. The order is real and it is in the reference's source; what a client can see
+> of it is the combination with `controllableByUserId` and nothing else, and AC-15 asserts that
+> rather than a sequence no request distinguishes.
+
 **Lifecycle**
 
 | Event | Effect |
@@ -481,6 +579,26 @@ Two things this fixes, and both are why it is a behaviour rather than an impleme
     the body [001 §3.2](../001-server-identity-and-discovery/spec.md#32-get-systeminfo--getsysteminfo)
     describes. *(Carried from [001 AC-5](../001-server-identity-and-discovery/spec.md#5-acceptance-criteria)
     at 001's closing audit, 2026-09-03 — see the amendment below.)*
+15. **`GET /Sessions` applies the three parameters of §3.8 in the measured order.** `deviceId`
+    narrows the whole list before the visibility rule and matches without regard to case, so a
+    caller who is not an administrator naming another user's device is answered `200` with `[]`;
+    `activeWithinSeconds` is applied last and only when greater than zero, and `0` or a negative
+    value answers the unfiltered list rather than refusing; `controllableByUserId` naming anybody
+    but the caller, from a caller who is not an administrator, is `403` carrying the same 25 bytes
+    as AC-2's refusals, and is otherwise `200` with `[]`. Statuses and bodies are asserted as bytes
+    at the wire. What the criterion asserts about the order is what §3.8 says is observable — that
+    the two parameters naming somebody else's property answer differently, and that `deviceId`
+    still narrows a request that also carries `controllableByUserId` — and **not** that `deviceId`
+    runs before the visibility rule, which no request can tell apart. *(Added 2026-09-03, with
+    §3.8's parameter declaration.)*
+
+**AC-4's second half has a request now, and it is that one.** *"A valid token lacking permission is
+`403`"* named no route in this feature: none of the seven gates on a permission, §3.7 refuses
+nobody, and 001's `/System/Info` admits any authenticated caller once setup is complete.
+`GET /Sessions` naming another user in `controllableByUserId` is the one request in 002 where a
+valid token is refused **for who its holder is**, and it is at the wire rather than at the domain.
+The check is for the administrator role rather than for one of §3.5's twenty-eight policy flags,
+which is what the criterion's word *"permission"* means on this route.
 
 **Amended 2026-09-03. AC-14 is 001's, and it is here because 001 cannot reach it.**
 [001 AC-5](../001-server-identity-and-discovery/spec.md#5-acceptance-criteria) is three claims —
@@ -534,7 +652,7 @@ surface.**
 | `GET /Users/Public` | **L2** | Golden response; fixture with a hidden user |
 | `GET /Users/Me`, `GET /Users/{userId}` | **L2** | Golden response, plus the caller matrix — every pair of caller and subject, the identifier nobody has, the malformed one and the absent credential. It was a *permission* matrix until 2026-09-01; there are no permissions on this route to tabulate, so what it proves is that no caller is refused and no body is redacted |
 | `POST /Users/Configuration` | **L2** | Round-trip test |
-| `GET /Sessions` | **L2** | Fixture with two sessions on two devices |
+| `GET /Sessions` | **L2** | Fixture with two sessions on two devices, **plus §3.8's parameter matrix**: `deviceId` in another case, empty, and matching nothing; the order, from a caller who is not an administrator, against a device that is not theirs; `activeWithinSeconds` at `0`, at a negative value and at one that excludes a row; and `controllableByUserId` naming the caller, naming somebody else, and named by an administrator |
 | `POST /Sessions/Capabilities/Full` | **L1** | Shape only; its effect is asserted through `/Sessions` |
 | The five token mechanisms | **L2** | Table-driven across three route classes, including the precedence pairs and the grammar table (AC-3) |
 

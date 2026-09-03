@@ -848,7 +848,15 @@ order that is observable `[probe: tools/probe_session_filters.py, Jellyfin 10.11
 **Depends on it:** the video client sends `deviceId` on this route today. Nothing observed sends
 the other two.
 
-**Atrium does:** none of it — v1 declares no parameter on this route. Recorded here at 012's
+**Atrium does:** ~~none of it — v1 declares no parameter on this route.~~ **declare all three, at
+[002 §3.8](../../specs/002-authentication-users-and-sessions/spec.md#38-sessions), in the change
+this entry asked for — 2026-09-03.** `deviceId` and `activeWithinSeconds` are reproduced whole,
+including the order and the forgiveness of an empty value and a non-positive one.
+`controllableByUserId` is accepted and its `403` reproduced, while the list it answers is **always
+empty here**: the rule's first clause is a live control channel, v1 has none, and it reports
+`SupportsRemoteControl: false` on every session — which §2.14 measures to be what the reference
+reports for a request-response client too. So the three later clauses decide nothing observable
+here and 002 §3.8 deliberately does not state them. Recorded here at 012's
 measurement gate (012 OQ-7) because the route is
 [002 §3.8](../../specs/002-authentication-users-and-sessions/spec.md#38-sessions)'s and the `403`
 is a sentence about who may see whose device, which is 002's to specify.

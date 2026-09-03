@@ -798,7 +798,7 @@ still owe.
 
 ## T22 — The cross-document debts: which of them are this feature's
 
-- [ ] **Changes:** the paired-file and cross-document debts the plan and the spec amendment reported
+- [x] **Changes:** the paired-file and cross-document debts the plan and the spec amendment reported
   and did not fix, each **decided** rather than listed.
   - **Taken here.** [request-cases.yaml](../../docs/compatibility/request-cases.yaml)'s
     `video-client-device-id` row says its parameter is *"a parameter neither server's route
@@ -836,6 +836,59 @@ still owe.
   it believed; `request-cases.yaml` still loads and still carries the same number of rows as before
   the change, which is the mechanical half of *"the pairing is not disturbed"*; and each debt not
   taken names its owner and the measurement that owner will need.
+- **Amended 2026-09-03, on doing it. The first is a finding that changes what this task hands on;
+  the rest are what this line did not name.**
+  - **Two of [plan §8.3](plan.md#83-l3-is-deferred-and-this-is-the-feature-where-that-costs-the-most)'s
+    three allowlist gaps do not exist, and the reason they were counted is worth more than the
+    correction.** `GET /Sessions`' `/-/Id` *is* declared — by a `*`-scoped row whose own `reason`
+    reads *"a latest item, **a public user**, **a session**"*, under a block comment that names
+    `GET /Users/Public` and `GET /Sessions` in words. `/Users/Public`'s `Id` and `ServerId` are the
+    same two rows; `/Users/Me` and `/Users/{userId}` are bare bodies and take the `/Id` and
+    `/ServerId` entries whose `reason` names *"a user"*, and their `LastActivityDate` takes the `*`
+    entry that says *"on a bare user body"*. **A gap in that file is not readable from the rows
+    scoped to an endpoint**, because the wildcards do most of the work — and a plan that counts its
+    own gaps by looking for an endpoint name will overcount exactly as this one did. §8.3 is struck
+    in place and now names **one** gap.
+  - **The hole 001 filled with [behaviours §4.5](../../docs/compatibility/behaviours.md#45-systeminfo-answers-four-fields-with-what-is-true-here-not-with-the-references-constants)
+    does not exist here, and that is this task's decision rather than an omission.** 001 had to write
+    a section because its four fields differ in **value**, fit none of the four derivation classes,
+    and are decided by a specification that is not a section of `behaviours.md` — so the file's own
+    load would have refused the entries. 002's one real gap is `LastLoginDate`, which is a
+    `wall-clock` on every route it travels on: a declared class, an entry citing it loads, and there
+    is nothing for this feature to write. **002 writes no behaviours section**, and the allowlist
+    rows stay 010's for the reason 001 gave.
+  - **The one place the 001-shaped hole *does* exist is `GET /System/Info`, and it is not this
+    feature's**, which is why it is in the handover below rather than here. T21 found it: seven of
+    the route's twenty-six members are `installation-path` — a declared class — and
+    `WebSocketPortNumber` is the port the operating system chose, which is **none** of the four.
+    That one needs a behaviours section or a fifth class before an entry for it can load, the route
+    and the argument are 001's ([001 §3.2](../001-server-identity-and-discovery/spec.md#32-get-systeminfo--getsysteminfo),
+    whose OQ-1 is the open question) and the rows are 010's.
+  - **`spec.md` changed in ten places, five of them strikes, and this line named one of the ten.**
+    Every one was recorded as owed by an earlier task, which is why they are taken here rather than
+    left for the audit: a debt four tasks have written down and none has owned is the shape
+    [AGENTS.md §5](../../AGENTS.md) warns about. **The five strikes:** AC-15's fifth copy of the
+    `deviceId`/`controllableByUserId` claim, handed here by T20 by name; **two further copies in
+    §3.8 itself**, which T20's amendment believed that section had already lost and which it had
+    not — the combination paragraph, and the closing line of the parameter-declaration note;
+    AC-14's paragraph naming the authentication port's signature, which stopped being true at T10
+    and which a WHAT document may not carry in any case; and §3.8's opening cross-reference to a
+    `§3.9` that named nothing when it was written, where the plan's own new §3.9 on 2026-09-03
+    turned a reference pointing at nothing into one pointing at the wrong thing —
+    [AGENTS.md §4](../../AGENTS.md) forbids retargeting one *silently* rather than at all, so it is
+    done with the reason beside it. **The five additions:** §3.7's table gains the all-zero `userId`
+    (T14 implemented it, T19 asserted it, and both said the table was owed the row) and the note
+    that explains it; §3.8's table gains the all-zero `controllableByUserId`, which the reference
+    substitutes the caller's own identity for (T20); and the validation `400` for a body that is not
+    a JSON document is written into **both** §3.6 and §3.8, because writing it on one route would
+    have made two routes that answer alike look different.
+  - **Nothing in v1 reaches the order of `GET /Sessions`' three parameters — none of it, not the
+    combination either — and this change is the fifth, sixth and seventh withdrawal of one
+    sentence.** The claim survived four earlier strikes by being reworded narrower each time. It is worth naming the shape: *the order is
+    observable* became *the combination is observable*, which is the same sentence with a smaller
+    domain, and a correction that narrows a claim instead of testing the narrower one is how a claim
+    outlives its own refutation. What the specification says now is that the two parameters answer
+    **differently**, which is a statement about two requests and not about a sequence.
 - **Spec reference:** §3.8; plan §8.3, §11; [docs/README.md §Paired files](../../docs/README.md#paired-files-edit-both-halves-or-neither).
 
 ## T23 — The closing audit
@@ -881,8 +934,108 @@ still owe.
 
 ## What this feature owes the next ones
 
-*Written at T22. Until then this section is empty on purpose — a handover written before the work is
-a guess.*
+*Written at T22, from what T1–T21 found. Nine items. Each names what is owed, **who owns it**, and
+the measurement or the request that owner will need — because a debt handed on without the thing
+that settles it is a debt nobody can close.*
+
+1. **One allowlist row is genuinely missing, and it is `LastLoginDate` — owner: 010.** It has no
+   entry anywhere in [allowlist.yaml](../../docs/compatibility/allowlist.yaml), on any route, while
+   `LastActivityDate` has four. It travels in three spellings, and the file's own conventions decide
+   all three: `/-/LastLoginDate` for a bare-array row (`GET /Users/Public`), `/LastLoginDate` for a
+   bare user body (`GET /Users/Me`, `GET /Users/{userId}`) and `/User/LastLoginDate` inside the
+   authentication result, which is this project's one `L3` body. All three are `wall-clock`: the
+   value is the moment an account last logged in, the two servers were logged into at different
+   moments, and neither chose it. **Nothing is owed before the rows can be written** — that is T22's
+   decision and its reason is in the amendment above — so this is three lines in one file plus its
+   two prose twins, and it is 010's because that file is one third of a three-way pairing.
+   *(A caution that costs nothing to carry: on both servers the field is **absent** until the first
+   login. A run whose fixture reads a never-used account compares absence with absence and the rows
+   excuse nothing, which is correct and is not evidence that they were unnecessary.)*
+
+2. **`GET /System/Info` has no allowlist rows at all, and one of its members fits no declared class
+   — owner: the rows are 010's, the argument is 001's.** Found at T21 while discharging AC-14.
+   Seven of the twenty-six members are `installation-path` (`ProgramDataPath`, `WebPath`,
+   `ItemsByNamePath`, `CachePath`, `LogPath`, `InternalMetadataPath`, `TranscodingTempPath`), which
+   is a declared class — so those seven are work rather than a question.
+   **`WebSocketPortNumber` is the question**: it is the port
+   this process is actually listening on ([001 §3.2](../001-server-identity-and-discovery/spec.md#32-get-systeminfo--getsysteminfo)),
+   the two servers listen on different ports, and that is neither a derived identifier, a wall
+   clock, a content hash nor an installation path. So an entry for it fails the file's own load, and
+   the choice is a fifth derivation class — which that file says is *"not added without review"* —
+   or a `behaviours §N` section of the kind 001 wrote as
+   [§4.5](../../docs/compatibility/behaviours.md#45-systeminfo-answers-four-fields-with-what-is-true-here-not-with-the-references-constants).
+   **The measurement it needs already has a name: [001's OQ-1](../001-server-identity-and-discovery/spec.md#7-open-questions)**,
+   whether any real client branches on the value. [request-cases.yaml](../../docs/compatibility/request-cases.yaml)
+   already says of this endpoint that *"seven of its installation paths differ on every run and are
+   triage rather than allowlist rows"* — so the state is known and written down, and what it does
+   not say is that an eighth member differs for a reason no class covers.
+
+3. **A request case for `controllableByUserId` — owner: 010, and here is the measurement that
+   justifies it.** `GET /Sessions` naming another user in `controllableByUserId`, sent by a caller
+   who is **not** an administrator, is the one request in this feature where a valid token is
+   refused for **who its holder is** — it is [AC-4](spec.md#5-acceptance-criteria)'s second half, and
+   §5 says so in terms. No case in
+   [request-cases.yaml](../../docs/compatibility/request-cases.yaml) sends it, so a differential run
+   never exercises 002's only permission refusal. What a run sends is 010's decision; what this
+   feature hands over is everything the case needs: the status and the media type are measured
+   `[probe: tools/probe_session_filters.py, Jellyfin 10.11.11, 2026-08-29]`, the body is
+   [behaviours §1.11](../../docs/compatibility/behaviours.md#111-there-are-four-error-shapes-not-one)'s
+   25-byte controller shape and is **register U-18**, and the case must name the `restricted`
+   identity — an administrator sending the same request is a `200`, so a case naming one seat proves
+   the opposite of what it looks like. The value must be another **seat's** identifier and not the
+   all-zero one, which spec §3.8 now records as the caller's own.
+
+4. **`GET /Sessions`' `deviceId` row has stopped being an ignored-parameter reading — owner: 010
+   §3.6.** Taken at T22 and struck in place in `request-cases.yaml`. Both servers declare and apply
+   the parameter now, so [010 §3.6](../010-conformance-harness/spec.md#36-the-ignored-parameter-report)'s
+   report counts nothing for it and a zero there is the right answer rather than a missed request.
+   The row is a **comparison**, and a sharper one than it was: a difference in how the two servers
+   narrow the list is now a real difference instead of one server ignoring the caller.
+
+5. **The rest of `controllableByUserId`'s rule belongs to whichever feature first attaches a live
+   control channel.** [Spec §3.8](spec.md#38-sessions) states the first clause only — a session is
+   remote-controllable while a control channel is attached to it
+   `[source: MediaBrowser.Controller/Session/SessionInfo.cs:246-266 @ v10.11.11]` — and v1 has none,
+   so every caller is answered `[]` and the three later clauses (the named user's shared-device
+   setting, the caller's remote-control permission, per-device access) decide nothing observable.
+   **They are deliberately not specified**, and the feature that attaches the channel is the one
+   that can tell them apart from an empty list. The same day, `SupportsRemoteControl` stops being
+   `false` for a measured reason and becomes a claim somebody has to defend.
+
+6. **007 inherits three `SessionInfo` members and the member order that depends on them.** The
+   reference constructs `PlayState` eagerly and initialises both queues empty
+   `[source: MediaBrowser.Controller/Session/SessionInfo.cs:44-48 @ v10.11.11]`, so it sends all
+   three on a session that has never played anything; §3.8 conditions `PlayState` on something
+   playing and is implemented as written, and the difference is on this feature's one L3 body.
+   **`Capabilities` is the first member of the body only because `PlayState` and `AdditionalUsers`
+   are absent** — the day 007 declares `PlayState`, the order assertion that transcribes the
+   fifteen-member list is where that is recorded rather than a surprise. And one mutation survived
+   T12's thirteen: building the authentication response's `SessionInfo` from the value handed to the
+   store rather than reading the row back passes the whole suite **today**, because nothing in v1
+   writes the playback check-in column. It becomes a wire bug on a re-authentication the day 007
+   writes it.
+
+7. **006 and 008 inherit the second sentence of [AC-3](spec.md#5-acceptance-criteria).** On the
+   image and delivery route classes all five token mechanisms are *accepted and none is required* —
+   presenting a token is never itself a reason to refuse. Nothing in v1 routes those classes yet, so
+   the assertion that carries it asserts today's `404` instead, and it goes red the day either class
+   is routed. That is deliberate: a comment saying *"not routed yet"* stops being true silently, and
+   a failing test does not.
+
+8. **003 owns the first derived migration, and one assertion is waiting for it.** The store is split
+   into a lineage a rescan rebuilds and one that is migrated ([ADR-0003](../../docs/decisions/0003-sqlite-as-the-store.md));
+   002 filed `0002` in the **precious** lineage, and the derived lineage is still empty and asserted
+   to be empty as a literal `0`. The first derived migration has to change that line **deliberately**,
+   which is the whole point of writing it as a literal rather than as a count.
+
+9. **The friendly name is still 001's datum, and this feature deliberately did not take it.** 001's
+   `/System/Ping` discrimination carries a caveat that used to read *"when the rename endpoint
+   lands"*; no such endpoint is in this surface — the reference renames at an operation v1 does not
+   include `[source: Jellyfin.Api/Controllers/StartupController.cs:74-78 @ v10.11.11]` — so what can
+   discharge it is the friendly name becoming **operator configuration**, over a port 001 wrote and
+   nothing calls. 002 could have added a configuration surface for it on the way past and did not,
+   because it is not this feature's decision to take. Whichever feature adds one closes 001's caveat
+   with it, and should say so.
 
 ---
 

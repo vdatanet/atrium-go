@@ -1715,23 +1715,40 @@ What this plan can do is make the run meet declared differences rather than surp
 `POST /Users/AuthenticateByName` — eight `derived-identifier`, covering both `Id`s, both
 `ServerId`s, the `DeviceId`, the `SessionInfo` identifier and the `AccessToken`, and two
 `wall-clock`, for `/User/LastActivityDate` and `/SessionInfo/LastActivityDate` — and **two** on
-`GET /Sessions`, for `/-/UserId` and `/-/DeviceId`. That is the L3 route covered. Three gaps are
-named here for 010 rather than written, because that file is one third of a three-way pairing and
+`GET /Sessions`, for `/-/UserId` and `/-/DeviceId`. That is the L3 route covered. ~~Three gaps are~~
+**One gap is** named here for 010 rather than written, because that file is one third of a three-way pairing and
 001 already refused to write one third of it:
 
-- **`/Users/Public`, `/Users/Me` and `/Users/{userId}` have no rows at all.** All three carry the
+- ~~**`/Users/Public`, `/Users/Me` and `/Users/{userId}` have no rows at all.** All three carry the
   same `User` object, whose `Id` and `ServerId` are derived and whose `LastLoginDate` and
   `LastActivityDate` are wall clocks. They are L2, so no run compares them until 010 chooses to —
   and when it does they are six undeclared differences on three routes, of shapes the authentication
-  result's own rows already spell.
+  result's own rows already spell.~~
 - **`LastLoginDate` has no row anywhere in the file**, on any route. `LastActivityDate` has two.
   The authentication result is the first body in the project to carry either, and the pair travels
   together in every user object.
-- **`GET /Sessions` has no row for `/-/Id`**, which is the derived session identifier §6.5 argues,
-  while the same value has one inside the authentication result.
+- ~~**`GET /Sessions` has no row for `/-/Id`**, which is the derived session identifier §6.5 argues,
+  while the same value has one inside the authentication result.~~
 
-**Neither is written here, and 001 gave the reason:** writing one third of a paired triple is how a
-paired set drifts.
+~~**Neither is written here, and 001 gave the reason:** writing one third of a paired triple is how a
+paired set drifts.~~ **It is not written here, and 001 gave the reason:** writing one third of a
+paired triple is how a paired set drifts.
+
+**Amended 2026-09-03 at [T22](tasks.md#t22--the-cross-document-debts-which-of-them-are-this-features), which went and looked. Two of the three gaps do not exist**, and the mistake in
+both is the same one: this paragraph read the endpoint-scoped rows and not the `*`-scoped ones, so
+it counted a route as uncovered when a wildcard entry already names it. `allowlist.yaml`'s
+bare-array block is introduced by a comment reading *"Rows of a bare array: `GET /Items/Latest`,
+`GET /Users/Public`, `GET /Sessions`"*, and its `/-/Id` entry's own `reason` reads *"a latest item,
+**a public user**, **a session**"* — so `GET /Sessions`' `/-/Id` is declared, by a row that names
+sessions in words, and so are `/Users/Public`'s `Id` and `ServerId`. `/Users/Me` and
+`/Users/{userId}` are bare bodies and take the `/Id` and `/ServerId` entries whose `reason` names
+*"a user"*; their `LastActivityDate` takes the `*` entry whose `reason` says *"on a bare user
+body"* in terms. **What is genuinely absent is `LastLoginDate`**, in the three spellings the field
+travels in — `/-/LastLoginDate`, `/LastLoginDate` and `/User/LastLoginDate` — and it is
+`wall-clock` on all three. The lesson is worth more than the correction: **a gap in this file is
+not readable from the rows scoped to an endpoint**, because the wildcards do most of the work, and
+a later plan counting its own gaps by grepping an endpoint name will overcount exactly as this one
+did.
 
 ### 8.4 The L0 friction is real and the task order has to plan for it
 

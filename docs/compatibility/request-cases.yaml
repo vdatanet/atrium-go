@@ -500,6 +500,24 @@ cases:
     needs: []
     what_it_is_for: "One of the twelve reads that answers a SHORTER LIST to a restricted seat: an administrator sees every session and everybody else sees their own"
 
+  # AMENDED 2026-09-03 BY 002 T22. This row's second clause was true when it was written and is
+  # now false on BOTH halves, so it is struck in place rather than replaced (AGENTS.md section 4).
+  # The reference declares the parameter
+  # [source: Jellyfin.Api/Controllers/SessionController.cs:52-59 @ v10.11.11], and Atrium declares
+  # it too as of 2026-09-03 - spec 002 section 3.8 gained `controllableByUserId`, `deviceId` and
+  # `activeWithinSeconds`, and 002 T9 and T20 implemented and asserted them at the wire. 002's own
+  # declaration is what falsified the clause, which is why 002 closes it.
+  #
+  # THE CONSEQUENCE IS FOR 010 SECTION 3.6, the ignored-parameter report: `deviceId` on
+  # GET /Sessions stops being an ignored-parameter reading on this server, so a run that expected
+  # to COUNT it there will count nothing, and a report that shows zero for it is the correct
+  # reading rather than a harness that missed the request. What the row still is, unchanged, is a
+  # comparison - and it is now a sharper one, because the two servers both narrow the list and a
+  # difference in the narrowing is a real difference rather than one server ignoring the caller.
+  #
+  # NO ROW IS ADDED OR REMOVED and no field but this prose changes: the file's prose twin is 010
+  # sections 3.2 and 3.9, neither of which says anything per-case, so the row-for-row comparison is
+  # untouched.
   - id: video-client-device-id
     endpoint: "GET /Sessions"
     query: "deviceId=atrium-differential"
@@ -508,7 +526,7 @@ cases:
     anchors: []
     identities: [administrator, restricted]
     needs: []
-    what_it_is_for: "The one concrete query string the video client's contract gives, and a parameter neither server's route declares - so it is an ignored-parameter reading as well as a comparison"
+    what_it_is_for: "The one concrete query string the video client's contract gives. ~~And a parameter neither server's route declares - so it is an ignored-parameter reading as well as a comparison.~~ STRUCK 2026-09-03 by 002 T22: both servers declare it now, so this is a comparison and not an ignored-parameter reading, and 010 section 3.6 counts nothing for it"
 
   # --- 004 ----------------------------------------------------------------------------------
 

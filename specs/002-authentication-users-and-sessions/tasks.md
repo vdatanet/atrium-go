@@ -670,7 +670,9 @@ still owe.
 
 ## T20 — `conformance/`: sessions, the lockout, and the parameter matrix over the wire
 
-- [ ] **Changes:** `conformance/` — AC-9, AC-10, AC-13 and AC-15 against the running binary.
+- [x] **Changes:** `conformance/` — AC-9, AC-10, AC-13 and AC-15 against the running binary; and
+  `internal/ports`, `internal/sessions`, `internal/store/sqlite`, `internal/httpapi` — the session
+  ceiling, which AC-13 asks for and which nothing implemented (see the second amendment below).
 - **Depends on:** T18
 - **Verified by:** AC-9 — post capabilities, read the session, the hoist and the `false` beside a
   declared `true`; AC-10 — a fixture account provisioned with `--login-attempts-before-lockout 2`,
@@ -681,9 +683,50 @@ still owe.
   [U-13](../../docs/compatibility/reference-target.md) cited, so that the request which settles it
   arrives at a test that already says what it expects; AC-15 — the six requests of plan §8's row plus
   the combination, with the `403` byte-compared against AC-2's golden. **The combination is its own
-  case and is named for what it proves** — that `deviceId` still narrows a request that also carries
-  `controllableByUserId` — and **not** for the order, which no request distinguishes (spec §3.8).
+  case and is named for what it proves** — ~~that `deviceId` still narrows a request that also
+  carries `controllableByUserId`~~ — and **not** for the order, which no request distinguishes
+  (spec §3.8).
 - **Spec reference:** AC-9, AC-10, AC-13, AC-15; §6; plan §6.7, §8.
+- **Amended 2026-09-03, on landing. Two of these are corrections to this entry rather than
+  findings about the code.**
+  - **This list carried a claim that had already been struck, and it is the third time that one
+    sentence was written down.** *"`deviceId` still narrows a request that also carries
+    `controllableByUserId`"* is **not observable in v1**: the early return answers `[]` whatever
+    `deviceId` narrowed to, so those two sequences agree as well. [Spec §3.8](spec.md#38-sessions)
+    lost the claim when the parameters were declared, [plan §6.10](plan.md#610-sessions-activity-capabilities-and-what-sessions-answers)
+    lost it again on 2026-09-03 when T9 made the domain case fail on it, and this line inherited the
+    older wording from the plan sentence T9 struck. It is struck here too. **The combination case
+    stays** — it catches a build that ignores `controllableByUserId` and one that lets it widen the
+    list back, and both were run as mutations at the wire — and the half of this line that stands is
+    its warning: it must not be named for the *order*. A fourth copy survives in `internal/sessions`'
+    own `Visible` doc comment and is corrected in this change; a **fifth** is in
+    [AC-15 itself](spec.md#5-acceptance-criteria), and that document is T22's.
+  - **`MaxActiveSessions` was enforced nowhere and owned by nobody, and this task decided it rather
+    than passing it on a third time.** T5 handed it to *"T9/T12"*, T12 found it in neither scope and
+    recorded the gap, and this entry's AC-13 row is where the task list expected it to land. The
+    decision is to **implement it**, because the alternative was worse than a gap: a v1 that neither
+    evicted (spec §3.8) nor refused (the reference) would answer a *third* thing — an unlimited
+    session list on an account an operator capped — which is a delta with nothing on the other side
+    of the scale. It cost one port method (`CloseSession`), one domain function
+    (`sessions.Evictions`), one store statement and one call in the login path, and both
+    [plan §5](plan.md#5-contracts) and [plan §6.7](plan.md#67-disabled-locked-out-and-at-the-session-ceiling)
+    carry the amendment. The wire row is written as the specification writes it, names §6.7's
+    contradiction in the test's own comment and cites U-13.
+  - **A second face of U-13 turned up while writing it.** The reference counts the session a
+    re-authentication is about to replace, so an account whose ceiling is 1 cannot log in again from
+    the device it is already on there and can here
+    `[source: Emby.Server.Implementations/Session/SessionManager.cs:1623-1629 @ v10.11.11]`. The
+    same probe answers both halves: send the second login twice, once from a new device and once
+    from the old one. **The register is owed the sentence and T23's pass (d) is where it goes**;
+    plan §6.7 carries it meanwhile.
+  - **Two of these criteria cannot be written without real elapsed time, which plan §8 did not say
+    and now does.** `LastActivityDate` is written at most once per session per second, and
+    `conformance/` starts the binary rather than replacing its clock — so two reads inside one
+    second read the same value correctly, and a test written that way would pass against a server
+    that never wrote the date. AC-15's exclusion row is the same constraint from the other side.
+    Both wait 1.2 s; the package went from 3.962 s to 7.200 s and **2.4 s of that is sleeping**
+    rather than Argon2id `[measurement: go test -count=1 ./conformance, Go 1.27.0 darwin/arm64,
+    2026-09-03]`, which is the distinction T18's rule is really about.
 
 ## T21 — AC-14, and the two notes 001 parked on it
 

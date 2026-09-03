@@ -310,6 +310,7 @@ SessionStore interface {
     ReplaceCapabilities(ctx, sessionID string, document []byte) error
     TouchSession(ctx, sessionID string, at units.Time) error
     RevokeTokensFor(ctx, userID, deviceID string) error
+    CloseSession(ctx, sessionID string) error            // added by T20, below
 }
 ```
 
@@ -388,6 +389,30 @@ Three things it deliberately does not do:
 - **It does not check for the duplicate first.** The command does, for the *message*; the index is
   the check. Those are different jobs and conflating them is how a check that races becomes the only
   guard.
+
+**Amended 2026-09-03, by T20, which enforced the session ceiling.** `CloseSession` is in the block
+above now. It is the one method this feature needed and did not declare, and the reason it was
+missing is worth keeping: **nothing in `SessionStore` removed a session**, so spec §3.8's
+*"`MaxActiveSessions` exceeded: oldest session is evicted"* had no store operation behind it. T5
+handed the ceiling to *"T9/T12"*, it turned out to be in neither's scope, and T12 recorded the gap
+rather than smuggling the method in. This is where it lands, and this section is amended because
+§5 is the file that says what the store owes.
+
+- **It removes the session *and* the tokens that open it, in one statement.** That is `OpenSession`'s
+  contract read backwards, and it is not tidiness: the token names its session by a foreign key, so
+  a build that removed only the row cannot commit at all, and one that removed only the tokens would
+  leave the evicted session in `GET /Sessions` and in the count the next login makes. Both halves
+  are asserted `[measurement: internal/store/sqlite, a DELETE matching no session row, Go 1.27.0,
+  2026-09-03]`.
+- **It requires exactly one row, where `RevokeTokensFor` requires none.** The two look alike and are
+  opposite: the first login from a device revokes nothing and must not fail, while an eviction that
+  evicted nothing leaves the account over the ceiling the login was clearing room for — silently,
+  and on the request that was meant to enforce it.
+- **Which session goes is the domain's and not the store's.** `sessions.Evictions(all, userID,
+  opening, ceiling)` names them, least recently used first, so the rule reads a policy the store
+  never decodes and is a table rather than a `SELECT … ORDER BY … LIMIT`. It is `Visible`'s shape
+  and §6.10's argument for it — a domain function over the whole list — and it is why no second
+  read method was added beside it.
 
 ```
 // internal/httpapi — the port 001 declared, filled
@@ -989,6 +1014,37 @@ same shape as 001's §3.5 and §3.4 findings and it is recorded for the same rea
 `0` means unlimited, which the reference spells as the guard `maxActiveSessions >= 1` and sends as
 the default `[probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11, 2026-08-28]`.
 
+**Amended 2026-09-03, by T20, which enforced the ceiling. It was owned by nobody for eight tasks,
+and that is the first thing this amendment records.** T5 handed it to *"T9/T12"*; T9's scope is
+`Visible` and T12's *Verified by* names it nowhere, so T12 wrote the gap down instead of guessing —
+correctly, because closing it needed a store method §5 did not declare. AC-13's wire evidence is
+where the task list expected it to land and it has: the ceiling is enforced between steps 2 and 3
+of §6.5's login, over `sessions.Evictions` and the new `CloseSession`, and the wire assertion is
+`conformance/`'s `AC-13: exceeding MaxActiveSessions evicts the least recently used session`.
+
+- **The row in the table above stands, and the test says so in its own words.** The second login on
+  an account whose ceiling is 1 is a `200` here and a `403` with the 25 bytes there. The test names
+  that contradiction, cites [U-13](../../docs/compatibility/reference-target.md), and says which two
+  expectations a reference run would change — so the request that settles it arrives at a test
+  already stating what it expects rather than at a green suite somebody has to re-read.
+- **A second face of U-13, found while writing it, and it is the half a probe would not have thought
+  to send.** The reference's count runs *before* it touches the session list and includes the
+  session a re-authentication is about to replace
+  `[source: Emby.Server.Implementations/Session/SessionManager.cs:1623-1629 @ v10.11.11]`, so an
+  account whose ceiling is 1 **cannot re-authenticate from the device it is already logged in on**
+  there. Here it can: §6.5 replaces that session rather than adding one, so nothing is exceeded and
+  `Evictions` excludes it from the count. The same probe answers both — the second login is simply
+  sent twice, once from a new device and once from the old one.
+- **The count that matters is the one after the login.** An account holding exactly its ceiling loses
+  a session before it gains one. A build that evicted only when the account was already *over* the
+  cap would pass every other assertion, because every request that exceeds a ceiling passes through
+  that state first `[measurement: internal/sessions, len(others) <= ceiling, Go 1.27.0, 2026-09-03]`.
+- **Least recently used, not oldest.** Spec §3.8's lifecycle table says *oldest* and AC-13 says
+  *least recently used*; they disagree about a session created first and used last, and the
+  criterion is followed. The tie between two sessions idle since the same tick is broken on the
+  derived identifier, because Principle VII forbids an eviction that depends on the order the store
+  returned its rows.
+
 ### 6.8 What makes an installation set up, and why this feature has to decide it
 
 **Nothing in v1 completes setup, and until something does, `/System/Info` admits everybody.** 001's
@@ -1513,6 +1569,41 @@ took the package from nine fixtures to three and its own runtime from 8.8 s to 3
 `[measurement: go test -count=1 ./conformance, Go 1.27.0 darwin/arm64, 2026-09-03]`. Every later
 `conformance/` task inherits the rule: a new installation per criterion is a cost paid by a test in
 another package.
+
+**Amended 2026-09-03, by T20, which wrote AC-9, AC-10, AC-13 and AC-15 at the wire. Four things
+this section did not settle, and two of them are findings.**
+
+- **Two accounts this section's six do not have, appended to one installation rather than added to
+  the fixture.** AC-10's second half needs a *second* account with a low lockout threshold — the
+  first is permanently disabled by the sequence that proves the first half (§6.7), so it can prove
+  nothing else — and AC-13's ceiling needs one provisioned `--max-active-sessions 1`. They are
+  appended as options to that installation, because `fixtureAccounts` is what AC-1's golden, AC-6's
+  five public users and AC-7's six subjects are written against: a seventh account there would move
+  three recorded bodies in another file to buy a fixture only one test needs.
+- **The four criteria share one installation and the order they run in is load-bearing**, which is
+  T18's rule applied rather than a tidy-up: AC-9 posts a full declaration and AC-13's replacement
+  clause posts a smaller one to the same session, so AC-13 runs second; AC-15 asserts which session
+  rows come back, and AC-10's one successful login opens a session an administrator would then see,
+  so AC-10 runs after it. The ceiling subtest reads its list **as the capped account**, which is a
+  non-administrator and therefore sees only its own sessions — the one subtest here that is
+  insensitive to everything before it. The package went from four installations to five and from
+  3.962 s to 7.200 s `[measurement: go test -count=1 ./conformance, Go 1.27.0 darwin/arm64,
+  2026-09-03]`, and **2.4 s of that increase is `time.Sleep`** rather than Argon2id, which is the
+  distinction that matters: idle waiting does not pay the margin §8.1's equalisation is sized with.
+- **Two of AC-13's clauses cannot be written without real elapsed time, and this is the section that
+  should have said so.** `conformance/` starts the binary, so there is no clock to replace
+  (architecture §2's *"a clock the tests replace"* is true only where a test can replace one, which
+  T18 already recorded of the goldens). `LastActivityDate` is written at most once per session per
+  second (§6.10), so two reads inside one second read the same value **correctly** — and a test
+  written that way would pass against a server that never writes the date at all. AC-15's exclusion
+  row is the same constraint from the other side: it needs a session that has been idle longer than
+  the window it asks for. Both wait 1.2 s, and the margin only ever grows, because `time.Sleep`
+  blocks for at least the duration it is given.
+- **AC-15's exclusion row is measured from the administrator's seat and is the last request in the
+  matrix**, which is §6.10's closing paragraph applied at the wire: an authenticated request
+  advances its **own** session's date, so every request the restricted seat makes happens first and
+  the window is asked for afterwards. The companion row with a window wide enough to reach both
+  sessions is what makes the narrow one a filter rather than a list that was empty anyway.
 
 ### 8.1 The timing equalisation, which is the one check ADR-0006's argument stands on
 

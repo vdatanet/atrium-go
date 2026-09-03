@@ -626,6 +626,8 @@ func (f failingSessions) TouchSession(context.Context, string, units.Time) error
 
 func (f failingSessions) RevokeTokensFor(context.Context, string, string) error { return f.err }
 
+func (f failingSessions) CloseSession(context.Context, string) error { return f.err }
+
 // failingAccounts is an account store nothing above reaches: the session store
 // fails first. It exists because the authenticator refuses to be built without
 // one, which is the point of that refusal.

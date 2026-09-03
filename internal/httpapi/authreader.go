@@ -281,6 +281,37 @@ func endsInWhitespace(s string) bool {
 	return s != "" && (s[len(s)-1] == ' ' || s[len(s)-1] == '\t')
 }
 
+// presentedClientIdentification reports how a request identified its client,
+// over the two header names that carry 002 spec 3.2's grammar.
+//
+// # Which header, and why the search does not stop at a header that said nothing
+//
+// The rule is presentedToken's, applied to the four components instead of to
+// the Token: Authorization first, then X-Emby-Authorization, and a header that
+// is present but yields nothing does not stop the search. That is one rule in
+// this package rather than two, which matters because a request carrying a
+// Bearer Authorization header beside a MediaBrowser X-Emby-Authorization one
+// would otherwise identify its client on one route and not on the next.
+//
+// ⚠️ UNVERIFIED, and it is the same generosity presentedToken records: the
+// reference falls back from Authorization to X-Emby-Authorization only when the
+// first header is *absent*, not when it is present and unreadable
+// [source: Jellyfin.Server.Implementations/Security/AuthorizationContext.cs:231-238 @ v10.11.11].
+// One request settles it, and it settles both readers at once.
+//
+// # It still never fails
+//
+// The zero ClientIdentification is what an absent header and an unreadable one
+// both yield, and whether that is fatal belongs to the route. Exactly one route
+// says yes: POST /Users/AuthenticateByName, which needs the four components to
+// open a session (behaviours 2.13).
+func presentedClientIdentification(r *http.Request) ClientIdentification {
+	if read := ParseClientIdentification(r.Header.Get(AuthorizationHeader)); read != (ClientIdentification{}) {
+		return read
+	}
+	return ParseClientIdentification(r.Header.Get(EmbyAuthorizationHeader))
+}
+
 // PresentedToken reports the access token a request presents, over the five
 // mechanisms of 002 spec 3.1, in the order the reference resolves them:
 //

@@ -784,6 +784,31 @@ what a session **contains**; §3.8's next sentence — *"identified by the `Devi
 reference answers one. The unmeasured half is what `/Sessions` then shows, and it is recorded as
 [U-16](../../docs/compatibility/reference-target.md).
 
+**Amended 2026-09-03, by T12, which wrote the route.** This section describes what an authentication
+*writes* and left three things about the request that produces it undecided. Each was decided
+against the reference's own order rather than invented:
+
+1. **Four components are checked, not one.** §6.3 names the missing `DeviceId` because that is the
+   component the probe varied, and the reference refuses on any of four — `App`, `DeviceId`,
+   `DeviceName` and `AppVersion` are each thrown on before a user is looked up
+   `[source: Emby.Server.Implementations/Session/SessionManager.cs:1589-1592 @ v10.11.11]`. So a
+   header carrying no `Version` is the same `400` as one carrying no `DeviceId`, and a route that
+   checked only the identifier would serve a request the reference refuses.
+2. **The body is bound before those four are looked at, and both before the credential.** The
+   reference binds the action parameter before the action runs, so a body that is not JSON is the
+   problem-details `400` *whatever the headers carried* — and a request with an unusable header and
+   a wrong password is the 25-byte `400`, never a `401`. Two of the three orderings are observable
+   on a single request each, which is why both are asserted: one status, two shapes, and the order
+   decides which.
+3. **The response describes the stored row, not the value handed to the store.** The session is read
+   back through the digest of the token just minted rather than assembled from the `ports.Session`
+   that was written. The two differ on a re-authentication, because `OpenSession` leaves
+   `created_at`, `capabilities_document` and `last_playback_check_in_at` alone when it updates — so
+   a body built from the value written would report a zero `LastPlaybackCheckIn` for a session that
+   had played something. **A mutation that builds it from the written value survives the whole
+   suite today**, because nothing in v1 writes that column; it is recorded here rather than covered
+   by a test that would pass either way, and feature 007 is where it stops being invisible.
+
 ### 6.6 Building the user object
 
 One function builds the §3.5 object, and every route that returns one calls it — `/Users/Public`,
@@ -843,6 +868,21 @@ serialiser in the Edge and the account domain in the Domain, so the domain may n
 stored document is not a response: it is negotiated with nobody, escaped for nobody's decoder and
 carries no content type. What the two encodings share is the **struct**, which is where the property
 that matters lives: one declaration fixes both the stored order and the key order of the L3 body.
+
+**Amended 2026-09-03, by T12.** The filler this section describes landed with
+`POST /Users/AuthenticateByName` rather than with `/Users/Public`, because the authentication
+result carries a user object and the route that returns one first is the route that has to build
+one. It is `userObject` in `internal/httpapi`, and it is **the** filler: the task that serves
+`/Users/Public` asserts §3.5 over it and adds no second one, which is this section's whole point —
+spec §3.4 measured the two readings to be byte-identical, and one filler is the only way to
+guarantee that rather than to keep checking it.
+
+Two members this section did not name were decided while writing it, both from the reference's own
+`GetUserDto` `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:411-437 @ v10.11.11]`:
+`HasConfiguredEasyPassword` is never assigned there and therefore travels as `false` — which is
+what spec §3.5 already says v1 sends, now with a reason — and `EnableAutoLogin` is filled from a
+non-nullable column, so it travels for every account although the DTO declares it nullable. v1
+stores no such column and no route sets it, so it is `false` everywhere.
 
 ### 6.7 Disabled, locked out, and at the session ceiling
 
@@ -1107,6 +1147,26 @@ this plan.** [Spec §3.8](spec.md#38-sessions) now declares all three, and behav
   fails **open**, as a wider list the client cannot tell from a correct one. The row is not amended
   — it anticipated this — but this is the request that makes it worth a probe.
 
+**Amended 2026-09-03, by T12, which declared the session model.** The authentication result carries
+a `SessionInfo`, so the model arrived with the login route rather than with `/Sessions`. The
+reference's DTO declares **twenty-eight** members
+`[source: MediaBrowser.Model/Dto/SessionInfoDto.cs:17-185 @ v10.11.11]` and this server declares
+**fifteen** — spec §3.8's list, in the reference's declaration order, with the members it does not
+name left out rather than reordered. Thirteen absences is the kind of gap only counting finds, so
+they are written down: eight are playback state feature 007 owns, five are members of a session
+concept v1 does not have (a second user, liveness, an operator-renamed device, a device type, a user
+avatar), and `Capabilities` is declared by the task that serves `POST /Sessions/Capabilities/Full`,
+because a session that has just authenticated has posted none and it would be absent from this
+route's body whichever task declared it.
+
+**Three of the thirteen are a difference on a *fresh* session and not only a deferred feature.**
+`PlayState` is constructed eagerly and `NowPlayingQueue` and `NowPlayingQueueFullItems` are
+initialised empty `[source: MediaBrowser.Controller/Session/SessionInfo.cs:44-48 @ v10.11.11]`, so
+the reference sends all three on a session that has never played anything, where this server sends
+none. Spec §3.8 conditions `PlayState` on something playing and is followed; the difference is
+stated rather than accepted silently, and it is a register row 010's run would raise on this
+feature's one L3 body.
+
 ## 7. Failure handling
 
 Every refusal in this feature, with the shape and where it comes from. The first three shapes are
@@ -1140,6 +1200,27 @@ is a fourth and is a model rather than a shape, because it carries a `traceId`
 enforce it: the request body is decoded into a struct that is **never logged whole**, and the
 refusal bodies above are constants, so no error path can interpolate one. AC-11 is asserted by a
 test that logs to a buffer and searches it for the password, over every refusal path.
+
+**Amended 2026-09-03, by T12, on the login route's two `400`s.** The row above reads *"a body that
+is not JSON, **or a required member missing**"*, and the reference's own model settles what the
+second half means. `Username` and `Pw` are both nullable and the `[Required]` sits on the **action
+parameter**, not on either member
+`[source: Jellyfin.Api/Models/UserDtos/AuthenticateUserByName.cs @ v10.11.11]`
+`[source: Jellyfin.Api/Controllers/UserController.cs:211 @ v10.11.11]`. So the required member the
+reference has is the body itself, and it is reported as the **second key of the same refusal**,
+beside `"$"`, on one response rather than on two — which is exactly what behaviours §1.11 measured
+on 009's rename. A body that is valid JSON and carries neither member binds successfully and is
+refused as a **credential**: the 25-byte `401`, not the problem document. A build that made either
+member required would tell a client its request was malformed when its password was wrong, and no
+client can tell those apart from the status alone.
+
+The problem-details writer this row needs is `WriteValidationProblem` in `internal/httpapi`, beside
+the seven refusal shapes. It is a model rather than a shape — it carries a `traceId`, which is per
+request by definition — and the `errors` map is the caller's argument, because the keys are the
+whole of what varies between routes. Its map is written by `encoding/json` in **sorted** key order;
+that agrees with both measured pairs (`""` before `playbackProgressInfo`, `"$"` before `request`)
+and is recorded rather than assumed, because a future refusal whose two keys sort the other way
+would need an ordered type there and not a comment.
 
 ## 8. Testing strategy
 

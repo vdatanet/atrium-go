@@ -159,7 +159,7 @@ still owe.
 
 ## T6 — The timing equalisation, which is the one check ADR-0006's argument stands on
 
-- [ ] **Changes:** two tests in `internal/users` and no production code.
+- [x] **Changes:** two tests in `internal/users` and no production code.
   [ADR-0006](../../docs/decisions/0006-password-hashing.md) records that *"the timing equalisation is
   specified here and asserted nowhere"* and hands the check to this feature by name, calling it *"the
   one check this record's argument stands or falls on"*. [plan §8.1](plan.md#81-the-timing-equalisation-which-is-the-one-check-adr-0006s-argument-stands-on)

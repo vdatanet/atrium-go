@@ -45,6 +45,19 @@ type UsersHandlerConfig struct {
 	// nil for the reason the authenticator refuses it: a defaulted clock makes
 	// the port an option.
 	Clock ports.Clock
+
+	// Authenticator is what the routes that require a token ask (plan 6.2's
+	// table). Three of this handler's routes require one — /Users/Me,
+	// /Users/{userId} and T15's /Users/Configuration — and two do not:
+	// AuthenticateByName reads the credential out of its body, and
+	// /Users/Public reads no credential at all even when one is present.
+	//
+	// It is refused when nil for the reason every other member is, and the
+	// reason is sharper here: a nil Authenticator admits nobody, so a server
+	// wired without one would answer 401 to every authenticated /Users route
+	// while answering the two that need no token perfectly. That is a failure
+	// that looks like a working server.
+	Authenticator Authenticator
 }
 
 // UsersHandler answers the /Users routes of feature 002.
@@ -54,6 +67,7 @@ type UsersHandler struct {
 	accounts       ports.UserStore
 	sessions       ports.SessionStore
 	clock          ports.Clock
+	authenticator  Authenticator
 }
 
 // NewUsersHandler builds the handler for the /Users routes.
@@ -78,12 +92,16 @@ func NewUsersHandler(cfg UsersHandlerConfig) (*UsersHandler, error) {
 	if cfg.Clock == nil {
 		return nil, errors.New("httpapi: the users handler needs a clock, and was given none")
 	}
+	if cfg.Authenticator == nil {
+		return nil, errors.New("httpapi: the users handler needs an authenticator, and was given none")
+	}
 	return &UsersHandler{
 		installationID: cfg.InstallationID,
 		login:          cfg.Login,
 		accounts:       cfg.Accounts,
 		sessions:       cfg.Sessions,
 		clock:          cfg.Clock,
+		authenticator:  cfg.Authenticator,
 	}, nil
 }
 

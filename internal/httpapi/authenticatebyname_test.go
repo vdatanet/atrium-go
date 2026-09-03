@@ -28,6 +28,12 @@ const testClientHeader = `MediaBrowser Client="Atrium Test", Device="A Device", 
 
 // newUsersHandler builds the /Users handler over a real store and a clock a
 // test can hold still.
+//
+// The authenticator is the real one over the same store and the same clock,
+// not a stand-in. T14 made it a required member, and a fake here would let the
+// caller matrix pass over an admission rule nothing in this package exercises:
+// the whole point of that matrix is which *account* a live token resolves to,
+// which is the store's answer and not a test's.
 func newUsersHandler(t *testing.T, store *sqlite.Store, clock ports.Clock) *httpapi.UsersHandler {
 	t.Helper()
 
@@ -37,6 +43,7 @@ func newUsersHandler(t *testing.T, store *sqlite.Store, clock ports.Clock) *http
 		Accounts:       store,
 		Sessions:       store,
 		Clock:          clock,
+		Authenticator:  newAuthenticator(t, store, clock),
 	})
 	if err != nil {
 		t.Fatalf("building the users handler: %v", err)
@@ -599,6 +606,7 @@ func TestAStoreFailureIsFiveHundredAndNeverARefusal(t *testing.T) {
 		Accounts:       store,
 		Sessions:       failingSessions{err: broken},
 		Clock:          &settableClock{at: aTestInstant},
+		Authenticator:  newAuthenticator(t, store, &settableClock{at: aTestInstant}),
 	})
 	if err != nil {
 		t.Fatalf("building the users handler: %v", err)
@@ -628,6 +636,16 @@ func TestTheUsersHandlerRefusesToBeBuiltWithoutItsPorts(t *testing.T) {
 		Accounts:       store,
 		Sessions:       store,
 		Clock:          clock,
+		Authenticator:  newAuthenticator(t, store, clock),
+	}
+
+	// The whole configuration is built first, and that line is what makes the
+	// rows below assertions rather than a table that passes because something
+	// else is missing from every one of them. T14 added a sixth member and
+	// this table went on passing with every row failing for the same wrong
+	// reason until the member was in `whole` too.
+	if _, err := httpapi.NewUsersHandler(whole); err != nil {
+		t.Fatalf("the whole configuration did not build a handler: %v", err)
 	}
 
 	for _, row := range []struct {
@@ -639,6 +657,7 @@ func TestTheUsersHandlerRefusesToBeBuiltWithoutItsPorts(t *testing.T) {
 		{"the account store", func(c *httpapi.UsersHandlerConfig) { c.Accounts = nil }},
 		{"the session store", func(c *httpapi.UsersHandlerConfig) { c.Sessions = nil }},
 		{"the clock", func(c *httpapi.UsersHandlerConfig) { c.Clock = nil }},
+		{"the authenticator", func(c *httpapi.UsersHandlerConfig) { c.Authenticator = nil }},
 	} {
 		t.Run(row.missing, func(t *testing.T) {
 			cfg := whole

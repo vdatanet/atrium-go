@@ -403,7 +403,7 @@ still owe.
 
 ## T14 — `GET /Users/Me` and `GET /Users/{userId}`, and the caller matrix
 
-- [ ] **Changes:** `internal/httpapi` — both handlers over T13's filler, with the `404` and the `400`
+- [x] **Changes:** `internal/httpapi` — both handlers over T13's filler, with the `404` and the `400`
   of spec §3.7 written through T11's two new shapes.
 - **Depends on:** T10, T11, T13
 - **Verified by:** the whole matrix of spec §3.7 — every pair of seat and subject, including a
@@ -417,6 +417,32 @@ still owe.
   validation `400` keyed on `userId`'s own spelling; and no credential answering the empty `401` —
   three different shapes on one route, which is why they are asserted as bytes and not as statuses.
 - **Spec reference:** §3.5, §3.7, AC-7, AC-12; plan §6.6, §7.
+- **Amended 2026-09-03, on landing. The route has four answers where the *Verified by* line names
+  three, and the fourth is the one worth reading.** A `userId` of **all zeros** is well formed and
+  belongs to nobody, so the row above would make it the 16-byte `404`. It is not: the reference's
+  account lookup refuses an empty identifier before it queries anything
+  `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:123-133 @ v10.11.11]`, the
+  exception is mapped to `400` under `text/plain`
+  `[source: Jellyfin.Api/Middleware/ExceptionMiddleware.cs:92-99,123-136 @ v10.11.11]`, and the same
+  request **measured** on another route that resolves an identifier answered exactly the 25 bytes
+  ([009 §3.8](../009-playlists/spec.md)'s identifier table, 2026-09-01). It is implemented rather
+  than recorded, because the alternative was answering `404` to a request the reference refuses; it
+  is compared against T12's golden, so five responses now stand on one file; and
+  [spec §3.7](spec.md#37-get-usersme-and-get-usersuserid)'s table is owed the row, which is T22's
+  document rather than this task's. Three further decisions are in
+  [plan §7](plan.md#7-failure-handling)'s amendment with the source that forced each: the credential
+  is read **before** the segment is bound, which is one observable request and a reading rather than
+  a measurement of this route; what counts as an identifier here is narrower than the reference's
+  binder and the dashed spelling's refusal is asserted as a divergence in T13's and T15's shape; and
+  the `Access`-to-response mapping moved out of `SystemHandler.admits` into one function both use,
+  which is T8's *a rule enforced twice is a rule no mutation of either half can reach* applied before
+  it could happen a second time. **The register at T23 is owed a row for the order and one for the
+  identifier grammar.** One finding is in the handoff and is the reason the central assertion has a
+  fixture rather than two accounts: T13's lesson that *the same bytes to everybody* proves nothing
+  over data with only one possible answer applies here too, so the administrator carries flags a
+  redacting handler would plausibly withhold and a separate test asserts the three seats read as
+  three **different** objects — without it, every equality in the file is satisfied by a handler that
+  answers one account to everybody.
 
 ## T15 — `POST /Users/Configuration`
 

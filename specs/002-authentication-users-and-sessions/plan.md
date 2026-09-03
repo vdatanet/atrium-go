@@ -1258,6 +1258,49 @@ that agrees with both measured pairs (`""` before `playbackProgressInfo`, `"$"` 
 and is recorded rather than assumed, because a future refusal whose two keys sort the other way
 would need an ordered type there and not a comment.
 
+**Amended 2026-09-03, by T14, which served `GET /Users/Me` and `GET /Users/{userId}`. The table
+gives that route two refusals and it has four, and the order between them is observable.**
+
+- **A fourth row: a `userId` of all zeros is the 25-byte `400`, not the `404` the table's own
+  "well formed and belongs to nobody" row would make it.** The reference's account lookup refuses an
+  empty identifier before it queries anything
+  `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:123-133 @ v10.11.11]`, the
+  `ArgumentException` that raises is mapped to `400` under `text/plain`
+  `[source: Jellyfin.Api/Middleware/ExceptionMiddleware.cs:92-99,123-136 @ v10.11.11]`, and the same
+  request **measured** on another route that resolves an identifier answered exactly that
+  ([009 §3.8](../009-playlists/spec.md)'s identifier table, 2026-09-01). So this is a source reading
+  of one route confirmed by a measurement of the class, and it is implemented rather than recorded —
+  the alternative was answering `404` to a request the reference refuses, on a segment a client can
+  send. `spec.md` §3.7's table is owed the row and T22 is the task that owns that document.
+- **The credential is read before the segment is bound**, so a request carrying no credential and a
+  malformed identifier is the `401`. The reference's authorization filter runs ahead of its model
+  binder, which was measured one route over — a caller who may not act meets the policy's refusal
+  for a path segment that is not an identifier at all ([009 §3.8](../009-playlists/spec.md),
+  2026-09-01). Reading that onto this route is a **reading**: no request carrying both has been sent
+  to a running reference here, and the register at T23 is owed the row. It is asserted as a test
+  because a handler that bound first would tell an unauthenticated caller which of its path segments
+  this server dislikes, and no assertion about either refusal alone can see the order.
+- **The `Access`-to-response mapping now has one home.** 001 wrote the switch inside
+  `SystemHandler.admits`, which was the only route that had one; this task is where the second and
+  third arrive and T15's and T16's are next, so it moved to `admitted` in `internal/httpapi` and
+  `SystemHandler.admits` calls it and discards the caller it has no use for. Nothing about the four
+  answers changed. The reason it moved rather than being written twice is T8's finding, applied
+  before it could happen a second time: **a rule enforced in two places is a rule no mutation of
+  either half can reach**, and it reads as defensive depth rather than as the duplicate it is.
+- **What counts as an identifier is narrower here than at the reference, knowingly.** This server
+  accepts thirty-two hexadecimal characters in either case and folds them to the lower-case spelling
+  every identifier it derives is written in; the reference parses the segment as a .NET identifier,
+  and plain, dashed, braced and upper-case spellings all address the object — **measured**, one route
+  over ([009 §3.8](../009-playlists/spec.md)'s identifier table, 2026-09-01). Refusing the dashed and
+  braced spellings is a delta in the direction
+  [behaviours §3.0.3](../../docs/compatibility/behaviours.md) calls the dangerous one: a request that
+  succeeds against every Jellyfin there is meets a `400` here. It is kept because that row measures a
+  *playlist* identifier and reading it onto this route is a reading; because no identifier this API
+  emits is written either way, so no conforming client reaches it; and because canonicalising a
+  spelling this server never produces is a rule nobody has asked a running reference for. It is
+  asserted as a test in T13's and T15's shape rather than left in a comment, and the register at T23
+  is owed the row.
+
 ## 8. Testing strategy
 
 Each criterion becomes a named test at the level spec §6 declares, **against the running binary in

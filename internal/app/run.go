@@ -80,15 +80,32 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		"derived-migrations-applied", store.AppliedMigrations(sqlite.Derived),
 	)
 
+	// The handlers, before the pipeline that registers them. The address
+	// configuration is the zero value because 001 gives an operator no way to
+	// set any of it — no published URL, no derive flag, no bound-address list —
+	// and system.LocalAddress then answers from the request itself, which
+	// plan 6.6 states as the deliberate answer for an installation with none of
+	// the three. The flags that fill it in are the feature that adds them.
+	systemHandler, err := httpapi.NewSystemHandler(installationID, store, system.AddressConfig{})
+	if err != nil {
+		return err
+	}
+
+	routes, err := httpapi.Routes(surface.V1(), httpapi.Handlers{System: systemHandler})
+	if err != nil {
+		return err
+	}
+
 	// Also before the listener, and for the same reason: the three stages that
 	// read the route table refuse a table they cannot fold, and plan 7 makes
 	// that a failure to start rather than a route that quietly never matches.
 	//
-	// No routes are registered yet — T16-T18 write the four handlers — so
-	// every path the table names is answered by the router's own refusal. The
-	// pipeline is nonetheless the whole pipeline: the gate, the two headers,
-	// both canonicalisers and the refusal shapes are what this binary serves.
-	pipeline, err := httpapi.NewPipeline(surface.V1(), httpapi.V1QuerySpellings(), nil)
+	// Only GET /System/Info/Public is registered so far — T17 and T18 write the
+	// other three — so the remaining paths the table names are answered by the
+	// router's own refusal. The pipeline is nonetheless the whole pipeline: the
+	// gate, the two headers, both canonicalisers and the refusal shapes are
+	// what this binary serves.
+	pipeline, err := httpapi.NewPipeline(surface.V1(), httpapi.V1QuerySpellings(), routes)
 	if err != nil {
 		return err
 	}

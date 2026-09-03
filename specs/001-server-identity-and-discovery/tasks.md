@@ -390,9 +390,37 @@ list is long for four routes.
 
 ## T16 — `GET /System/Info/Public`
 
-- [ ] **Changes:** the handler and its response model — exactly the seven fields of §3.1, with
+- [x] **Changes:** the handler and its response model — exactly the seven fields of §3.1, with
   `ProductName` the literal `Jellyfin Server`, `OperatingSystem` the empty string, and `Version` the
   pinned reference version.
+- **Amended 2026-09-03, on doing it:** four things this wording did not settle, and the first is the
+  one that decides how every golden in this repository works.
+  **A byte-compared golden needs the response to stop deriving from the run.** Two of the seven
+  fields do: `Id` is 16 cryptographically random bytes on a first start, and `LocalAddress` is built
+  from the request, whose port the operating system chose. Neither can be normalised away without
+  giving up the byte comparison, so both are **stated** instead — the test writes the identity file
+  before the server starts and sends a fixed `Host` header, and the recorded body is the one spec
+  §3.1 prints. The per-field assertions run on a *genuinely* fresh installation, where `Id` is
+  asserted by shape.
+  **`conformance/` cannot import `internal/`, so it cannot build a server — it starts the binary.**
+  `go build` once in `TestMain`, then one process per test on `127.0.0.1:0`, with the bound address
+  read back out of the server's own log because a caller that did not choose the port has nowhere
+  else to learn it. That is the shape T19 and T20 inherit, and it is the import rule
+  ([architecture §3](../../docs/architecture.md#3-repository-layout)) doing its job rather than
+  getting in the way: everything these tests know is something a client could have known.
+  **The update flag rewrites the golden and then fails.**
+  [architecture §8](../../docs/architecture.md#8-testing-and-conformance) says goldens are reviewed
+  and never blindly regenerated, so no single run may both rewrite one and report green —
+  `-update-golden` writes the file and fails the test, and the suite has to be re-run without it.
+  An update flag that left the run green is a button that turns a golden into a record of whatever
+  the code last did.
+  **Key order is contract and it is not measured.** L3 compares bytes, so the order of the seven
+  keys is part of the response. The reference's model declares them in exactly §3.1's order
+  `[source: MediaBrowser.Model/System/PublicSystemInfo.cs:14-53 @ v10.11.11]` and that is what is
+  implemented — but no probe in this repository records the key order of a body, and the two sample
+  bodies here **disagree** (§3.1 opens with `LocalAddress`, `reference-target.md` §4 with
+  `ServerName`). It is one request to settle, marked `⚠️ UNVERIFIED` in the model, and until it is
+  settled it is a difference 010's run would raise.
 - **Depends on:** T7, T14, T15
 - **Verified by:** a byte-compared golden on an empty installation, plus per-field assertions so a
   golden diff names which field moved. Answers before any user exists and before any library is

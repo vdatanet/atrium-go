@@ -35,6 +35,12 @@ import (
 // text/plain body, the JSON-encoded bare string, the 415 — all belong to a
 // handler that got as far as looking something up. No route in 001 has one.
 //
+// A fourth function joined the three at T16, and it is deliberately not one of
+// the measured shapes: WriteInternalServerError. behaviours 1.11 has no 500
+// row, plan 7 records the shape as owed, and it is written here anyway because
+// a handler that cannot build its response has to answer something. It says so
+// itself; do not read it as a fourth measurement.
+//
 // # Content-Length is set here, and not only inherited
 //
 // Go's net/http adds `Content-Length: 0`, and no content type, to a body-less
@@ -100,6 +106,27 @@ func WriteMethodNotAllowed(w http.ResponseWriter, allow string) {
 // credential at all.
 func WriteUnauthorized(w http.ResponseWriter) {
 	refuse(w, http.StatusUnauthorized)
+}
+
+// WriteInternalServerError answers a handler that could not build its response
+// at all: the status, an empty body, and nothing else.
+//
+// **This shape is not measured, and that is stated rather than hidden.**
+// behaviours 1.11's table has seven rows and none of them is a 500; plan 7
+// records the 500 as owed, under the risks. So this writes the one thing that
+// is certainly right — the status — and invents no body, because a body this
+// project made up is a difference on a response the reference sends something
+// else for, and an empty one is at least a difference nobody can mistake for a
+// measurement.
+//
+// A caller reaches it only when something below the wire failed: a store that
+// cannot be read, or a model that cannot be serialised. Both are exceptional
+// and neither is a client's fault, so there is nothing here for a client to
+// act on. It carries no log line because this package holds no logger; that is
+// a gap worth closing when a feature gives the edge one, and it is named here
+// rather than left as a silence.
+func WriteInternalServerError(w http.ResponseWriter) {
+	refuse(w, http.StatusInternalServerError)
 }
 
 // refuse writes an empty refusal, and is where the three shapes agree.

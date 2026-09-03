@@ -237,10 +237,23 @@ list is long for four routes.
 
 ## T11 — The refusal shapes, and `Allow` computed from the table
 
-- [ ] **Changes:** the router's `NotFound` and `MethodNotAllowed` replaced — `404` and `405` with an
+- [x] **Changes:** the router's `NotFound` and `MethodNotAllowed` replaced — `404` and `405` with an
   empty body and **no content type** — and `Allow` built from `internal/surface`: every method that
   **path** has, sorted alphabetically. An unauthenticated refusal answers `401` with an empty body,
   `Content-Length: 0` and **no** `WWW-Authenticate`.
+- **Amended 2026-09-03, on doing it:** the measurement below is wrong and is corrected in
+  `plan.md` §1, which keeps both readings. chi names **both** methods, in **two `Allow` field
+  lines**, in **map-iteration order** — `GET, POST` 171 times and `POST, GET` 29 over 200 identical
+  requests — and sends **no `Allow` at all** for a method token it does not know
+  `[measurement: github.com/go-chi/chi/v5 v5.3.2, Go 1.27.0, 2026-09-03]`. The original reading is
+  what a header reader that returns one field line per name sees of two, which is worth more than
+  the correction: the same kind of instrument reads the reference. The conclusion is unchanged and
+  the assertion below is unchanged, because §1.11 measured one comma-joined field line in
+  alphabetical order and none of chi's three faults produces one. Two things the wording left open
+  are decided in `plan.md` §6.5: the lookup goes through canonicalisation's `pattern`, because a
+  request never carries the pattern that matched it; and a path the table has no row for is a `404`
+  whatever the method, because chi checks the method before it routes and §3.6 keys its `404` on
+  the path.
 - **Depends on:** T8, T9
 - **Verified by:** the measured case, which the router gets wrong on its own — `PUT`, `HEAD` and
   `OPTIONS` on `/System/Ping` must each answer `405` with `Allow: GET, POST`, where chi answers one

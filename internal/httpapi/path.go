@@ -360,10 +360,11 @@ func (f *PathFolder) Wrap(next http.Handler) http.Handler {
 		escaped := r.URL.EscapedPath()
 		canonical, ok := f.Canonicalise(escaped)
 		if !ok {
-			// 404, empty body, no Content-Type (behaviours 1.11). Writing
-			// nothing is what leaves the content type off: the standard
-			// library sniffs one only for a body, and there is none.
-			w.WriteHeader(http.StatusNotFound)
+			// 404, empty body, no Content-Type (behaviours 1.11). The shape
+			// is written in one place — refusal.go — because it is the same
+			// refusal the router sends for a path matching no route, and two
+			// spellings of it would be two shapes to keep the same.
+			WriteNotFound(w)
 			return
 		}
 		if canonical == escaped {

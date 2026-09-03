@@ -17,18 +17,26 @@ import (
 	"github.com/vdatanet/atrium-go/internal/users"
 )
 
-// userRoutes mounts the two routes of spec 3.7 on a router of this test's own.
+// userRoutes mounts the two routes of spec 3.7 on a router of this test's own,
+// with spec 3.6's beside them.
 //
 // They are mounted rather than called directly because GET /Users/{userId}
 // reads a path parameter, and a handler invoked without a route context is a
 // handler answering a request no client can send. The patterns are
 // surface.yaml's own spellings; T17 is what registers them on the server's
-// router, and this is deliberately not that check — it is the two handlers,
+// router, and this is deliberately not that check — it is the handlers,
 // reachable.
+//
+// POST /Users/Configuration was added here by T15 rather than mounted a second
+// time in its own file, because every assertion that route makes is read back
+// through GET /Users/Me: a second router would be a second answer to the
+// question of which handler a request reaches, and the round trip is only a
+// round trip while both halves are on one.
 func userRoutes(handler *httpapi.UsersHandler) http.Handler {
 	router := chi.NewRouter()
 	router.Get("/Users/Me", handler.CurrentUser())
 	router.Get("/Users/{userId}", handler.UserByID())
+	router.Post("/Users/Configuration", handler.UpdateConfiguration())
 	return router
 }
 

@@ -279,7 +279,7 @@ still owe.
 
 ## T10 — The `Authenticator`, filled and widened
 
-- [ ] **Changes:** `internal/httpapi` — `Access` gains `AccessForbidden`, the third value 001
+- [x] **Changes:** `internal/httpapi` — `Access` gains `AccessForbidden`, the third value 001
   reserved for this feature *"with the shape"*; `Authentication` and `Caller` of plan §5;
   `Authenticate` reads T8's credential, digests it, resolves a session and a user, and advances
   `LastActivityDate` at most once per session per second (plan §6.10).
@@ -296,6 +296,17 @@ still owe.
   fine; and two authenticated requests inside one second write `LastActivityDate` once while two a
   second apart write twice, read back from the store, since that is a decision about frequency and
   a test asserting *"it advanced"* would pass on a build that wrote on every request.
+- **Amended 2026-09-03, by the task itself, in two places and both in [plan.md](plan.md).** §5 owed
+  a function §4 had written as a property of a column: the digest has **two** callers — the login
+  that mints a token and this port, which resolves one — and a digest spelled twice is two digests
+  whose disagreement makes every credential this server issues fail to authenticate with no error
+  anywhere. It is `sessions.TokenDigest`, in the domain rather than at the edge, and it is not
+  truncated the way `DeriveID` is. And §6.10's activity bullet named a rule for a date without
+  saying **which** — the one written here is the *session's*, while `ports.UserStore.TouchActivity`
+  still has no caller and spec §3.5's `LastActivityDate` on the **user** object would therefore be
+  absent where the reference sends one. That rule is not this task's to invent: the reference
+  throttles a user at sixty seconds and a token at three minutes, neither measured here, and
+  whichever task first serves the user object owes it.
 - **Spec reference:** §3.1, §3.8; plan §5, §6.10; [001 plan §6.10](../001-server-identity-and-discovery/plan.md).
 
 ## T11 — The three refusal shapes 001 could not reach

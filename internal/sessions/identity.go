@@ -58,3 +58,39 @@ func DeriveID(client, deviceID string) string {
 	digest.Write([]byte(deviceID))
 	return hex.EncodeToString(digest.Sum(nil)[:identifierBytes])
 }
+
+// TokenDigest is what the store holds instead of the token itself: the
+// unsalted SHA-256 of the token, whole, in lowercase hex (002 plan 4).
+//
+// One function, called by both sides of the token's life — the login that
+// mints one and writes its digest, and the authenticator that resolves a
+// presented one — because two spellings of a digest are two digests, and the
+// symptom of a disagreement is every credential this server issues failing to
+// authenticate with no error anywhere.
+//
+// # Why the token is not stored
+//
+// ADR-0006's threat model is the store file leaking, and a leaked table of
+// live bearer tokens is that leak with the hashing skipped: the file alone
+// would let anybody hold every logged-in client's credential.
+//
+// # Why it is unsalted, and why that is not the password rule being ignored
+//
+// A password is low-entropy and chosen by a person, which is what ADR-0006
+// spends 52 ms and a memory reservation on. A token is 128 bits from
+// crypto/rand (002 plan 6.5), so a salt would defend against precomputation
+// over a space nobody can precompute, while costing the primary-key lookup
+// that makes a per-request check one indexed read. This is invisible on the
+// wire — no response carries a stored token — so it is an engineering choice
+// in ADR-0006's own sense and not a delta.
+//
+// # It is not truncated, where DeriveID is
+//
+// DeriveID keeps 16 bytes because its output is an *identifier* and behaviours
+// 1.4 makes an identifier 32 hex characters. This output is a lookup key that
+// no response carries, so there is nothing to match and no reason to throw
+// half of it away.
+func TokenDigest(token string) string {
+	digest := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(digest[:])
+}

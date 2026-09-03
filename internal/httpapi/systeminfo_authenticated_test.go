@@ -21,16 +21,23 @@ import (
 // level and not in conformance/.
 var configuredInstallation = ports.Installation{Name: "The Library", SetupCompleted: true}
 
-// stubAuthenticator is the port 002 fills, standing in for it. It answers one
-// decision, so a test names the state it is putting the server in rather than a
-// credential the server could not recognise anyway.
+// stubAuthenticator is ~~the port 002 fills, standing in for it~~ **an
+// Authenticator that decides without a store**, which is still what these tests
+// want: 002 T10 filled the port with httpapi.TokenAuthenticator, and a handler
+// test that had to mint a real token would be asserting the authenticator's
+// behaviour a second time rather than the handler's. It answers one decision,
+// so a test names the state it is putting the server in.
+//
+// It carries no caller. /System/Info reads none — 001 spec 3.2's body is the
+// same for every admitted caller — and a stub that filled one in would suggest
+// this handler had somewhere to put it.
 type stubAuthenticator struct {
 	access httpapi.Access
 	err    error
 }
 
-func (s stubAuthenticator) Authenticate(*http.Request) (httpapi.Access, error) {
-	return s.access, s.err
+func (s stubAuthenticator) Authenticate(*http.Request) (httpapi.Authentication, error) {
+	return httpapi.Authentication{Access: s.access}, s.err
 }
 
 // systemInfo issues one GET /System/Info to the handler and hands back the

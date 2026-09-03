@@ -8,8 +8,10 @@
 // identifier. The dependency runs one way: this package knows a user by
 // identifier and never the reverse, so nothing here imports internal/users.
 //
-// Two things live here and they are not the same kind of thing. DeriveID is
-// arithmetic over two strings. Visible is a rule with an order, and the order is
-// the reference's — 002 plan 6.10 makes it one function precisely so that no
-// caller can compose the halves the wrong way round.
+// Three things live here and they are not the same kind of thing. DeriveID and
+// TokenDigest are arithmetic over strings — the first over the pair a session is
+// keyed on, the second over the credential the store keeps only a digest of.
+// Visible is a rule with an order, and the order is the reference's — 002 plan
+// 6.10 makes it one function precisely so that no caller can compose the halves
+// the wrong way round.
 package sessions

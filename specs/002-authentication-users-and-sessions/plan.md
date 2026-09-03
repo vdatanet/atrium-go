@@ -442,6 +442,7 @@ Derive(pw Plaintext) (record string, err error)
 
 // internal/sessions
 DeriveID(client, deviceID string) string     // §6.5
+TokenDigest(token string) string             // added by T10, below
 
 type Caller struct {                         // added by T9, below
     UserID          string
@@ -482,6 +483,24 @@ is the same property `Authentication{}` has above and is asserted under that nam
 `wire.Write` writes a nil slice as `null`; spec §3.8 answers `[]`. That is a difference invisible to
 anything that parses the body (Principle VIII), so the shape is decided in the function rather than
 patched at the handler.
+
+**Amended 2026-09-03, by T10, which filled the `Authenticator`.** `TokenDigest` is in the block
+above now. §4 wrote the digest as a property of a *column* — *"SHA-256 of the token, lowercase
+hex"* — and named no function, which is the same gap T4 met over where the record types live and
+T7 met over `CreateUser`: two callers need it, and neither is the store.
+
+- **The two callers are the two ends of one token's life.** The login mints a token and writes its
+  digest (§6.5); the authenticator digests a presented one and looks it up (§6.10). A digest spelled
+  twice is two digests, and the symptom of a disagreement is *every credential this server issues
+  failing to authenticate*, with no error anywhere — the primary key simply matches nothing.
+- **It is in `internal/sessions` and not at the edge**, because the token is the session's
+  credential and the store's contract is already written in terms of the digest rather than the
+  token. Putting it in `internal/httpapi` would make the login path's *storage* decision a property
+  of the HTTP layer, and would put the one function both ends must share behind the package that
+  002 plan 3 keeps everything else out of.
+- **It is not truncated, where `DeriveID` is.** Sixteen bytes is what makes an *identifier* the 32
+  hex characters behaviours §1.4 measures; a lookup key that no response carries has nothing to
+  match, so there is nothing to gain by halving it.
 
 `Plaintext` is ADR-0006's type whose `String` and `slog.LogValue` return a redaction. It is declared
 in `internal/users` because the domain is where it is verified, and **nothing outside that package
@@ -980,6 +999,30 @@ before it does.
   once, after the token resolves. It is written **at most once per session per second** — the value
   is a date on the wire and a busy client would otherwise turn every request into a write. That is a
   choice about frequency and not about the value.
+
+  **Amended 2026-09-03, by T10, which wrote it, in three places this bullet left open.**
+
+  1. **It is the *session's* date, and the *user's* has no rule here.** `ports.UserStore` carries
+     `TouchActivity` and nothing calls it, so `users.last_activity_at` stays NULL and spec §3.5's
+     `LastActivityDate` on the user object would be **absent** — a member the reference sends and
+     this server would not, which is a Principle I difference and not a value one. It is not T10's
+     to invent: the reference stamps a user only when more than sixty seconds have passed since its
+     last stamp `[source: Emby.Server.Implementations/Session/SessionManager.cs:265-271 @ v10.11.11]`
+     and a *token's* activity only after three minutes
+     `[source: Jellyfin.Server.Implementations/Security/AuthorizationContext.cs:180-184 @ v10.11.11]`,
+     both unmeasured here, while keeping the session's own date exact because it holds sessions in
+     memory where this server holds them in a table. **Whichever task first serves the user object
+     owes this rule**, and *"at most once per session per second"* is not it.
+  2. **The throttle's state is the stored date**, not a timer beside the authenticator: the session
+     the request already read to resolve its token carries the value being compared. That is what
+     makes the rule survive a restart and two processes over one store, and it is why the test can
+     read the answer back out of the store instead of interrogating a counter.
+  3. **The interval is elapsed time and the bound is inclusive** — exactly one second after the last
+     written value writes. A truncation to the second boundary would let two requests 200 ms apart
+     write twice whenever they straddled one, which is a throttle whose behaviour depends on when it
+     started. A clock that has gone backwards writes nothing, because the alternative moves a
+     session's last activity into the past, where `activeWithinSeconds` would then hide a session
+     that is in use right now.
 - **`POST /Sessions/Capabilities/Full` replaces, never merges**, answers `204` with no body, and
   **stores the document the client posted whole** — which is where an unknown property survives into
   `/Sessions`, the recorded divergence of

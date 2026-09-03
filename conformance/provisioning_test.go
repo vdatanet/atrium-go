@@ -178,9 +178,15 @@ func TestTheBinaryOffersNoWayToPutAPasswordInAnArgumentVector(t *testing.T) {
 		t.Errorf("the usage text offers a password flag:\n%s", output)
 	}
 
+	// The value is deliberately not a plausible password. The flag is refused
+	// before anything reads what follows it, so this string is only ever
+	// compared against nothing — and a name-and-password pair on one command
+	// line is the shape a public repository's secret scanners are built to
+	// find. Leaving a realistic one here costs a false positive every time
+	// somebody looks, and proves nothing this does not.
 	directory := t.TempDir()
 	rejected, err := runBinary(t, "", userCommand, userAddCommand,
-		"--data-dir", directory, "--name", "Ada", "--password", "hunter2")
+		"--data-dir", directory, "--name", "Ada", "--password", "refused-before-this-is-read")
 	if err == nil {
 		t.Fatalf("--password was accepted:\n%s", rejected)
 	}

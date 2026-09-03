@@ -730,7 +730,7 @@ still owe.
 
 ## T21 — AC-14, and the two notes 001 parked on it
 
-- [ ] **Changes:** `conformance/` — provision an administrator, authenticate over HTTP, send the
+- [x] **Changes:** `conformance/` — provision an administrator, authenticate over HTTP, send the
   returned token to `GET /System/Info` and assert `200` with the superset body; and 001's `401` on
   the same route moved here from `internal/httpapi`, which is possible for the first time because T7
   gives this package an installation whose setup is **complete**.
@@ -758,6 +758,42 @@ still owe.
   endpoint lands"* is a condition no v1 feature can satisfy; what can satisfy it is the friendly name
   becoming operator configuration, that is 001's datum, and this feature deliberately does not add a
   configuration surface for it on the way past.
+- **Amended 2026-09-03, on doing it. One of these is a finding and the others are what this line did
+  not name.**
+  - **001's third unreachable state is now reachable, and it is covered here.** 001's own closing
+    table says of `/System/Info`'s `403`: *"Untested, and unreachable. 001 issues no credential, so
+    no request can be valid **and** insufficient."* Both halves stopped being true at T14, and the
+    route the state is reached by is not the obvious one: the `disabled` account never holds a token
+    because the login route refuses it (AC-2), so a fixture cannot provision the state. What reaches
+    it is the **lockout** — an account authenticates, then fails twice, and a lockout is *stored* as
+    the disabled flag (plan §6.7), so the token minted before the failures is a valid credential
+    whose holder the server will no longer serve. The subtest asserts the **empty** shape rather than
+    the status alone, which is the half [behaviours §1.11](../../docs/compatibility/behaviours.md)
+    separates from the controller's 25-byte `403` on the same status, and it asserts the token
+    answered `200` *before* the failures so the refusal is about the account rather than about the
+    credential.
+  - **Four mutation runs are in the pull request body, and the first is the evidence this line asks
+    for.** The same pair against an *unprovisioned* installation answers `200` **twice** — the token
+    request and the token-less one alike — so the companion assertion goes red while the AC-14 half
+    stays green, which is precisely the green-and-proving-nothing test the criterion was written to
+    rule out. The other three: the setup exemption made unconditional on a provisioned installation
+    (both subtests red), the policy `403` written as the controller's refusal (the three shape
+    assertions red, the status still `403`), and a granted `Access` refused (the `200` half red, so
+    the criterion is not vacuous in the other direction either).
+  - **Nothing moved out of `internal/httpapi`.** Plan §8.2 says the assertion *moves* and then says
+    the `internal/httpapi` test stays; those read as a contradiction and are not. What moved is the
+    **criterion** — `/System/Info`'s `401` is now asserted at the wire, on a real installation, by a
+    request that differs from an admitted one only in a `Token` parameter. What stayed is the
+    handler test, which sees the same shape beside a *stubbed* store and is the only place a store
+    failure and an unrecognised `Access` can be put on the same route.
+  - **Two comparisons in 001's `system_info_test.go` became functions rather than being written a
+    second time**, because AC-14 asserts the superset and the twenty-six names about a body a
+    **token** admitted: `assertTheSupersetAgreesWithThePublicBody` and `systemInfoNames`. A second
+    spelling of either would be a second answer to what *"superset"* means. `assertEmptyRefusal` is
+    the same move for behaviours §1.11's empty shape, and `users_test.go`'s own copy now calls it.
+  - **The ping caveat is corrected in place and not dropped**, in the test's own comment, with the
+    strike-through the amendment rule asks for. It also carried a second wrong sentence — *"the
+    rename endpoint belongs to 002"* — which is corrected in the same edit.
 - **Spec reference:** AC-14 and §5's two carried notes; plan §8.2; [001 T18, T21](../001-server-identity-and-discovery/tasks.md).
 
 ## T22 — The cross-document debts: which of them are this feature's

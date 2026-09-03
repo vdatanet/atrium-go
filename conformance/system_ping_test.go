@@ -67,14 +67,31 @@ func TestPingMatchesItsGoldenOnBothMethods(t *testing.T) {
 // — at which point no ping assertion in this file discriminates any more.
 //
 // **This is the weakest link in T17 and it is stated rather than hidden.**
-// 001 gives an operator no way to rename an installation — the port exists and
-// nothing calls it, because the rename endpoint belongs to 002 — so the
-// friendly name this binary can be started with is plan 4's default, "atrium",
-// and not a value the fixture chose. The handler-level test in
-// internal/httpapi sets a deliberately unlike name through the store and is
-// where the discrimination is really proven; this one asserts, at the wire,
-// that the two names differ on the server the golden was recorded against.
-// When 002 lands a rename, this test should send it and drop the caveat.
+// An operator has no way to rename an installation — the SetServerName port
+// exists and nothing calls it — so the friendly name this binary can be started
+// with is 001 plan 4's default, "atrium", and not a value the fixture chose. The
+// handler-level test in internal/httpapi sets a deliberately unlike name through
+// the store and is where the discrimination is really proven; this one asserts,
+// at the wire, that the two names differ on the server the golden was recorded
+// against.
+//
+// # The condition this caveat drops on, corrected at 002 T21
+//
+// ~~When 002 lands a rename, this test should send it and drop the caveat.~~
+// **002 lands no rename, and no v1 feature can.** The reference renames a server
+// at POST /Startup/Configuration
+// [source: Jellyfin.Api/Controllers/StartupController.cs:74-78 @ v10.11.11],
+// which is not one of surface.yaml's fifty-nine rows and has no named consumer,
+// so "when the rename endpoint lands" is a condition this surface can never
+// satisfy and a caveat waiting on it would outlive the project (002 spec 5's
+// amendment, 002 plan 8.2).
+//
+// What can satisfy it is the friendly name becoming **operator configuration** —
+// one more subcommand over the port 001 wrote and nobody calls — at which point
+// a fixture can start a server under a name it chose and this test can send it.
+// 002 deliberately does not add that surface on the way past: the name is 001's
+// datum, and deciding to configure it is not this feature's decision to take
+// while it is passing.
 func TestPingAnswersTheProductNameAndNotThisServersFriendlyName(t *testing.T) {
 	t.Parallel()
 

@@ -426,22 +426,8 @@ func assertTheEmptyIdentifierIsTheControllerRefusal(t *testing.T, server *server
 func assertNoCredentialIsTheEmptyRefusal(t *testing.T, server *server, subject string) {
 	t.Helper()
 
-	got := server.get(t, userPath(subject), goldenHost, nil)
-	if got.status != http.StatusUnauthorized {
-		t.Fatalf("status %d, want %d\nbody: %s", got.status, http.StatusUnauthorized, got.body)
-	}
-	if len(got.body) != 0 {
-		t.Errorf("the refusal carries a body, want the empty 401 shape: %q", got.body)
-	}
-	if length := got.header.Get("Content-Length"); length != "0" {
-		t.Errorf("Content-Length: got %q, want %q", length, "0")
-	}
-	if contentType := got.header.Get("Content-Type"); contentType != "" {
-		t.Errorf("Content-Type: got %q, want the field to be absent", contentType)
-	}
-	if challenge := got.header.Get("WWW-Authenticate"); challenge != "" {
-		t.Errorf("WWW-Authenticate: got %q, want the field to be absent", challenge)
-	}
+	assertEmptyRefusal(t, server.get(t, userPath(subject), goldenHost, nil),
+		http.StatusUnauthorized, "no credential on a path naming an account that exists")
 }
 
 // 002 AC-12: GET /Users/Me returns the caller's spec 3.5 object in full,

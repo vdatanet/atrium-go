@@ -46,9 +46,21 @@ func TestSystemInfoIsASupersetOfThePublicBody(t *testing.T) {
 		t.Fatalf("%s: status %d\n%s", systemInfoPath, authenticated.status, authenticated.body)
 	}
 
-	publicNames := propertyNames(t, public.body)
-	publicFields := rawFields(t, public.body)
-	authenticatedFields := rawFields(t, authenticated.body)
+	assertTheSupersetAgreesWithThePublicBody(t, authenticated.body, public.body)
+}
+
+// The superset itself, member by member, as raw JSON.
+//
+// It is a function rather than the body of the test above because 002's AC-14
+// asserts the same thing about a body admitted by a **token** rather than by
+// first-time setup, and two spellings of one comparison are two answers to what
+// "superset" means.
+func assertTheSupersetAgreesWithThePublicBody(t *testing.T, authenticated, public []byte) {
+	t.Helper()
+
+	publicNames := propertyNames(t, public)
+	publicFields := rawFields(t, public)
+	authenticatedFields := rawFields(t, authenticated)
 
 	if len(publicNames) != 7 {
 		t.Fatalf("the public body carries %d fields and spec 3.1 has seven: %v", len(publicNames), publicNames)
@@ -88,42 +100,49 @@ func TestSystemInfoCarriesTheSupersetInSpecOrder(t *testing.T) {
 		t.Errorf("Content-Type: got %q, want %q", contentType, "application/json; charset=utf-8")
 	}
 
-	want := []string{
-		// spec 3.1's seven, first, because they are the embedded half.
-		"LocalAddress",
-		"ServerName",
-		"Version",
-		"ProductName",
-		"OperatingSystem",
-		"Id",
-		"StartupWizardCompleted",
-		// spec 3.2's additions, in the reference model's declaration order
-		// [source: MediaBrowser.Model/System/SystemInfo.cs:29-143 @ v10.11.11].
-		// PackageName belongs between the first two and is deliberately not
-		// sent.
-		"OperatingSystemDisplayName",
-		"HasPendingRestart",
-		"IsShuttingDown",
-		"SupportsLibraryMonitor",
-		"WebSocketPortNumber",
-		"CompletedInstallations",
-		"CanSelfRestart",
-		"CanLaunchWebBrowser",
-		"ProgramDataPath",
-		"WebPath",
-		"ItemsByNamePath",
-		"CachePath",
-		"LogPath",
-		"InternalMetadataPath",
-		"TranscodingTempPath",
-		"CastReceiverApplications",
-		"HasUpdateAvailable",
-		"EncoderLocation",
-		"SystemArchitecture",
+	if names := propertyNames(t, got.body); !equalStrings(names, systemInfoNames) {
+		t.Errorf("property names:\n got %v\nwant %v", names, systemInfoNames)
 	}
-	if names := propertyNames(t, got.body); !equalStrings(names, want) {
-		t.Errorf("property names:\n got %v\nwant %v", names, want)
-	}
+}
+
+// The twenty-six names spec 3.2's body carries, in the order it carries them.
+//
+// A package-level list rather than a literal inside the test above, because
+// 002's AC-14 asserts the same order on a body admitted by a token: the count
+// and the order are the half of the missing golden that can be held still, and
+// a second copy of them is a second answer.
+var systemInfoNames = []string{
+	// spec 3.1's seven, first, because they are the embedded half.
+	"LocalAddress",
+	"ServerName",
+	"Version",
+	"ProductName",
+	"OperatingSystem",
+	"Id",
+	"StartupWizardCompleted",
+	// spec 3.2's additions, in the reference model's declaration order
+	// [source: MediaBrowser.Model/System/SystemInfo.cs:29-143 @ v10.11.11].
+	// PackageName belongs between the first two and is deliberately not
+	// sent.
+	"OperatingSystemDisplayName",
+	"HasPendingRestart",
+	"IsShuttingDown",
+	"SupportsLibraryMonitor",
+	"WebSocketPortNumber",
+	"CompletedInstallations",
+	"CanSelfRestart",
+	"CanLaunchWebBrowser",
+	"ProgramDataPath",
+	"WebPath",
+	"ItemsByNamePath",
+	"CachePath",
+	"LogPath",
+	"InternalMetadataPath",
+	"TranscodingTempPath",
+	"CastReceiverApplications",
+	"HasUpdateAvailable",
+	"EncoderLocation",
+	"SystemArchitecture",
 }
 
 // The values spec 3.2 fixes, field by field, as raw JSON.
@@ -306,4 +325,207 @@ func rawFields(t *testing.T, body []byte) map[string]json.RawMessage {
 		t.Fatalf("the body is not a JSON object: %v\n%s", err, body)
 	}
 	return fields
+}
+
+// The devices this file's credentials are minted from.
+//
+// One each, because a second authentication from one DeviceId revokes the
+// first token (002 plan 6.5): the administrator's credential has to survive
+// the lockout sequence below, and the failed logins that lock an account must
+// not be able to take it away by accident.
+const (
+	systemInfoDevice        = "system-info-administrator"
+	systemInfoLockedDevice  = "system-info-locked-out"
+	systemInfoFailureDevice = "system-info-failures"
+)
+
+// 002 AC-14, and spec 3.2's 403 row, on one installation.
+//
+// # This is the debt 001's closing audit recorded in 002's specification
+//
+// [001 AC-5] is three claims — 401 without a token, 200 with a valid one, and a
+// body that is a superset of /System/Info/Public agreeing on every shared
+// field. 001 proved the first and the third. The second needs a **valid
+// credential**, and a credential is something this feature issues: 001 serves
+// no route that authenticates anybody. It became 002 AC-14 rather than a note,
+// for the reason 001 gave — a criterion carried in a sentence is one nobody
+// closes.
+//
+// # The second request is what makes the first a proof
+//
+// On an installation whose setup is outstanding, GET /System/Info admits a
+// request carrying nothing at all: the reference's authorisation handler
+// succeeds on "!IsStartupWizardCompleted" before it looks at a role
+// [source: Jellyfin.Api/Auth/FirstTimeSetupPolicy/FirstTimeSetupHandler.cs:29-31 @ v10.11.11].
+// Every installation 001 could start was in that state, so a test written
+// against one would be green, named for AC-14, and proving nothing about the
+// token. Two requests against **one** server settle it: the token answering 200
+// with the superset body, and the *identical* request without the token
+// answering 401. What this installation has that 001's could not is a completed
+// setup, which spec 3.9 makes a consequence of holding one account and
+// withProvisionedAccount therefore arranges.
+//
+// # Why the three criteria share a server
+//
+// T18's rule: provisioning 002 plan 8's fixture costs six Argon2id derivations
+// and installations that do not disturb one another share one. These do not.
+// AC-14 uses `administrator`, the 403 row uses `locked-out` and locks it, and
+// nothing here reads a list of sessions or of users.
+func TestSystemInfoAnswersTheCredentialRatherThanTheExemption(t *testing.T) {
+	t.Parallel()
+
+	server := newInstallation(t)
+
+	t.Run("AC-14: the token is answered 200 and the identical request without it is 401", func(t *testing.T) {
+		assertTheTokenIsWhatAdmitsSystemInfo(t, server)
+	})
+	t.Run("spec 3.2's 403: a live token whose account a lockout disabled", func(t *testing.T) {
+		assertALockedOutAccountsTokenIsTheEmptyForbidden(t, server)
+	})
+}
+
+// AC-14 and its companion: one server, two requests, one header apart.
+//
+// The pair is one function rather than two subtests on purpose. What the
+// criterion asserts is a *difference between two requests*, and two subtests
+// each holding one of them could drift into asserting two unrelated facts —
+// which is the shape 001's audit caught twice.
+func assertTheTokenIsWhatAdmitsSystemInfo(t *testing.T, server *server) {
+	t.Helper()
+
+	held := logIn(t, server, systemInfoDevice, administratorAccount, fixturePassword)
+
+	// The two headers differ in the Token parameter and in nothing else, so
+	// the pair below cannot be told apart by the client identification, by the
+	// path, by the method or by the Host.
+	bearing := held.bearing()
+	unbearing := http.Header{"Authorization": {clientIdentification(held.device, "")}}
+
+	admitted := server.get(t, systemInfoPath, goldenHost, bearing)
+	if admitted.status != http.StatusOK {
+		t.Fatalf("a token this server issued was answered %d, want %d\nbody: %s",
+			admitted.status, http.StatusOK, admitted.body)
+	}
+	if contentType := admitted.header.Get("Content-Type"); contentType != "application/json; charset=utf-8" {
+		t.Errorf("Content-Type: got %q, want %q", contentType, "application/json; charset=utf-8")
+	}
+
+	// The state the criterion has to be asserted in, stated rather than
+	// assumed. A build that never recorded setup completion answers false here
+	// and admits everything below, and this line is what says so instead of
+	// letting the 401 assertion fail with a status nobody can explain.
+	fields := rawFields(t, admitted.body)
+	if got := string(fields["StartupWizardCompleted"]); got != "true" {
+		t.Fatalf("StartupWizardCompleted = %s on a provisioned installation; "+
+			"while setup is outstanding this route admits every request, so nothing below would be about the token", got)
+	}
+
+	// The superset half of 001 AC-5, now on a body a credential admitted. The
+	// public route needs none, which is what lets the same server answer both.
+	public := server.get(t, publicSystemInfoPath, goldenHost, nil)
+	if public.status != http.StatusOK {
+		t.Fatalf("%s: status %d\n%s", publicSystemInfoPath, public.status, public.body)
+	}
+	assertTheSupersetAgreesWithThePublicBody(t, admitted.body, public.body)
+	if names := propertyNames(t, admitted.body); !equalStrings(names, systemInfoNames) {
+		t.Errorf("property names:\n got %v\nwant %v", names, systemInfoNames)
+	}
+
+	// The companion, and the whole reason this test is a proof.
+	assertEmptyRefusal(t, server.get(t, systemInfoPath, goldenHost, unbearing),
+		http.StatusUnauthorized, "the identical request with the Token parameter removed")
+
+	// And the same request carrying no credential at all, which is the request
+	// 001 could only send to a server that answered it 200.
+	assertEmptyRefusal(t, server.get(t, systemInfoPath, goldenHost, nil),
+		http.StatusUnauthorized, "no credential at all")
+}
+
+// spec 3.2's 403 row, which 001 recorded as **unreachable** and this feature
+// can now enter.
+//
+// 001's tasks.md says of it: *"Untested, and unreachable. 001 issues no
+// credential, so no request can be valid and insufficient."* Both halves of
+// that are now false — this feature issues credentials, and it has a state in
+// which one is valid and its holder is refused.
+//
+// # How a live token comes to belong to a disabled account
+//
+// Not by provisioning one disabled: `disabled` is refused at the login route
+// (AC-2), so it never holds a token. The state is reached the way an operator
+// would reach it by accident — the account authenticates, and is *then*
+// locked out. A lockout is stored as the disabled flag (002 plan 6.7, and the
+// reference does the same
+// [source: Jellyfin.Server.Implementations/Users/UserManager.cs:636-641 @ v10.11.11]),
+// so the token that was minted before the failures is a valid credential whose
+// holder this server will no longer serve.
+//
+// # The shape is the empty one, and that is the assertion
+//
+// behaviours 1.11 has four error shapes, and the two 403s are two of them: a
+// controller's own refusal is text/plain with no charset and 25 bytes, while an
+// authorization **policy**'s refusal has no body and no content type
+// [probe: tools/probe_playlist_visibility.py, Jellyfin 10.11.11, 2026-08-31].
+// This route's 403 is the policy one. Nothing at the wire asserted that until
+// now — internal/httpapi asserts it over a stubbed store, which is where the
+// declared length and the two absent fields are seen beside a handler built in
+// the test, and this is the same shape over a real installation.
+func assertALockedOutAccountsTokenIsTheEmptyForbidden(t *testing.T, server *server) {
+	t.Helper()
+
+	held := logIn(t, server, systemInfoLockedDevice, lockedOutAccount, fixturePassword)
+
+	// The token works first. Without this the 403 below would be the right
+	// status for the wrong reason — a token that was never valid is a 401, and
+	// a build that answered 403 to every credential would pass a test that only
+	// looked afterwards.
+	if before := server.get(t, systemInfoPath, goldenHost, held.bearing()); before.status != http.StatusOK {
+		t.Fatalf("the token was answered %d before the lockout, want %d — "+
+			"the refusal below would not be about the account\nbody: %s",
+			before.status, http.StatusOK, before.body)
+	}
+
+	// The threshold is fixtureLockoutThreshold, and the reference's comparison
+	// increments before it compares
+	// [source: Jellyfin.Server.Implementations/Users/UserManager.cs:636-641 @ v10.11.11],
+	// so the second failure is the one that locks. The failures are sent from a
+	// device of their own: a refusal opens no session, but a device is what a
+	// successful login would replace a token on.
+	for attempt := 1; attempt <= 2; attempt++ {
+		refused := authenticate(t, server, systemInfoFailureDevice, lockedOutAccount, "not-the-password")
+		if refused.status != http.StatusUnauthorized {
+			t.Fatalf("failure %d: status %d, want %d\nbody: %s",
+				attempt, refused.status, http.StatusUnauthorized, refused.body)
+		}
+	}
+
+	assertEmptyRefusal(t, server.get(t, systemInfoPath, goldenHost, held.bearing()),
+		http.StatusForbidden, "a live token whose account a lockout disabled")
+}
+
+// assertEmptyRefusal is behaviours 1.11's empty shape at the wire: the status,
+// no body, a declared length of zero, no content type and no challenge.
+//
+// One function for every route that answers it, because the shape is one
+// measurement and a second spelling of it is a second answer. The 401 and the
+// policy 403 differ only in the status, which is why the status is a parameter
+// rather than two near-identical helpers.
+func assertEmptyRefusal(t *testing.T, got *response, status int, what string) {
+	t.Helper()
+
+	if got.status != status {
+		t.Fatalf("%s: status %d, want %d\nbody: %s", what, got.status, status, got.body)
+	}
+	if len(got.body) != 0 {
+		t.Errorf("%s: the refusal carries a body, want the empty shape: %q", what, got.body)
+	}
+	if length := got.header.Get("Content-Length"); length != "0" {
+		t.Errorf("%s: Content-Length: got %q, want %q", what, length, "0")
+	}
+	if contentType := got.header.Get("Content-Type"); contentType != "" {
+		t.Errorf("%s: Content-Type: got %q, want the field to be absent", what, contentType)
+	}
+	if challenge := got.header.Get("WWW-Authenticate"); challenge != "" {
+		t.Errorf("%s: WWW-Authenticate: got %q, want the field to be absent", what, challenge)
+	}
 }

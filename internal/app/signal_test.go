@@ -30,7 +30,7 @@ func TestServeStopsOnSIGTERM(t *testing.T) {
 	// part of the baseline rather than a stray.
 	before := runtime.NumGoroutine()
 
-	server := newTestServer(t, NoRoutes())
+	server := newTestServer(t, testPipeline(t))
 	stopped := serve(t, ctx, server)
 
 	client := newTestClient(t)

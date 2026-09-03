@@ -332,7 +332,24 @@ list is long for four routes.
 
 ## T14 — Assemble the pipeline, and assert its order
 
-- [ ] **Changes:** wire the stages in plan §6.7's order and nowhere else.
+- [x] **Changes:** wire the stages in plan §6.7's order and nowhere else.
+- **Amended 2026-09-03, on doing it.** Three things the wording did not settle.
+  **The order assembled is T13's, not the struck-through one**, and the three assertions hold
+  against it: `httpapi.NewPipeline` is the one place the chain exists, and each assertion was run
+  against a chain with exactly one stage moved to prove it can fail.
+  **The `Accept` join plan §6.3 left to this task is `httpapi.NegotiateProfile(r)`, a function a
+  handler calls rather than a stage.** Negotiation writes nothing and refuses nothing, so it is the
+  *handler → wire* step §6.7 already ends with, and a `Profile` carried in a request context would
+  be `ProfilePlain` in any handler tested without the stage — silently. §6.7's order is unchanged;
+  §6.3 carries the argument.
+  **Two of the five stages cannot be seen by any request this server serves, and one still cannot.**
+  Removing query canonicalisation from the chain broke no test in the repository, because
+  `V1QuerySpellings()` is empty — none of 001's four routes takes a query parameter (T10). A test
+  that supplies its own declaration now covers it. The one still unasserted is the *relative* order
+  of the two canonicalisers: the query folder builds its own path folder internally, so swapping
+  them changes no response. And the `404` row of the *Verified by* line does not, on its own, prove
+  canonicalisation ran — the router answers `404` with both headers too. It is the fold reaching a
+  handler (`GET /system/ping/` → `200`) that proves it, and that row is asserted beside it.
 - **Depends on:** T9, T10, T11, T12, T13
 - **Verified by:** three assertions that only the order can satisfy — a `503` from the gate still
   carries the response-time stamp and `Server`; a `404` from canonicalisation carries them too; and

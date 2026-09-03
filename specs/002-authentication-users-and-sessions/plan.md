@@ -570,6 +570,51 @@ reference *is* distinguishable with a stopwatch where Atrium is not. It is a div
 that the two servers behave differently and it is not one in the sense Principle I means: no byte
 moves, and the differential compares bytes.
 
+**Amended 2026-09-03, by T5, which wrote the path.** Five things this section fixed the order of
+without saying what the order *returns*, and each had to be decided to write it:
+
+- **The path answers two refusals, not four.** `ErrCredentialsRefused` and `ErrAccountDisabled`,
+  neither naming a status — the domain does not know what one is, and §7's table is the mapping.
+  Collapsing "no such account" and "wrong password" into one value is not tidiness: it makes it
+  impossible for a later handler to answer them differently, which is the distinction the decoy
+  spends 52 ms a request to hide. **There is no third sentinel for a lockout**, because §6.7's
+  lockout *is* the disabled flag being set: a locked-out account is disabled on every later attempt,
+  and a distinct value would be a state nothing here can reach.
+- **The attempt that reaches the threshold is still a credential refusal.** It is a wrong password;
+  the lockout is what it *writes*, not what it answers. The refusal as *disabled* starts on the next
+  attempt. That is the reference's own order — the disabled check runs before the failure is counted
+  `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:585-593,636-641 @ v10.11.11]` — and
+  it is why §6.7's two rows are one state on the second try.
+- **The threshold is compared against the counter *after* this attempt.** The reference increments
+  and then compares `>=` `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:636-641 @
+  v10.11.11]`, so a threshold of two locks on the second failure and not the third. The count comes
+  from the column and never from the stored document (§4, §6.6); reading it off the document would
+  compare a fresh attempt against whatever number the document was written with, and would never
+  lock.
+- **A stored record this package could not have written is a fault, not a wrong password.** `Verify`
+  reports it as an error, and the path passes it out rather than folding it into the refusal:
+  answering `401` would tell a client to discard a credential that was fine over a corrupt row, and
+  counting it as a failed attempt would lock an account out over one. It joins §7's
+  *store-unreadable* row at `500`. A failed rehash write and a failed outcome write are the same
+  class and answer the same way — a login whose transition could not be recorded has not happened.
+- **The path answers the account as the store holds it afterwards**, by reading it back rather than
+  by patching the copy in hand. The response carries `InvalidLoginAttemptCount` and `LastLoginDate`
+  and both have just moved, and a patched copy would be a second spelling of the transition §5
+  deliberately made one store method. **Whether the reference's `AuthenticationResult.User` reflects
+  the login it just performed is unmeasured** — its update bypasses the entity it then serialises
+  `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:614-627 @ v10.11.11]`, which reads
+  as though it answers the *previous* `LastLoginDate`, and on a first login that would be no member
+  at all. It is one request to settle and it is the register's, at T23.
+
+**And the fold is this package's, spelled down.** `users.Fold` reduces a presented username to the
+`username_folded` column §4 declares; provisioning fills that column with the same function, and it
+has to be the same one on both sides or an account becomes unauthenticatable with no error anywhere.
+It lower-cases where the reference upper-cases
+`[source: Jellyfin.Server.Implementations/Users/UserManager.cs:155-166 @ v10.11.11]`. The direction
+is not observable — the fold is a store key and `Username` is what reaches the wire — but *which
+names collide* can differ between the two on a handful of characters. v1 has no rename and
+provisioning refuses a name whose fold is taken, so nothing can produce the disagreement today.
+
 ### 6.5 What an authentication writes: two identities and one replacement
 
 `POST /Users/AuthenticateByName`, after §6.4 succeeds, performs one transaction:

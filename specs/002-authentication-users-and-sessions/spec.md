@@ -282,8 +282,10 @@ flag whose feature arrives must be enforced in the same change.
 > reference's own refusals here are unmeasured — each needs an account restricted in that way and a
 > caller outside the local network — so this is recorded rather than acted on, and it is
 > [U-15](../../docs/compatibility/reference-target.md) in the register of measurements this project
-> owes. [behaviours §5](../../docs/compatibility/behaviours.md)'s accepted-gaps row states the same
-> thing about the same 28 and is owed the same correction by whoever owns it.
+> owes. ~~[behaviours §5](../../docs/compatibility/behaviours.md)'s accepted-gaps row states the same
+> thing about the same 28 and is owed the same correction by whoever owns it.~~ **That correction
+> landed on 2026-09-03**, in the change that wrote the login path — the code that decides not to
+> enforce them — so the two documents now say twenty-six in the same words.
 
 **The three transcoding flags moved into the enforced set on 2026-08-27**, when transcoding entered
 v1 ([roadmap](../../docs/roadmap.md#in-scope)). That is this rule working as written rather than an

@@ -460,52 +460,18 @@ func (h *SystemHandler) Info() http.HandlerFunc {
 // A nil authenticator is not a special case worth a branch of its own: 001
 // ships without one, and "this server recognises no credential" is the true
 // answer for a server that has issued none.
+//
+// **The mapping from an Access to a response moved out of this method at 002
+// T14**, which is where the second, third and fourth routes needing it
+// arrived. It is `admitted` in admission.go, and this method is the part that
+// is really this handler's: /System/Info has no use for the caller, and
+// discarding it here is what says so. Nothing about the four answers changed —
+// the empty 401, the policy 403, the 500 for a store that could not decide and
+// the 500 for an Access this package does not recognise are the same
+// responses, decided in one place instead of two.
 func (h *SystemHandler) admits(w http.ResponseWriter, r *http.Request) bool {
-	var authentication Authentication
-	if h.authenticator != nil {
-		decided, err := h.authenticator.Authenticate(r)
-		if err != nil {
-			// Not a 401. A client answered 401 discards its credential and
-			// logs in again, and a store that was briefly unreadable is not a
-			// reason to make it.
-			WriteInternalServerError(w)
-			return false
-		}
-		authentication = decided
-	}
-
-	switch authentication.Access {
-	case AccessGranted:
-		return true
-	case AccessForbidden:
-		// 002 plan 7's row for a live token whose user was disabled after it
-		// was issued: behaviours 1.11's *policy* refusal — the status, an
-		// empty body and no content type at all. T10 wrote this as a bare
-		// refuse(w, 403) because the shape had no name yet; T11 gave it one
-		// and this call site took it, so the bytes are now decided in the same
-		// place as every other refusal's rather than here. What it must not do
-		// is fall through to the default, which would answer a disabled
-		// account 500.
-		WriteForbidden(w)
-		return false
-	case AccessUnauthenticated:
-		// behaviours 1.11's empty shape, written in one place (refusal.go):
-		// no body, Content-Length: 0, no Content-Type and no
-		// WWW-Authenticate. None of those four is visible to a test that
-		// parses the body, and three of them are invisible to one that only
-		// reads the status.
-		WriteUnauthorized(w)
-		return false
-	default:
-		// An Access this package does not know is an error rather than a
-		// fall-through, which is internal/wire's rule for an unknown Profile
-		// and holds for the same reason: the two directions a fall-through
-		// could take are "admit everybody" and "refuse everybody", and both
-		// are wrong silently. 002 adding a value without teaching this switch
-		// about it fails loudly here.
-		WriteInternalServerError(w)
-		return false
-	}
+	_, ok := admitted(w, r, h.authenticator)
+	return ok
 }
 
 // systemInfo builds spec 3.2's body around the seven fields the public route

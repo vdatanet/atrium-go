@@ -69,6 +69,25 @@ func requiredBodyMessage(parameter string) string {
 	return "The " + parameter + " field is required."
 }
 
+// invalidValueMessage is what the reference says about a value that could not
+// be bound to its declared type, with the value quoted back.
+//
+// It is the message under `userId` when the segment of GET /Users/{userId} is
+// not an identifier — `The value 'not-an-identifier' is not valid.`
+// [probe: tools/probe_user_read.py, Jellyfin 10.11.11, 2026-09-01] — and the
+// same sentence appears under `playlistId` and `itemId` on 009's routes and
+// under `newIndex` for a path segment that is not a number, so the value is
+// interpolated and the parameter's name is the errors map's key rather than
+// part of this text.
+//
+// The two apostrophes are the reason this is composed here and sent through
+// internal/wire rather than assembled at the writer: behaviours 1.16 escapes
+// an apostrophe to \u0027, the reference's own encoder does the same, and a body
+// written with fmt would carry a literal apostrophe the reference never sends.
+func invalidValueMessage(value string) string {
+	return "The value '" + value + "' is not valid."
+}
+
 // WriteValidationProblem answers behaviours 1.11's validation `400`: RFC 9457
 // problem details under `application/json; charset=utf-8`, with the errors map
 // the caller built.

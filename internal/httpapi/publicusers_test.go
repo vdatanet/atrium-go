@@ -511,6 +511,7 @@ func TestAStoreThatCannotListAccountsIsAFiveHundred(t *testing.T) {
 		Accounts:       unreadableAccounts{},
 		Sessions:       store,
 		Clock:          clock,
+		Authenticator:  newAuthenticator(t, store, clock),
 	})
 	if err != nil {
 		t.Fatalf("building the users handler: %v", err)

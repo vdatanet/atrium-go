@@ -219,19 +219,11 @@ func newSweepFixture(t *testing.T) *sweepFixture {
 		withProvisionedAccount(sweepAccountName, sweepAccountPassword+"\n",
 			"--administrator", "--hidden=false"))}
 
-	got := fixture.send(t, http.MethodPost, authenticateByNamePath, goldenHost,
-		http.Header{"Authorization": {clientIdentification(sweepFixtureDevice, "")}},
-		[]byte(sweepLoginBody))
-	if got.status != http.StatusOK {
-		t.Fatalf("authenticating the sweep's account: status %d, want %d\nbody: %s",
-			got.status, http.StatusOK, got.body)
-	}
-
-	fixture.token = unquote(t, rawField(t, got.body, "AccessToken"))
-	fixture.userID = unquote(t, rawField(t, []byte(rawField(t, got.body, "User")), "Id"))
-	if fixture.token == "" || fixture.userID == "" {
-		t.Fatalf("the login answered no token or no identifier:\n%s", got.body)
-	}
+	// logIn is fixture_test.go's, and it is called rather than repeated: two
+	// ways of authenticating in one package are two answers to what a token is.
+	held := logIn(t, fixture.server, sweepFixtureDevice, sweepAccountName, sweepAccountPassword)
+	fixture.token = held.token
+	fixture.userID = held.userID
 
 	// So that /Sessions carries the raw document rather than nothing. Posted
 	// here rather than relying on the swept row of the same route, because the

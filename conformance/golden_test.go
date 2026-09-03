@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -67,6 +68,106 @@ func assertGolden(t *testing.T, name string, got []byte) {
 
 	t.Errorf("the response does not match %s.\n got %s\nwant %s\n%s",
 		path, got, want, firstDifference(got, want))
+}
+
+// statedMember is one member of a golden body whose value derives from the run
+// and which the golden therefore states rather than records.
+//
+// name is the placeholder's name inside the file — `{{AccessToken}}` — and
+// value is what this run's response carried at that position.
+type statedMember struct {
+	name  string
+	value string
+}
+
+// assertGoldenWithStatedMembers compares a response against a golden that
+// states the members deriving from the run, at the positions they occupy.
+//
+// # Why a golden needs this at all
+//
+// 001 T16's rule: a byte-compared golden needs the response to stop deriving
+// from the run, and the honest fix is to state the input rather than blank the
+// output. Every derived member of 001's bodies could be stated through an
+// input — the identity by writing the file, the address by sending a Host
+// header — so 001 needed no placeholder.
+//
+// 002's authentication result carries three that cannot be. The access token
+// is read from the system's randomness and the two dates from the wall clock,
+// and the binary offers an operator no way to state either: there is no flag,
+// no environment variable and no request that fixes them. The choice is
+// therefore between a golden that names them and no golden at all.
+//
+// # This is not "normalising away"
+//
+// Blanking would delete the member from the response and compare what is left,
+// which agrees with a body that moved the member, renamed it, changed its JSON
+// type or dropped the quotes around it. Here the golden holds the member's
+// name, its position among the other bytes and its quoting, and the value that
+// goes into it is one this run's caller has already asserted against a rule of
+// its own — a shape, or a window the request happened inside. A member the
+// caller does not state is compared as bytes like everything else.
+//
+// A stated member whose placeholder is not in the file is a fatal error rather
+// than a no-op, because a substitution that matches nothing is a caller
+// asserting something and a file not being asked anything.
+func assertGoldenWithStatedMembers(t *testing.T, name string, got []byte, stated []statedMember) {
+	t.Helper()
+
+	path := filepath.Join(goldenDirectory, name)
+
+	if *updateGolden {
+		// The file records the *template*, so the run's own token and dates
+		// never reach it. First occurrence only, and in the order the caller
+		// gave: two members can hold the same string — two clock reads a
+		// microsecond apart usually do not, but nothing stops them — and
+		// replacing every occurrence would give both slots one name.
+		template := string(got)
+		for _, member := range stated {
+			if !strings.Contains(template, member.value) {
+				t.Fatalf("the response does not carry %s's stated value %q, so %s cannot be recorded:\n%s",
+					member.name, member.value, path, got)
+			}
+			template = strings.Replace(template, member.value, placeholder(member.name), 1)
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("making the golden directory: %v", err)
+		}
+		if err := os.WriteFile(path, []byte(template), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", path, err)
+		}
+		t.Fatalf("%s was rewritten from this run.\n"+
+			"A golden is a record of what a client receives, so read the diff as a contract change, "+
+			"then re-run without -update-golden.\n%s", path, template)
+	}
+
+	template, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v\n"+
+			"If this response is new, create the file with -update-golden and review what it recorded.",
+			path, err)
+	}
+
+	want := string(template)
+	for _, member := range stated {
+		slot := placeholder(member.name)
+		if !strings.Contains(want, slot) {
+			t.Fatalf("%s does not state %s: there is no %s in it, so stating a value for it asserts nothing",
+				path, member.name, slot)
+		}
+		want = strings.ReplaceAll(want, slot, member.value)
+	}
+
+	if bytes.Equal(got, []byte(want)) {
+		return
+	}
+
+	t.Errorf("the response does not match %s with its stated members filled in.\n got %s\nwant %s\n%s",
+		path, got, want, firstDifference(got, []byte(want)))
+}
+
+// placeholder is how a stated member is spelled inside a golden file.
+func placeholder(name string) string {
+	return "{{" + name + "}}"
 }
 
 // firstDifference names the byte the two bodies first disagree on, because a

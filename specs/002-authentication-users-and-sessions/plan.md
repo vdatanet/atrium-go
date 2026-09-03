@@ -1447,7 +1447,7 @@ is not met by a test about the mechanism that serves it, however good that test 
 
 | AC | Where | How |
 |---|---|---|
-| 1 | L2, `conformance/` | Provision, authenticate, assert `200`, a 32-hex `AccessToken` by shape, and the `User`/`SessionInfo` members present. A golden holds the body with the two derived members stated (§8.2) |
+| 1 | L2, `conformance/` | Provision, authenticate, assert `200`, a 32-hex `AccessToken` by shape, and the `User`/`SessionInfo` members present. A golden holds the body with the ~~two~~ **three** derived members stated (§8.2, and the amendment below) |
 | 2 | L1/L2 golden, `conformance/` | Three requests, three statuses, **one** golden body compared by all three — which is what makes "the same 25 bytes" an assertion rather than three assertions written alike. `Content-Type: text/plain` with **no** charset asserted as a field value |
 | 3 | L2, `conformance/` | Table-driven: five mechanisms × two route classes (a required route, `/Users/Public`), plus the four precedence pairs in both directions, plus the grammar table of §6.3. The image and delivery classes are 006's and 008's and are named as not-this-feature's |
 | 4 | L2, `conformance/` | The `401` half over the wire. ~~**The second half — "a valid token lacking permission is `403`" — has no request in this feature**~~ **Amended 2026-09-03: it has one, and it is AC-15's — `GET /Sessions?controllableByUserId=` naming somebody else, from a caller who is not an administrator, is a `403` at the wire. Both halves are `conformance/` now, and the paragraph below survives as the reason the *domain* assertion stays.** The reasoning it was recorded with, and which still holds of the other six routes: none of them gates on a permission, `/Users/{userId}` refuses nobody, and `/System/Info` admits any authenticated caller once setup is complete — its policy requires no administrator `[source: Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs:78 @ v10.11.11]` and succeeds for any caller in the user role `[source: Jellyfin.Api/Auth/FirstTimeSetupPolicy/FirstTimeSetupHandler.cs:46-50 @ v10.11.11]`. It is proven at the domain over `AccessForbidden` — which stays, because the authenticator's own `403` for a token whose user was disabled has no wire request either way — and was recorded as a criterion **partly out of reach**, ~~not ticked~~ **which it no longer is** |
@@ -1468,6 +1468,51 @@ administrator with a password; a restricted non-administrator with a password; a
 disabled user; an account with no password; and an account with a low lockout threshold. A second,
 one-line fixture in which every user is hidden. They are built by the same command an operator runs,
 which is the point: the fixture is not a back door into the store.
+
+**Amended 2026-09-03, by T18, which built both fixtures and recorded AC-1's golden.** Three things
+this section did not settle had to be decided to write them.
+
+**The authentication result has *three* members that derive from the run, not two, and the third is
+the one 001's rule cannot reach.** Six of its members derive from something, and three of those are
+stated the way [001 T16](../001-server-identity-and-discovery/tasks.md) states them — by stating the
+*input*: the installation identity is written before the server starts (`ServerId`, twice), the
+account is named (`User/Id` and `SessionInfo/UserId`, through the derivation Principle VII requires),
+and the client and device are named (`SessionInfo/Id`). The other three have **no input to state**:
+`AccessToken` is sixteen bytes of the system's randomness and `LastLoginDate` and
+`LastActivityDate` are wall-clock reads, and this binary offers an operator no flag, variable or
+request that fixes any of them. The golden therefore names them at the positions they occupy and the
+test states each value only after asserting it against a rule of its own — a shape for the token, and
+for each date both the seven-digit wire form and the window the request was made inside.
+[allowlist.yaml](../../docs/compatibility/allowlist.yaml) already counts the same three on this
+route (eight `derived-identifier` rows, of which `AccessToken` is one, plus two `wall-clock`), so
+"two" was this section's undercount rather than a disagreement about the body.
+
+**Blanking a member and stating one are not the same operation, and only the second keeps the
+comparison.** A test that deleted the three members and compared what was left would agree with a
+body that moved `AccessToken`, renamed it, dropped its quotes or made it a number. What is compared
+here is every other byte plus each stated member's name, position and quoting. The window is the
+half that does the work: a build stamping .NET's minimum date on every login satisfies the wire-date
+rule, would be substituted into the golden and would report green
+`[measurement: conformance/, LastLoginDate pinned to the zero instant, Go 1.27.0, 2026-09-03]`.
+
+**A bare `user add` is hidden, so plan §8's six accounts read backwards and the second fixture is
+one line for that reason** — §6.9 already carries T7's finding; this is where it decides a fixture.
+The hidden account is the bare one; the visible five each carry `--hidden=false`; and "every user is
+hidden" needs no flags at all.
+
+**And the fixture is expensive enough to interfere with §8.1, which decides how the tests are
+grouped.** Provisioning it costs six Argon2id derivations, each holding a 64 MiB arena. Written as
+one test function per criterion, T18's nine installations stood up in parallel and the first CI run
+failed — not in `conformance/`, which passed, but in `internal/users`, where
+`TestTheTwoRefusalsCannotBeToldApartWithAStopwatch` measured **71.3 ms against 107.5 ms with a
+17.8 ms margin**, its samples alternating between 50 ms and 231 ms
+`[measurement: GitHub Actions, go test ./..., 2026-09-03]`. §8.1 chose that margin to survive
+*scheduling noise*, and enough of this package provisioning at once stops being noise. Criteria that
+do not disturb one another therefore **share an installation and stay separate subtests** — which
+took the package from nine fixtures to three and its own runtime from 8.8 s to 3.6 s
+`[measurement: go test -count=1 ./conformance, Go 1.27.0 darwin/arm64, 2026-09-03]`. Every later
+`conformance/` task inherits the rule: a new installation per criterion is a cost paid by a test in
+another package.
 
 ### 8.1 The timing equalisation, which is the one check ADR-0006's argument stands on
 

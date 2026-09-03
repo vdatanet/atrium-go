@@ -580,7 +580,7 @@ still owe.
 
 ## T18 — `conformance/`: an installation the fixture provisions, and the credential criteria
 
-- [ ] **Changes:** `conformance/` — one provisioning helper calling T7's subcommand before
+- [x] **Changes:** `conformance/` — one provisioning helper calling T7's subcommand before
   `startServer`, producing plan §8's fixture: an administrator with a password, a restricted
   non-administrator with a password, a hidden user, a disabled user, an account with no password and
   an account with a low lockout threshold; plus a second one-line fixture in which **every** user is
@@ -598,6 +598,30 @@ still owe.
   grammar table over the wire; the image and delivery classes are 006's and 008's and are **named in
   the test as not this feature's** rather than silently skipped. AC-5 — authenticate twice from one
   `DeviceId`, the first token then answering `401` and `/Sessions` showing one row.
+- **Amended 2026-09-03, on doing it:** three corrections this wording earned.
+  **The golden states *three* derived members, not two.** Plan §8's own amendment carries the count
+  and the reasoning: three of the body's six derived members are stated the way 001 T16 states one —
+  by stating the input — and `AccessToken`, `LastLoginDate` and `LastActivityDate` have no input to
+  state, so the golden names them at their positions and each value is asserted by a rule of its own
+  before it goes in. The dates' rule is a *window* and not only a shape, because .NET's minimum date
+  is a well-formed wire date and a build stamping it passes a shape check.
+  **The six precedence pairs are not the rows the unmeasured generalisation rests on**, and the two
+  sets are separated for that reason. Every pair whose two sides each carry a readable token passes
+  under an `if hasHeader { return }` implementation; the four rows that fail are the ones where the
+  first header is present and unreadable, and **only the first of those** — a `Bearer`
+  `Authorization` beside a readable `X-Emby-Authorization` — is a candidate undeclared difference,
+  because the reference's fallback is on the field being *absent* (T8's finding, plan §6.1). The
+  other three read from their own field on both servers.
+  **`/Sessions` showing one row is not an assertion about accumulation.** `sessions` carries
+  UNIQUE (client, device_id), so a build deriving a fresh identifier per login answers `500` at the
+  second authentication rather than growing a list — T7's rule about the wire's vocabulary, met from
+  the other side: the row count cannot see a state the store forbids. What it does assert is that the
+  surviving row is the replacement rather than the first login's left behind.
+  **And a fourth thing, which is a rule for T19–T21 rather than a correction: one installation per
+  criterion is too expensive to be free.** Nine of these fixtures in parallel failed CI in
+  `internal/users` rather than here, on the timing equalisation's margin; plan §8's amendment carries
+  the numbers. Criteria that do not disturb one another share an installation and stay separate
+  subtests.
 - **Spec reference:** AC-1, AC-2, AC-3, AC-5; §6; plan §8.
 
 ## T19 — `conformance/`: the user routes over the wire

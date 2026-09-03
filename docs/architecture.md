@@ -385,6 +385,22 @@ while proving nothing, so the fixture is required to produce bodies with members
 **Goldens are reviewed, never blindly regenerated.** An update flag exists; a diff in a golden file
 is a contract change and is read like one in review.
 
+**Amended 2026-09-03, at 002's T18, which recorded the first golden this rule could not hold still.**
+§2 says *"a clock the tests replace is what keeps a golden body stable between two runs"*, and that
+is true wherever a test can replace one. **`conformance/` cannot**: it starts the binary rather than
+building a server, so the clock, the randomness and everything else behind the process boundary are
+the operator's rather than the test's. 001 met no such value — its two derived fields were both
+stateable through an input, the identity by writing the file and the address by sending a `Host`
+header — and 002's authentication result carries three that are not: a minted access token and two
+wall-clock dates. So a golden in this directory may **state** such a member: the recorded file names
+it at the position it occupies, the test asserts the run's value against a rule of its own before
+substituting it, and every other byte is compared as before. The update flag records the *template*,
+so no run's token or timestamp ever reaches the file. **Stating is not blanking**, and the
+difference is the whole of why it is allowed: a test that deleted the member and compared what was
+left would agree with a body that had moved it, renamed it, or changed its JSON type. The rule this
+adds is that a stated member needs its own assertion — a shape alone is not one, because a constant
+satisfies a shape.
+
 **Two fixture worlds, because they answer different questions** — a scanning tree of paths and
 filler bytes, and a small media tree that ffmpeg really encodes into each container and codec the
 delivery tests need. Tests that reach the binaries are separated by a build tag, and the suite

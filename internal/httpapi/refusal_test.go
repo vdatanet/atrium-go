@@ -81,7 +81,10 @@ func (r rawResponse) values(name string) []string {
 // because two of the methods under test — an unknown token, and a HEAD the
 // client would rewrite the response of — do not survive a client that is
 // trying to be helpful.
-func send(t *testing.T, handler http.Handler, method, target string) rawResponse {
+//
+// headerLines are extra field lines, written verbatim after the Host, for a
+// test that has to send a credential (systeminfo_authenticated_test.go).
+func send(t *testing.T, handler http.Handler, method, target string, headerLines ...string) rawResponse {
 	t.Helper()
 
 	server := httptest.NewServer(handler)
@@ -94,7 +97,11 @@ func send(t *testing.T, handler http.Handler, method, target string) rawResponse
 	}
 	defer connection.Close()
 
-	request := fmt.Sprintf("%s %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", method, target, address)
+	extra := ""
+	for _, line := range headerLines {
+		extra += line + "\r\n"
+	}
+	request := fmt.Sprintf("%s %s HTTP/1.1\r\nHost: %s\r\n%sConnection: close\r\n\r\n", method, target, address, extra)
 	if _, err := io.WriteString(connection, request); err != nil {
 		t.Fatalf("writing %s %s: %v", method, target, err)
 	}

@@ -42,9 +42,39 @@ func (f fakeInstallations) MarkSetupComplete(context.Context, units.Time) error 
 // configured holds: the default name, and setup not finished.
 var freshInstallation = ports.Installation{Name: "atrium", SetupCompleted: false}
 
+// testPaths is the installation layout the handler-level tests report, stated
+// rather than derived from a temporary directory so that a body carrying seven
+// paths is a body a test can write down.
+var testPaths = system.PathsFor("/var/lib/atrium")
+
+// testHTTPPort is what these tests' server is pretending to listen on, and it
+// is deliberately not 8096: a handler that ignored the function it was given
+// and answered the default would pass against that number.
+const testHTTPPort = 34567
+
 func newSystemHandler(t *testing.T, installations ports.InstallationStore, addresses system.AddressConfig) *httpapi.SystemHandler {
 	t.Helper()
-	handler, err := httpapi.NewSystemHandler(testInstallationID, installations, addresses)
+	return newSystemHandlerFrom(t, httpapi.SystemHandlerConfig{
+		Installations: installations,
+		Addresses:     addresses,
+	})
+}
+
+// newSystemHandlerFrom builds a handler from a partly filled configuration,
+// supplying the members a test did not care about. It is what lets a test about
+// the authenticated route name only the authenticator.
+func newSystemHandlerFrom(t *testing.T, cfg httpapi.SystemHandlerConfig) *httpapi.SystemHandler {
+	t.Helper()
+	if cfg.InstallationID == "" {
+		cfg.InstallationID = testInstallationID
+	}
+	if cfg.Paths == (system.Paths{}) {
+		cfg.Paths = testPaths
+	}
+	if cfg.HTTPPort == nil {
+		cfg.HTTPPort = func() int { return testHTTPPort }
+	}
+	handler, err := httpapi.NewSystemHandler(cfg)
 	if err != nil {
 		t.Fatalf("building the system handler: %v", err)
 	}
@@ -236,11 +266,24 @@ func TestPublicInfoRefusesRatherThanInventingAnInstallation(t *testing.T) {
 func TestNewSystemHandlerRefusesWhatItCannotAnswerWith(t *testing.T) {
 	t.Parallel()
 
-	if _, err := httpapi.NewSystemHandler("", fakeInstallations{}, system.AddressConfig{}); err == nil {
+	port := func() int { return testHTTPPort }
+
+	if _, err := httpapi.NewSystemHandler(httpapi.SystemHandlerConfig{
+		Installations: fakeInstallations{}, HTTPPort: port,
+	}); err == nil {
 		t.Error("an empty installation identity was accepted")
 	}
-	if _, err := httpapi.NewSystemHandler(testInstallationID, nil, system.AddressConfig{}); err == nil {
+	if _, err := httpapi.NewSystemHandler(httpapi.SystemHandlerConfig{
+		InstallationID: testInstallationID, HTTPPort: port,
+	}); err == nil {
 		t.Error("a missing installation store was accepted")
+	}
+	// Without this one, WebSocketPortNumber would answer 0 on every request —
+	// a number that reads like a measurement and is not one.
+	if _, err := httpapi.NewSystemHandler(httpapi.SystemHandlerConfig{
+		InstallationID: testInstallationID, Installations: fakeInstallations{},
+	}); err == nil {
+		t.Error("a handler with no way to answer which port it is listening on was accepted")
 	}
 }
 
@@ -266,12 +309,13 @@ func TestRoutesRegistersOnTheSurfaceFilesOwnPattern(t *testing.T) {
 		t.Fatalf("walking the router: %v", err)
 	}
 
-	// The three rows 001 has registered so far, spelled as surface.yaml spells
-	// them. /System/Ping appears twice, on the two methods its two operations
-	// are named with — which is what a registration keyed by operation buys
-	// and what a registration keyed by path could not express (spec 3.3).
+	// All four rows of 001, spelled as surface.yaml spells them. /System/Ping
+	// appears twice, on the two methods its two operations are named with —
+	// which is what a registration keyed by operation buys and what a
+	// registration keyed by path could not express (spec 3.3).
 	for _, want := range []string{
 		"GET /System/Info/Public",
+		"GET /System/Info",
 		"GET /System/Ping",
 		"POST /System/Ping",
 	} {
@@ -279,8 +323,8 @@ func TestRoutesRegistersOnTheSurfaceFilesOwnPattern(t *testing.T) {
 			t.Errorf("the router does not serve %q; it serves %v", want, registered)
 		}
 	}
-	if len(registered) != 3 {
-		t.Errorf("the router serves %d routes, and 001 has registered three so far: %v", len(registered), registered)
+	if len(registered) != 4 {
+		t.Errorf("the router serves %d routes, and 001 has four: %v", len(registered), registered)
 	}
 }
 

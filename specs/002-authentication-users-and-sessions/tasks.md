@@ -62,7 +62,7 @@ still owe.
 
 ## T2 — The policy and the configuration, and the rule that a stored document decodes onto the reference's defaults
 
-- [ ] **Changes:** `internal/users` — `Policy` in the reference's declaration order, `Configuration`
+- [x] **Changes:** `internal/users` — `Policy` in the reference's declaration order, `Configuration`
   over spec §3.6's sixteen properties, and the constructors both decode over
   (`DefaultPolicy`, and the same rule for configuration). Declaration order is wire order, so these
   are Go structs and adding a property is a code change and not a migration (plan §4).

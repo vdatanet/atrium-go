@@ -37,11 +37,26 @@ func newDatabase(t *testing.T) *sql.DB {
 // TestOpenAppliesThePreciousLineageAndSeedsTheInstallation is the first clause
 // of T3's definition of done: a migration on an empty directory creates the row
 // with server_name = 'atrium' (spec 3.1).
+//
+// Amended 2026-09-03 by 002 T1, which adds a second precious migration. The
+// assertion read "want [1]" and was a literal that every later migration
+// invalidates; it now states the rule it always meant — a first start applies
+// the whole lineage, in order, from 1 — so that the next feature to file a
+// precious migration does not have to decide whether a red test here is its own
+// mistake.
 func TestOpenAppliesThePreciousLineageAndSeedsTheInstallation(t *testing.T) {
 	store := openForTest(t)
 
-	if applied := store.AppliedMigrations(Precious); !slices.Equal(applied, []int{1}) {
-		t.Errorf("a first start applied %v precious migrations, want [1]", applied)
+	lineage, err := loadLineage(migrationFiles, Precious)
+	if err != nil {
+		t.Fatalf("loading the precious lineage returned %v", err)
+	}
+	whole := make([]int, 0, len(lineage))
+	for _, m := range lineage {
+		whole = append(whole, m.version)
+	}
+	if applied := store.AppliedMigrations(Precious); !slices.Equal(applied, whole) {
+		t.Errorf("a first start applied %v precious migrations, want the whole lineage %v", applied, whole)
 	}
 
 	var (
@@ -100,12 +115,23 @@ func TestASecondStartAppliesNothing(t *testing.T) {
 // without touching the precious one, which is only possible if the two versions
 // are two numbers.
 //
-// 001 owns no derived table, so the derived half is at 0 while the precious
-// half is at 1 — which is exactly the state that could not be represented by a
-// single lineage.
+// Neither 001 nor 002 owns a derived table, so the derived half is at 0 while
+// the precious half is at the end of its lineage — which is exactly the state
+// that could not be represented by a single lineage.
+//
+// Amended 2026-09-03 by 002 T1. The precious half was asserted as 1; it is now
+// asserted as the length of the lineage this build ships, for the reason above
+// TestOpenAppliesThePreciousLineageAndSeedsTheInstallation. The derived half
+// stays a literal 0, because that one is a claim about what these two features
+// own rather than about how many migrations they wrote.
 func TestTheHalvesCarrySeparateSchemaVersions(t *testing.T) {
 	store := openForTest(t)
 	ctx := context.Background()
+
+	lineage, err := loadLineage(migrationFiles, Precious)
+	if err != nil {
+		t.Fatalf("loading the precious lineage returned %v", err)
+	}
 
 	precious, err := store.SchemaVersion(ctx, Precious)
 	if err != nil {
@@ -116,11 +142,11 @@ func TestTheHalvesCarrySeparateSchemaVersions(t *testing.T) {
 		t.Fatalf("SchemaVersion(derived) returned %v", err)
 	}
 
-	if precious != 1 {
-		t.Errorf("the precious half is at version %d, want 1", precious)
+	if precious != len(lineage) {
+		t.Errorf("the precious half is at version %d, want %d — the whole lineage", precious, len(lineage))
 	}
 	if derived != 0 {
-		t.Errorf("the derived half is at version %d, want 0 — 001 scans nothing (plan 4)", derived)
+		t.Errorf("the derived half is at version %d, want 0 — neither 001 nor 002 scans anything", derived)
 	}
 
 	// And they are separate rows rather than one number read twice.

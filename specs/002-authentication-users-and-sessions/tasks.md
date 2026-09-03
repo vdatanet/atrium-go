@@ -42,7 +42,7 @@ still owe.
 
 ## T1 — `ports.Clock`, and the precious migration this feature owns
 
-- [ ] **Changes:** `internal/ports` — `Clock`, which [001 plan §5](../001-server-identity-and-discovery/plan.md)
+- [x] **Changes:** `internal/ports` — `Clock`, which [001 plan §5](../001-server-identity-and-discovery/plan.md)
   declared and 001 never wrote; this feature is its first caller (plan §6.8).
   `internal/store/sqlite` — `0002_users_and_sessions.sql` in the **precious** lineage, creating the
   four tables of [plan §4](plan.md#4-data-model) with their keys, their uniqueness and their foreign

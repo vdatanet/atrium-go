@@ -73,3 +73,27 @@ type InstallationStore interface {
 	// value in a golden body that no test could hold still.
 	MarkSetupComplete(ctx context.Context, at units.Time) error
 }
+
+// Clock is the wall clock, as a port.
+//
+// 001's plan 5 declared it and 001 never wrote it, because 001 had no caller:
+// nothing it served recorded an instant. 002 is the first — provisioning the
+// first account records when setup completed (002 plan 6.8), a login stamps
+// last_login_at, and a session carries three dates of its own.
+//
+// It is an interface rather than a call to time.Now for the reason
+// architecture 2 gives: "a clock the tests replace is what keeps a golden body
+// stable between two runs". Every date this server sends is compared byte for
+// byte at L3, and wall-clock is one of the allowlist's four declared derivation
+// classes — so the differences a clock creates are enumerated, and a value that
+// moved because a test could not hold it still would be a difference nobody
+// declared.
+//
+// It returns units.Time and not time.Time, which is the same rule
+// InstallationStore's MarkSetupComplete follows: a units.Time is already UTC
+// and already rounded to a whole tick, so no caller can hold an instant the
+// wire cannot spell (behaviours 1.2, 1.3).
+type Clock interface {
+	// Now is this instant.
+	Now() units.Time
+}

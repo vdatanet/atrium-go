@@ -230,6 +230,19 @@ would defend against precomputation over a space nobody can precompute, while co
 lookup that makes a per-request check one indexed read. This is invisible on the wire — no response
 carries a stored token — so it is an engineering choice in ADR-0006's own sense and not a delta.
 
+**Amended 2026-09-03, by T1, which wrote the migration.** The tables above list columns, and two
+things a schema also carries were left implicit. Both are now in
+`0002_users_and_sessions.sql` and both are tested:
+
+- **`sessions` carries `UNIQUE (client, device_id)`.** *"One row per `(Client, DeviceId)`"* was
+  stated here in prose and enforced only by the primary key, because §6.5 derives `id` from exactly
+  that pair. That is true until the derivation changes, and the day it does the symptom is two live
+  sessions for one client on one device and an authentication that replaces neither. The constraint
+  is redundant today on purpose: it is the one thing in the schema that notices.
+- **`access_tokens` carries an index on `(user_id, device_id)`.** §6.5's replacement rule is the
+  only query against that table that does not go by its primary key, and without the index it is a
+  scan of every live token on the installation.
+
 ### Two rules that decide what a later reader will otherwise get wrong
 
 **The two document columns are serialised models, not schemas.** `policy_document` and

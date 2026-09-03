@@ -3,9 +3,9 @@ feature: 002-authentication-users-and-sessions
 title: Authentication, users and sessions
 status: Implemented
 created: 2026-08-26
-updated: 2026-09-01
+updated: 2026-09-03
 accepted: 2026-08-26
-amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid. 2026-09-03 at 001's closing audit (001 T21) - section 5 gains AC-14, the half of 001 AC-5 that needs a credential only this feature can issue, together with the two assertions 001 parked at a lower level for the same reason
+amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid. 2026-09-03 at 001's closing audit (001 T21) - section 5 gains AC-14, the half of 001 AC-5 that needs a credential only this feature can issue, together with the two assertions 001 parked at a lower level for the same reason. 2026-09-03 by this feature's own plan, in four places: section 3.9 and a section 4 row are new, because nothing in v1 completes setup and AC-14 would otherwise be met by a request carrying no token at all; section 3.5 records that two of the twenty-eight unenforced policy flags are enforced by the reference at authentication itself, so "they all gate features v1 does not have" holds for twenty-six; section 5's two carried conditions are corrected, because neither "when this feature can complete setup over HTTP" nor "when the rename endpoint lands" can ever be met - no v1 row does either; and OQ-6 records what the reference's source says about the -1 sentinel while staying open, because the running server has not been asked
 depends_on: [001]
 ---
 
@@ -272,6 +272,19 @@ accepted for v1 because the unenforced flags all gate features v1 does not have 
 remote control) — enforcing "you may not sync" on a server that never syncs is not observable. Any
 flag whose feature arrives must be enforced in the same change.
 
+> **Amended 2026-09-03, while writing this feature's plan: two of the 28 are not unobservable, and
+> the sentence above is not true of them.** `EnableRemoteAccess` and `AccessSchedules` are enforced
+> by the reference **at authentication itself** — a user without remote access authenticating from
+> outside the local network, and a user outside their permitted schedule, are each refused there
+> `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:595-611 @ v10.11.11]`. The feature
+> they gate is not Live TV or sync; it is logging in, which v1 has. So v1 admits two logins the
+> reference refuses, and *"all gate features v1 does not have"* holds for 26 of the 28. The
+> reference's own refusals here are unmeasured — each needs an account restricted in that way and a
+> caller outside the local network — so this is recorded rather than acted on, and it is
+> [U-15](../../docs/compatibility/reference-target.md) in the register of measurements this project
+> owes. [behaviours §5](../../docs/compatibility/behaviours.md)'s accepted-gaps row states the same
+> thing about the same 28 and is owed the same correction by whoever owns it.
+
 **The three transcoding flags moved into the enforced set on 2026-08-27**, when transcoding entered
 v1 ([roadmap](../../docs/roadmap.md#in-scope)). That is this rule working as written rather than an
 edit to it: the feature arrived, so the flags that restrict it stopped being unobservable, and a
@@ -383,11 +396,40 @@ verbatim.
 > measured, v1 does not expire tokens on inactivity at all — the safe direction, since a token that
 > outlives the reference's is invisible to a client, whereas one that dies sooner is not.
 
+### 3.9 An installation becomes set up when it is given its first account
+
+**Setup completion is observable and nothing in v1 makes it happen**, which is why it is stated here
+rather than left implicit. [001 §3.1](../001-server-identity-and-discovery/spec.md#31-get-systeminfopublic--getpublicsysteminfo)
+reports `StartupWizardCompleted` on the response every client enters the API through, and
+[001 §3.2](../001-server-identity-and-discovery/spec.md#32-get-systeminfo--getsysteminfo) permits
+`GET /System/Info` to **any** caller while setup is outstanding, whatever the request carried. So on
+an installation that can never finish setting up, that route admits every request for ever, and the
+field is `false` for ever.
+
+**An installation is set up from the moment it holds one account**, recorded once, at the instant the
+first account is created; creating a second does not move it, and removing every account does not
+undo it. The reference completes setup through an operation this surface does not include and no
+named consumer calls `[source: Jellyfin.Api/Controllers/StartupController.cs:41-46 @ v10.11.11]`, so
+v1 reaches the same observable state by the only event it has.
+
+Two things this fixes, and both are why it is a behaviour rather than an implementation note:
+
+- **AC-14 would otherwise be met by a request carrying nothing.** A token this feature issues is
+  admitted to `GET /System/Info` — and so is no token at all, while setup is outstanding. The
+  criterion is about the credential, so the state it is asserted in has to be one where the
+  credential is what decides.
+- **A reference stood up for a differential run has completed its own setup**, and answers `true`.
+  An Atrium that can only answer `false` is a difference on an L3 response, on a boolean, that no
+  feature before this one could have closed.
+
+*(Added 2026-09-03, while writing this feature's plan.)*
+
 ## 4. Data the feature owns
 
 | State | Observable as | Lifetime |
 |---|---|---|
 | User accounts | `/Users/*` responses | Until removed by an operator |
+| Setup completion | `StartupWizardCompleted` in 001 §3.1 and §3.2, and whether `GET /System/Info` admits an unauthenticated caller | Recorded once, at the first account (§3.9) |
 | Password verifier | `HasPassword`, and whether authentication succeeds | With the account |
 | Failed-attempt counter | `InvalidLoginAttemptCount`; lockout behaviour | Reset on success |
 | Access tokens | Whether a request is `401` | Until replaced, evicted or revoked |
@@ -464,11 +506,25 @@ feature:
 that this feature meets them as work rather than as a surprise. 001's `401` on `/System/Info` is
 asserted at the HTTP boundary in `internal/httpapi` rather than in `conformance/`, because the
 refusal needs an installation whose setup is **complete** and 001 serves no route that completes
-one — **when this feature can complete setup over HTTP, that assertion moves to `conformance/`,
-where it belongs**. And 001's `/System/Ping` discrimination — that the body is the product name and
-not the operator's friendly name — is proven at the wire against a server whose friendly name is
-still the default, because 001 has no route that renames one; **when the rename endpoint lands,
-send it in `TestPingAnswersTheProductNameAndNotThisServersFriendlyName` and drop the caveat.**
+one — ~~when this feature can complete setup over HTTP, that assertion moves to `conformance/`,
+where it belongs~~ **when an installation whose setup is complete can be stood up, that assertion
+moves to `conformance/`, where it belongs**. And 001's `/System/Ping` discrimination — that the body
+is the product name and not the operator's friendly name — is proven at the wire against a server
+whose friendly name is still the default, because 001 has no route that renames one; ~~when the
+rename endpoint lands, send it in `TestPingAnswersTheProductNameAndNotThisServersFriendlyName` and
+drop the caveat~~ **the caveat drops when an operator can name a server and a fixture can therefore
+rename one; it does not drop when "the rename endpoint lands", because no such endpoint is in this
+surface.**
+
+> **Both conditions amended 2026-09-03, while writing this feature's plan, because neither could
+> be met as written.** §3.9 completes setup and does not do it over HTTP, so the first note's
+> precondition never arrives while the thing it was asking for — an installation in that state,
+> reachable from a black-box test — does. And the reference renames a server at an operation this
+> surface does not include `[source: Jellyfin.Api/Controllers/StartupController.cs:74-78 @ v10.11.11]`,
+> so *"when the rename endpoint lands"* is a condition **no v1 feature can satisfy**, and a note
+> waiting on it would outlive the project. What can satisfy it is the friendly name becoming
+> something an operator sets; that is 001's datum and remains 001's to decide, and the caveat stands
+> until somebody does.
 
 ## 6. Conformance
 
@@ -490,6 +546,16 @@ send it in `TestPingAnswersTheProductNameAndNotThisServersFriendlyName` and drop
 | OQ-4 | Are `HasConfiguredPassword` and `HasConfiguredEasyPassword` read by any client? | Nothing; honest values are sent | Differential harness (010) |
 | OQ-6 | What `LoginAttemptsBeforeLockout = -1` means. It is what the reference sends, so it is what most accounts carry, and it is a sentinel rather than a threshold | §3.3's lockout rule, which reads it as a count | A probe against a throwaway account, alongside OQ-5 |
 | OQ-5 | The refusals a probe will not send at a real installation: an enabled account given a **wrong password**, an account **locked out** by failed attempts, and a **live token whose user was disabled** after it was issued | The two rows §3.3 states as v1's own decision, and the `403` v1 answers a locked-out account with | `tools/probe_auth_mechanisms.py` against a **throwaway enabled, non-administrator** account somebody is willing to lock |
+
+> **OQ-6 gained an answer from the reference's own source on 2026-09-03, and stays open anyway.**
+> `LoginAttemptsBeforeLockout` is a three-way switch and not a count: `-1` means *never lock*, `0`
+> means *three*, and any other value is the number
+> `[source: Jellyfin.Server.Implementations/Users/UserManager.cs:816-821 @ v10.11.11]`. Since `-1` is
+> what the reference sends for a default account, **the default account never locks out at all**.
+> The row is not moved to *Resolved*: [AGENTS.md §1.3](../../AGENTS.md) makes the running server the
+> tie-breaker and none has been asked, and the probe that answers OQ-5 answers this in the same run.
+> It is recorded here because a reader who took OQ-6 as *"nobody knows"* would compare a failure
+> count against `-1` and lock every account either never or immediately.
 
 > **Narrowed on 2026-09-01.** This row also held a **`403` for insufficient permission** and the **shape** of both `403`s, on the premise that *"the account available to measure with is an administrator, and an administrator lacks no permission"*. That premise stopped being true: three probes now create and delete throwaway non-administrators, and the shape is measured rather than analogised. A controller's own refusal is `text/plain` with no charset and 25 bytes; an authorization **policy**'s refusal has no body and no content type `[probe: tools/probe_playlist_visibility.py, Jellyfin 10.11.11, 2026-08-31]`. So the sentence *"which v1 sends empty by analogy with the measured empty `401`"* described code that no longer exists — `ForbiddenError` has answered the 25 bytes since 009 T2, and the empty shape is a second class. What remains open is the three refusals above, which still cost somebody's account a lockout counter to measure; [behaviours §1.11](../../docs/compatibility/behaviours.md#111-there-are-four-error-shapes-not-one) carries the shapes that were settled.
 

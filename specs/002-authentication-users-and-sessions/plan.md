@@ -1685,6 +1685,26 @@ margin is what makes it safe to run unconditionally on shared hardware: the gap 
 scheduling noise, and the gap it must catch is a whole derivation.
 *(Added 2026-09-03, at T6.)*
 
+**Amended 2026-09-03 at [T23](tasks.md#t23--the-closing-audit): the wall-clock half failed on CI, on
+a build where both paths hashed exactly once, and the fix is the *statistic* rather than the
+margin.** The paragraph above says the gap the check must survive is *"scheduling noise"*. On a
+shared runner that is the wrong model: a runner has **neighbours**, which start and stop, so its
+sample is bimodal rather than noisy around a mean. The failing run shows it plainly — six samples of
+each kind around 250 ms and three around 85 ms, medians of 245 ms and 193 ms, a 52 ms difference
+against a 48 ms margin `[measurement: GitHub Actions, go test ./..., 2026-09-03]`. Two medians drawn
+from a bimodal sample can land in different modes. The samples were already **interleaved**, and
+interleaving only cancels a monotone drift.
+
+The statistic is now the median of the **per-pair differences**, the pair being one refusal of each
+kind measured microseconds apart. On the same failing data that median is **17 ms** against the same
+48 ms margin. It is not a weakening, which is the half that matters and the half a reviewer should
+check: a path that stopped hashing differs by a whole derivation in *every* pair, so the median of
+the differences is a whole derivation rather than something an average could dilute. **Both of T6's
+mutations were re-run against the paired form and both still fail it** — the early return that
+skips the decoy, and the decoy derived at the previous constants. Widening the margin would have
+weakened the check; pairing does not touch it, and the margin is unchanged at a quarter of a
+derivation as measured on the machine running the test.
+
 ### 8.2 What this feature owes 001, and how each half is discharged
 
 001's closing audit put **AC-14** in this specification and rode two smaller notes on it.

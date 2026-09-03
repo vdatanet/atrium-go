@@ -125,11 +125,30 @@ func TestAnUnknownUsernameDerivesOnceWithTheCurrentConstants(t *testing.T) {
 //
 // # How it is measured
 //
-// Nine of each, **interleaved**. Interleaving matters more than the count: a
-// runner whose clock ramps up, a garbage collection, or a neighbour process
-// starting halfway through would land entirely on the second group if the two
-// were timed in blocks, and would show up as a difference that is not a
-// difference. Alternating spreads any such drift across both medians.
+// Nine **pairs**, each pair one refusal of each kind, run microseconds apart —
+// and the statistic is the median of the **per-pair differences**, not the
+// difference of the two medians.
+//
+// That is a correction, made at 002's closing audit, and it is worth the
+// paragraph because the first version failed on CI for a reason that was not a
+// regression. Interleaving was already here; what was not was pairing the
+// samples when they were compared. Interleaving only cancels a *monotone*
+// drift. A shared runner does not drift monotonically — it has neighbours that
+// start and stop — and the run that failed shows exactly that: six samples of
+// each kind around 250 ms and three around 85 ms, in one run
+// `[measurement: GitHub Actions, go test ./..., 2026-09-03]`. Two medians drawn
+// from a bimodal sample can land in different modes, and these did: 245 ms
+// against 193 ms, a 52 ms gap with a 48 ms margin, on a build where both paths
+// hashed exactly once.
+//
+// Pairing removes it, because the two members of a pair see the same machine a
+// few hundred microseconds apart. On that same failing run the median pair
+// difference is **17 ms** against the same 48 ms margin. **And it is not a
+// weaker check, which is the half that matters**: a build where one path
+// stopped hashing differs by a whole derivation in *every* pair, so the median
+// of the differences is a whole derivation rather than being averaged away.
+// Widening the margin would have weakened the assertion; pairing does not
+// touch it.
 //
 // One authentication of each kind is run and discarded first. The first
 // Argon2id derivation in a process pays for faulting in 64 MiB that no
@@ -197,20 +216,30 @@ func TestTheTwoRefusalsCannotBeToldApartWithAStopwatch(t *testing.T) {
 		}
 	})
 
-	unknownMedian := median(unknownUsername)
-	wrongMedian := median(wrongPassword)
-	difference := unknownMedian - wrongMedian
+	// The paired statistic. Each pair was measured microseconds apart, so a
+	// neighbour process that arrives mid-run moves both members of a pair
+	// together and cancels; a path that stopped hashing moves one member of
+	// every pair by a whole derivation and does not.
+	pairs := make([]time.Duration, 0, timingSamples)
+	for i := range timingSamples {
+		pairs = append(pairs, unknownUsername[i]-wrongPassword[i])
+	}
+	difference := median(pairs)
 	if difference < 0 {
 		difference = -difference
 	}
+
+	unknownMedian := median(unknownUsername)
+	wrongMedian := median(wrongPassword)
 	margin := min(unknownMedian, wrongMedian) / 4
 
 	t.Logf("unknown username: median %v over %d, samples %v", unknownMedian, timingSamples, unknownUsername)
 	t.Logf("wrong password:   median %v over %d, samples %v", wrongMedian, timingSamples, wrongPassword)
-	t.Logf("difference %v, margin %v (a quarter of one derivation as measured here)", difference, margin)
+	t.Logf("per-pair differences %v", pairs)
+	t.Logf("median pair difference %v, margin %v (a quarter of one derivation as measured here)", difference, margin)
 
 	if difference >= margin {
-		t.Errorf("the two 401 refusals differ by %v, which is more than %v — a quarter of one "+
+		t.Errorf("the two 401 refusals differ by %v per pair, which is more than %v — a quarter of one "+
 			"derivation as measured on this machine (unknown username %v, wrong password %v). "+
 			"spec §3.3 makes these two answers byte-identical and ADR-0006 makes them cost the "+
 			"same; a gap of a whole derivation means one of the two paths is no longer hashing, "+

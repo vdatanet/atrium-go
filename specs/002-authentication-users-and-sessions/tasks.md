@@ -1032,6 +1032,26 @@ mutation — a `PresentedToken` returning a fabricated token for an identificati
 resolves to no session and is a `401` for the wrong reason — and it is why the §3.2 row above sends
 its request from a device that *has* one.
 
+**One thing this audit broke and had to fix, and it is the risk plan §9 named by name.** The first
+push of this change failed CI on `TestTheTwoRefusalsCannotBeToldApartWithAStopwatch` — ADR-0006's
+only evidence — **on a build where both paths hashed exactly once**. Plan §9 predicted it (*"a flaky
+test somebody deletes, taking ADR-0006's only check with it"*) and §8.1 explained the margin as
+surviving *"scheduling noise"*, which is the wrong model for a shared runner: a runner has
+**neighbours**, so its sample is bimodal rather than noisy around a mean. Six samples of each kind
+landed around 250 ms and three around 85 ms, and the two medians landed in different modes — 245 ms
+against 193 ms, a 52 ms difference against a 48 ms margin
+`[measurement: GitHub Actions, go test ./..., 2026-09-03]`. The samples were already interleaved;
+interleaving only cancels a *monotone* drift.
+
+**The fix is the statistic, not the margin**, and the distinction is the whole point: the statistic
+is now the median of the **per-pair differences**, a pair being one refusal of each kind measured
+microseconds apart. On the same failing data that median is **17 ms** against the same 48 ms margin.
+It is not a weakening — a path that stopped hashing differs by a whole derivation in *every* pair, so
+pairing makes that gap more visible rather than less — and **both of T6's mutations were re-run
+against the paired form and both still fail it**. Widening the margin, which is what a hurried fix
+would have done, would have weakened the one check ADR-0006's argument stands on. Plan §8.1 carries
+the amendment.
+
 #### Pass (b) — every paragraph of spec §3
 
 Tested, unless the row says otherwise. *"Tested"* means at least one named test fails when the

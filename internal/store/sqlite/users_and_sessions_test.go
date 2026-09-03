@@ -19,17 +19,21 @@ const (
 	testSessionID = "7d793037a0760186574b0282f2f435e7"
 )
 
-// insertUser writes one account directly, without going through a store method,
-// because T1 ships no store method: this task owns the schema and the lineage
-// it is filed under, and T4 owns the readers and writers. What is under test is
-// what the database refuses, so the SQL is the subject and not the detour.
+// insertUser writes one account directly, without going through a store method.
+//
+// T1 wrote it because T1 shipped no store method. It survives T4 because T4
+// still ships none that creates an account: 002 plan 5's UserStore reads
+// accounts, replaces their credentials and configurations and records what a
+// login did to them, and nothing in it makes one — provisioning is T7's, and
+// the port method it needs is T7's to add. So this remains the only way a test
+// builds a row, which is what the handoff asked for: not a second way, the
+// only one.
+//
+// It is now a thin call onto insertUserWithPolicy, so that the empty document
+// is one choice made in one place rather than a literal repeated in two files.
 func insertUser(t *testing.T, db *sql.DB, id, username, folded string) error {
 	t.Helper()
-	_, err := db.Exec(
-		`INSERT INTO users (id, username, username_folded, policy_document, configuration_document,
-		                    invalid_login_attempt_count, last_login_at, last_activity_at)
-		 VALUES (?, ?, ?, '{}', '{}', 0, NULL, NULL)`, id, username, folded)
-	return err
+	return insertUserWithPolicy(t, db, id, username, folded, []byte("{}"), 0)
 }
 
 // insertSession writes one session with every date at the zero tick.

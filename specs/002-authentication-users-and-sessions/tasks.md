@@ -103,7 +103,7 @@ still owe.
 
 ## T4 — The two store ports, and their SQLite half
 
-- [ ] **Changes:** `internal/ports` — `UserStore` and `SessionStore` as [plan §5](plan.md#5-contracts)
+- [x] **Changes:** `internal/ports` — `UserStore` and `SessionStore` as [plan §5](plan.md#5-contracts)
   writes them. `internal/store/sqlite` — the readers and writers behind both.
 - **Note the plan left one thing open and this task takes it.** §5 writes both interfaces in terms
   of `User`, `Credential`, `Session` and `LoginOutcome` without saying where those types live, and

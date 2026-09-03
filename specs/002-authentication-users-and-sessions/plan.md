@@ -316,6 +316,55 @@ SessionStore interface {
 *"set the disabled flag"* and *"stamp the login date"*, because §6.7's rule is a single transition
 and four callers would be four chances to perform three quarters of it.
 
+**Amended 2026-09-03, by T4, which wrote both ports.** ~~The block above writes both interfaces in
+terms of `User`, `Credential`, `Session` and `LoginOutcome` without saying where those four types
+live.~~ They live in **`internal/ports`**, and the task list said in terms that this was the plan's
+open question and T4's to close. What forced the answer:
+
+- **The alternative inverts the diagram.** A method returning `users.User` makes `ports` import a
+  domain package, and [architecture §2](../../docs/architecture.md#2-layers-and-the-direction-of-dependency)
+  puts `ports` at the bottom: it may import *"nothing of ours"* but the unit types, which its
+  2026-09-03 amendment admits as the one exception because they are a leaf that imports nothing
+  itself. `internal/users` is not a leaf. The rule that row is really stating — a port imports
+  nothing that can reach a request, a status code or a store — is the same rule, and this is not a
+  deviation from it, so no ADR is owed.
+- **It would have been two domain packages, not one.** §3 splits `users` from `sessions`
+  deliberately, and a single `ports` file naming both would re-join in the lowest layer exactly what
+  the domain took care to separate — while making `sessions` reachable from every importer of the
+  account store.
+- **The cost is real and is the honest shape.** These are store records, so the policy and the
+  configuration cross the boundary as **the bytes of their stored documents** rather than as
+  `users.Policy` and `users.Configuration`. That follows §4 and §6.6 rather than working around
+  them: a stored document decodes onto the reference's defaults and never onto Go's zero value, and
+  `InvalidLoginAttemptCount` is overlaid from its own column afterwards. A port that handed the
+  domain an already-decoded policy would have performed both rules inside the store, where the
+  reason for them is invisible.
+- **The store may still import `internal/users`, and does, in exactly one place.** The store is
+  outward of `ports`, not inward of it, so the arrow is undisturbed. `RecordLoginOutcome`'s lockout
+  is the caller: T1 shipped **no `is_disabled` column** — §4 keeps the flag in `policy_document` —
+  so setting it is a read, a `DecodePolicy`, a change and an encode, inside the same transaction as
+  the counter.
+
+Three consequences of writing it that this section did not say and now does:
+
+- **`LoginOutcome`'s zero value is not an outcome.** It is `LoginFailed`, `LoginSucceeded`,
+  `LoginLockedOut` and an invalid zero that is refused. There is no safe default here — defaulting
+  to a failure counts an attempt nobody made, defaulting to a success clears a lockout — which is
+  the *opposite* decision from `Authentication{}` two blocks below, and for the opposite reason:
+  there, the zero value is the safe answer and exists so that an unwired authenticator admits
+  nobody. **Which failure reaches the threshold stays the domain's**, because
+  `LoginAttemptsBeforeLockout` is §6.7's three-way sentinel; the store applies the transition it is
+  handed.
+- **`SessionByTokenDigest`'s second return value is the *token's* user, not the session's.** §6.5
+  already argues that the two differ — a session is keyed on `(Client, DeviceId)` and names whoever
+  authenticated there last, a token on `(user, device)` — so two people sharing one client on one
+  device hold two live tokens against one session row. A caller resolved from the session's user
+  would be whoever logged in most recently, on somebody else's account, with no error anywhere.
+  That is why this method returns two values, and this is where it is written down.
+- **Neither interface creates an account, and T4 did not invent one.** Provisioning is §6.9's and
+  T7's, so the port method that writes a new `users` row is T7's to add and to amend this section
+  with. Until it lands, the only thing that builds a `users` row is the test helper T1 wrote.
+
 ```
 // internal/httpapi — the port 001 declared, filled
 Access int  // AccessUnauthenticated | AccessGranted | AccessForbidden

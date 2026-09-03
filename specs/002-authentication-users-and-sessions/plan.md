@@ -1234,6 +1234,62 @@ none. Spec §3.8 conditions `PlayState` on something playing and is followed; th
 stated rather than accepted silently, and it is a register row 010's run would raise on this
 feature's one L3 body.
 
+**Amended 2026-09-03, by T16, which served both routes. Five things this section left open had to
+be decided, and three of them are findings.**
+
+- **`Capabilities` is declared here after all, and it is a raw document rather than a model.** T12
+  left the member to *"the task that serves `POST /Sessions/Capabilities/Full`"*; this is that task.
+  It is `*json.RawMessage`, first in the model because the reference declares it third behind two
+  members v1 does not send `[source: MediaBrowser.Model/Dto/SessionInfoDto.cs:17-29 @ v10.11.11]`,
+  and **absent** rather than null until something is posted — the reference's constructor
+  initialises `AdditionalUsers`, `PlayState` and both queues and leaves this one unset
+  `[source: MediaBrowser.Controller/Session/SessionInfo.cs:39-49 @ v10.11.11]`, and behaviours §1.7
+  omits a null. A declared struct is what *drops* an unknown property, which is precisely what
+  behaviours §5.9 says this server must not do, so the model this route reads (`clientCapabilities`,
+  two members) is a **decode target and never the store's shape**.
+- **The camelCase profile cannot rename what this server never parsed, and that is a second face of
+  the same divergence.** `internal/wire` renames property names by walking the document beside the
+  value it was encoded from, and a `json.Marshaler` takes its subtree out of that walk (001 plan
+  §10). So a posted declaration's keys travel exactly as the client wrote them under **both**
+  profiles, where the reference — which holds a real DTO here — would convert them under
+  `profile="CamelCase"`. It is ⚠️ **UNVERIFIED**, no observed client both negotiates camelCase and
+  posts capabilities, and **the register at T23 is owed the row**. The alternative is a declared
+  model, which is behaviours §5.9's own closing mechanism and a bigger change than this observation
+  justifies.
+- **The `id` query parameter is ignored, which is U-14's shape a second time.** The reference
+  declares `[FromQuery] string? id` and writes the declaration into the session it names, falling
+  back to the caller's own only when it is absent or blank
+  `[source: Jellyfin.Api/Controllers/SessionController.cs:380-389 @ v10.11.11]`. Spec §3.8 names no
+  parameter on this route and behaviours §1.12 ignores an unrecognised query value, so this route
+  reads no query at all and a request naming somebody else's session writes to its **own** — a
+  silent write to the wrong row, exactly the class U-14 already costs `POST /Users/Configuration`.
+  It is asserted on **both** rows as a divergence test rather than recorded as a comment, and it is
+  also why this route contributes no entry to `QuerySpellings`: a name nothing binds is a name
+  nothing should fold.
+- **The all-zero `controllableByUserId` is the caller's own and not nobody's.** The reference treats
+  an empty `Guid` here exactly as it treats an absent one and falls back to the authenticated user
+  before the administrator check runs
+  `[source: Jellyfin.Api/Helpers/RequestHelpers.cs:67-85 @ v10.11.11]`. Without that substitution it
+  would be *"anybody else"* and answered `403` — a refusal for a request the reference serves, which
+  is behaviours §3.0.3's dangerous direction — and it is **not** the same request as the absent one,
+  which does not take the controllable path at all. This is a fourth answer on a parameter spec
+  §3.8's table gives three, and it is the same shape T14 found on `GET /Users/{userId}`.
+- **`activeWithinSeconds` is bound at Go's `int` where the reference's is `Int32`**
+  `[source: Jellyfin.Api/Controllers/SessionController.cs:58 @ v10.11.11]`, so a value above
+  2147483647 binds here and fails the reference's binder. Accepting more than the reference is the
+  safe direction — no request that succeeds there meets a refusal here — and narrowing at the edge
+  would make T9's saturating window unreachable from the wire, which is the one arithmetic this
+  route can get wrong. Asserted as a divergence test; **the register is owed the row**.
+
+**And one thing this section's own wording made easy to get wrong, recorded because a test hid it
+first.** *"`LastActivityDate` advances on every authenticated request"* means the caller's **own**
+session is stamped by the very request that reads the list, so an `activeWithinSeconds` window
+measured over a fixture the restricted seat has already sent a request from is a window over two
+recent rows. The exclusion row is therefore measured from the administrator's seat, against a
+session no request in that test has touched — and it has a fixture of its own rather than a row in
+the parameter matrix, because an earlier row from the other seat silently turned the assertion into
+*"both sessions are recent"*.
+
 ## 7. Failure handling
 
 Every refusal in this feature, with the shape and where it comes from. The first three shapes are
@@ -1355,6 +1411,32 @@ can be stored.**
 - **The credential is read before the body is bound**, which is T14's order on this route's own two
   refusals and the same reading of 009 §3.8, 2026-09-01. Asserted for the reason T14 asserts it: no
   claim about either refusal alone can see an order.
+
+**Amended 2026-09-03, by T16, which served spec §3.8's two routes. The table gives them two refusals
+between them — the `403` and the two bound-parameter `400`s — and they have four.**
+
+- **A body `POST /Sessions/Capabilities/Full` cannot read is the validation `400`, keyed `"$"` and
+  `capabilities`.** Spec §3.8 names `204` alone on that route, so this is the login route's rule
+  applied to a third route rather than a measurement of this one: the reference's parameter is
+  `[FromBody, Required] ClientCapabilitiesDto`
+  `[source: Jellyfin.Api/Controllers/SessionController.cs:380-382 @ v10.11.11]`, and the action
+  parameter's own name is `capabilities` where the login route's is `request` and the configuration
+  route's is `userConfig` — three routes, three names, none guessable from another. **The reason
+  this route cannot skip the check is stronger than the other two's**: the posted document is stored
+  whole and echoed into every later `/Sessions` body, so storing bytes that are not a document would
+  put an unparseable subtree in a `200` nobody can decode. Every JSON value that is not an object
+  is refused, `null` included, which is the reference's binder.
+- **The credential is read before the body is bound, on that route too**, and the parameters of
+  `GET /Sessions` are bound **before** its `403`. The second is the more useful half: a
+  `controllableByUserId` that is not an identifier is the binder's `400` before it is anybody's
+  refusal, because the reference binds an action's parameters before the action runs. Both are one
+  request each and both are asserted, for the reason T14 gives — no claim about either refusal alone
+  can see an order.
+- **The `403` is byte-compared against T12's golden, so six responses now stand on one file.** It is
+  the same twenty-five bytes as spec §3.3's four refusals and `GET /Users/{userId}`'s empty-identifier
+  `400`; the status and the media type are measured
+  `[probe: tools/probe_session_filters.py, Jellyfin 10.11.11, 2026-08-29]` and the bytes are
+  register **U-18**, which is the reason to assert them rather than assume them.
 
 ## 8. Testing strategy
 

@@ -491,7 +491,7 @@ still owe.
 
 ## T16 — `POST /Sessions/Capabilities/Full` and `GET /Sessions`
 
-- [ ] **Changes:** `internal/httpapi` — the capabilities handler, storing the posted document
+- [x] **Changes:** `internal/httpapi` — the capabilities handler, storing the posted document
   **whole**; the `/Sessions` handler over T9's `Visible`, with `controllableByUserId`'s `403` decided
   in the handler before the domain is asked (plan §6.10); and the first route-keyed entries
   `httpapi.QuerySpellings` has ever had — three names on one route, which is the arrival
@@ -518,6 +518,43 @@ still owe.
   is, and a route declaring neither parameter would answer both cases `200` with the caller's own
   sessions — a success where the reference refuses.
 - **Spec reference:** §3.8, AC-4, AC-9, AC-13, AC-15; plan §6.10, §7.
+- **Amended 2026-09-03, on landing. Five things this line did not name had to be decided, and three
+  of them are findings.** They are all in [plan §6.10](plan.md#610-sessions-activity-capabilities-and-what-sessions-answers)'s
+  and [plan §7](plan.md#7-failure-handling)'s amendments with the source that forced each; the
+  register at T23 is owed three rows.
+  - **The `id` query parameter this route does not declare is U-14's shape a second time.** The
+    reference writes the declaration into the session `id` names
+    `[source: Jellyfin.Api/Controllers/SessionController.cs:380-389 @ v10.11.11]`; spec §3.8 names
+    no parameter and behaviours §1.12 ignores an unrecognised value, so a request naming somebody
+    else's session writes to its **own**. Asserted on both rows — the caller's session holds the
+    posted document and the named one holds nothing — which needed the one assertion in the file
+    that reads the store rather than a response, because `/Sessions` never shows the other row to
+    that caller (T7's finding a third time).
+  - **The all-zero `controllableByUserId` is a fourth answer on a parameter the table gives three.**
+    The reference falls back to the authenticated user for an empty `Guid` before the administrator
+    check runs `[source: Jellyfin.Api/Helpers/RequestHelpers.cs:67-85 @ v10.11.11]`, so without the
+    substitution it would be *"anybody else"* and answered `403` — a refusal for a request the
+    reference serves. It is **not** the same request as the absent parameter, which does not take
+    the controllable path at all.
+  - **`Capabilities` cannot be renamed under the camelCase profile, and that is a second face of
+    behaviours §5.9 rather than a new divergence.** Keeping the posted bytes is what makes the
+    unknown property survive; `internal/wire` renames property names by walking the document beside
+    the value it came from, and a raw subtree leaves that walk — so a server that keeps bytes it
+    never parsed cannot convert what it did not read. ⚠️ UNVERIFIED, and the register is owed it.
+  - **Two refusals spec §3.8 does not name.** A capabilities body that is not a JSON object is the
+    validation `400` keyed `"$"` and `capabilities`, and it is less optional here than on the other
+    two routes that have one: the document is echoed into every later `/Sessions` body, so storing
+    bytes that are not a document would put an unparseable subtree inside a `200`. And
+    `activeWithinSeconds` binds at Go's `int` where the reference's is `Int32`, which accepts values
+    the reference's binder refuses — the safe direction, and the alternative would make T9's
+    saturating window unreachable from the wire.
+  - **The finding worth repeating as a technique is the fixture, not the code.** *"An authenticated
+    request advances its own session's `LastActivityDate`"* means an earlier row of a parameter
+    matrix, sent from the seat whose session a later `activeWithinSeconds` row is meant to
+    **exclude**, silently turns that row into *"both sessions are recent"* — a green case asserting
+    nothing. The exclusion has a fixture of its own and is measured from the other seat, and the
+    companion row with a window wide enough to reach both is what makes it a filter rather than a
+    list that was empty anyway.
 
 ## T17 — Register the seven rows, in one change
 

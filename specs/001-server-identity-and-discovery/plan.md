@@ -584,6 +584,111 @@ T12 ships two stages that satisfy either reading: both are ordinary `Wrap` middl
 stamp is a `ResponseWriter` decorator rather than a handler, so anything *inside* it is stamped
 whatever wrote the response.
 
+**Amended 2026-09-03, at T13 — resolved, the first way out. The order is:**
+
+```
+response-time stamp → Server header → readiness gate → path canonicalisation
+  → query canonicalisation → routing → refusal shapes → handler → wire
+```
+
+~~The readiness gate is outermost~~ — it is third, immediately inside the two stages that stamp
+every response and immediately outside everything that could route. Three reasons, in the order
+they bind:
+
+1. **The reference resolves it this way already.** Its response-time middleware sits near the
+   outside of the main pipeline and its startup gate well inside it
+   `[source: Jellyfin.Server/Startup.cs:163,217 @ v10.11.11]`, so the `503` that pipeline answers
+   while loading is stamped. Principle I settles a choice this project would otherwise be making
+   for itself.
+2. **The alternative is the duplication §1 exists to prevent.** A gate that wrote
+   `X-Response-Time-ms` and `Server` itself would be the second place each of those values is
+   spelled, and every later stage that refuses without calling the next handler — 002's `401` is
+   the next one — would have to do the same.
+3. **It costs §3.5 nothing.** Nothing between the stamp and the gate reads the path, matches a
+   route or refuses; the two stages above set a header each and call the next handler
+   unconditionally. So *"nothing is exempt"* is exactly as true one stage further in, and the gate
+   still answers before routing, which is what makes an unknown path a `503` rather than a `404`
+   while the server is starting. T13 asserts that row by name.
+
+T13 was the one to decide it rather than T14, because T14 only assembles what the stages already
+are: the constraint is a property of the gate, and T13 is where the gate is written. T14's
+*Verified by* line stands unchanged and is achievable against this order — the amendment moves the
+plan to meet the acceptance, not the other way round.
+
+### 6.8 The readiness gate (§3.5, AC-12)
+
+The gate is shut from the moment it is built and opened once, by the entry layer, after the start
+has finished. A gate that had to be told to refuse would serve for the length of whatever went
+wrong before the first `MarkReady`, which is the window §3.5 describes.
+
+Three values go on the wire, rendered when the state changes rather than per request:
+
+| Part | While starting | On a deliberate withdrawal |
+|---|---|---|
+| `Retry-After` | `5` | The operator's hint, rounded **up** to a whole second |
+| `Message` | `Jellyfin Server is loading. Please try again shortly.` | The operator's reason |
+| Body | The message, in a minimal `text/html` document | The reason, in the same document |
+
+The starting message is the reference's own localised string
+`[source: Jellyfin.Api/Middleware/ServerStartupMessageMiddleware.cs:45-48 @ v10.11.11]`
+`[source: Emby.Server.Implementations/Localization/Core/en-US.json:79 @ v10.11.11]`, and five
+seconds is the reference's own hint
+`[source: Jellyfin.Server/ServerSetupApp/SetupServer.cs:143 @ v10.11.11]`. The rounding is **up**
+because a hint that under-states when to come back invites the retry storm the header exists to
+prevent, and a hint of zero or less is refused rather than rounded, because a caller asking for no
+delay has not thought about the header.
+
+An operator's reason is validated before it is stored, not when it is written: it becomes a header
+field value, and one carrying `CR` or `LF` would end the `Message` field line and let the rest be
+read as further headers — response splitting out of a configuration string. Go drops such a header
+silently at write time, which is both the wrong place and the wrong answer. The same reason is
+HTML-escaped in the body and left as written in the header, because only the body is parsed as
+HTML.
+
+#### §3.5's *"nothing is exempt"* is contradicted by the reference's own source, and this plan owes a probe
+
+**This is the largest open question 001 leaves behind, and it is recorded here rather than acted
+on.** §3.5 and AC-12 cite the **pinned document**: every operation declares a `503` carrying
+`Retry-After`, `Message` and a `text/html` body, 389 of 389, because an OpenAPI operation filter
+attaches that declaration to all of them at once
+`[source: Jellyfin.Server/Filters/RetryOnTemporarilyUnavailableFilter.cs:7-51 @ v10.11.11]`. What
+the reference *runs* is not that, in three measured-by-reading places:
+
+1. The `503` answered before the application exists comes from a **separate setup web server**, not
+   from the main pipeline `[source: Jellyfin.Server/ServerSetupApp/SetupServer.cs:177-259 @
+   v10.11.11]`. That server registers no response-time middleware, so its `503` very likely carries
+   no `X-Response-Time-ms` at all — which, if true, is a difference on every `503` this project
+   sends.
+2. That setup server answers a **real** `/System/Info/Public` body, with `StartupWizardCompleted`
+   false, rather than a `503` `[source: .../SetupServer.cs:204-237 @ v10.11.11]`. One route is
+   exempt there, and it is the first request every client makes.
+3. The **main** pipeline's gate exempts `/system/ping` case-insensitively and sends **neither**
+   `Retry-After` nor `Message` — only the status, `text/html` and the localised string
+   `[source: Jellyfin.Api/Middleware/ServerStartupMessageMiddleware.cs:38-48 @ v10.11.11]`. So the
+   two headers are only ever sent together by the setup server, which exempts two paths of its own.
+
+[AGENTS.md §1.3](../../AGENTS.md) ranks the three sources: where a probe, a source line and the
+pinned document disagree, **the running server wins**. There is no running reference here and no CI
+job may start one ([AGENTS.md §1.6](../../AGENTS.md)), so the disagreement **cannot be settled in
+this repository**. §3.5 and AC-12 are therefore implemented as written — every route, no exemption,
+both headers, a `text/html` body — because the spec is the authority on WHAT and source evidence
+alone does not discharge it. **`spec.md` is deliberately not amended.**
+
+What settles it: **one probe against a reference caught while it is starting**, issuing the four
+v1 routes and one unrouted path and recording status, `Retry-After`, `Message`, `Content-Type` and
+`X-Response-Time-ms` on each. That is a hard probe to run — the window is short — and it belongs in
+[reference-target.md](../../docs/compatibility/reference-target.md)'s register of measurements that
+still owe one. Failing that, **010's differential run is where it surfaces**, as up to five
+undeclared differences on the starting server. Whichever way it resolves, the change is to `spec.md`
+§3.5 and to `allowlist.yaml`, not to this stage's shape.
+
+Two smaller items are owed by the same probe. The reference's setup server zero-pads `Retry-After`
+to three digits — `005` for its five-second hint `[source: .../SetupServer.cs:242 @ v10.11.11]` —
+which parses as the same integer and is **not** what the pinned document declares; this project
+sends `5`. And the `text/html` body's bytes are **⚠️ UNVERIFIED**: the main pipeline writes the bare
+message, the setup server renders a page out of the startup log, so there is no single body to copy
+and §3.5 asks only for the media type.
+
 ## 7. Failure handling
 
 | Failure | Detection | Response | Recovery |

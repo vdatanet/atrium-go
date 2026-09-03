@@ -331,7 +331,7 @@ still owe.
 
 ## T12 — `POST /Users/AuthenticateByName`
 
-- [ ] **Changes:** `internal/httpapi` — the handler, its request model bound under the reference's own
+- [x] **Changes:** `internal/httpapi` — the handler, its request model bound under the reference's own
   parameter name `[source: Jellyfin.Api/Controllers/UserController.cs:211 @ v10.11.11]`, the
   transaction of plan §6.5 (mint the token, derive the session identifier, revoke the pair's tokens,
   insert or update the session row) and the `AuthenticationResult` body of spec §3.3.
@@ -351,6 +351,21 @@ still owe.
   served `200` on another route — behaviours §2.13's *"fatal to a route, not to a parse"*, and the
   mistake plan §6.3 says would refuse requests the reference serves on every route at once.
 - **Spec reference:** §3.2, §3.3, AC-1, AC-2, AC-5; plan §6.5, §7.
+- **Amended 2026-09-03, on landing. What this row covers and what it does not.** This is the
+  project's **first L3 row**, and [ADR-0007](../../docs/decisions/0007-a-container-runtime-for-the-reference-instance.md)
+  makes a differential run need a reference instance that is never automatic
+  ([AGENTS.md §1.6](../../AGENTS.md)). **No reference instance is available in this run**, so what
+  is met here is **L2 plus byte-level goldens** — the four measured refusals compared against one
+  recorded body, the `LastPlaybackCheckIn` value compared as encoded bytes — and the differential
+  half is a **recorded gap that closes the first time [010](../010-conformance-harness/spec.md)
+  runs**, which is what spec §6's row already says. It is not L3 and this task does not claim it.
+  Three further things landed here that the row's own wording did not name, each recorded in
+  `plan.md` with the source that decided it: the four client components are checked rather than
+  `DeviceId` alone (plan §6.5), the user object's single filler arrived with this route because it
+  is the first to return one (plan §6.6), and the session model declares fifteen of the reference's
+  twenty-eight members (plan §6.10). And `MaxActiveSessions` is **not** enforced here — spec §3.8's
+  eviction needs a store method plan §5 does not declare, and AC-13's wire evidence at T20 will meet
+  that rather than a passing test.
 
 ## T13 — One function builds the user object, and `GET /Users/Public`
 

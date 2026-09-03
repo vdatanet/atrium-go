@@ -566,6 +566,49 @@ Three tiers, in order, in `internal/system`:
    the scheme and port the server is actually reachable on** — the deliberate divergence of
    [§4.2](../../docs/compatibility/behaviours.md#42-localaddress-does-not-get-an-https-override).
 
+**Amended 2026-09-03, at T15.** Four things the three lines above did not settle, and one of them
+is a contradiction with the reference's own source that is recorded rather than resolved.
+
+**~~one trailing `/` removed~~ — every leading and trailing `/` is removed.** The reference spells
+it `PublishedServerUrl.Trim('/')`
+`[source: Emby.Server.Implementations/ApplicationHost.cs:877 @ v10.11.11]`, and .NET's `Trim(char)`
+takes every one of them from both ends, not one from the end. §3.4 says *"any trailing `/`
+removed"*, which the source matches and this line did not; a published URL configured with two
+trailing slashes would have come back carrying one. The scoped form reaches the same place by a
+different route — a value that starts with `http` is returned by `GetLocalApiUrl` after
+`TrimEnd('/')` `[source: Emby.Server.Implementations/ApplicationHost.cs:932-935 @ v10.11.11]` —
+so both forms are trimmed alike.
+
+**The order of tiers 1 and 2 contradicts the source, and the specification is implemented as
+written.** `LocalAddress` is served by the `HttpRequest` overload of `GetSmartApiUrl`
+`[source: Emby.Server.Implementations/SystemManager.cs:77, 120 @ v10.11.11]`, and that overload
+tests `EnablePublishedServerUriByRequest` **first**, reaching `PublishedServerUrl` only when it is
+off `[source: Emby.Server.Implementations/ApplicationHost.cs:885-901 @ v10.11.11]`. §2.3's
+corrected table numbers the branches the other way round, and §3.4 follows it. The two readings
+disagree on exactly one installation — a published URL set **and** derivation switched on — and on
+nothing else. AGENTS.md §1.3 makes the running server the authority and there is none here, so this
+is **not** closed by editing the specification on source evidence: it is **one request to settle**,
+against a reference configured with both, and failing that it surfaces in 010's differential run as
+a single undeclared difference on `/System/Info/Public`. This is the same shape as §6.8, and it is
+recorded for the same reason.
+
+**The certificate is an input this function takes and deliberately does not read.** §4.2's argument
+is that v1 has no certificate configuration, so the state in which the reference rewrites the scheme
+*cannot be configured on Atrium at all* — which would leave the divergence with nothing to assert.
+A divergence with no input can only be assumed. `AddressConfig` therefore carries
+`CertificateConfigured` and `HTTPSPort`, the two inputs the reference consults, and no branch reads
+either; T15's check sets them, asserts the answer does not move on any tier, and fails the day one
+does. This is not a v1 configuration surface — nothing at the entry layer sets them — and Principle I
+is untouched, because neither reaches the wire.
+
+**Two answers the tiers do not cover, decided here.** `BoundAddresses` is in **preference order**
+and tier 3 takes the **first** entry whose subnet contains the requester, which is what the
+reference does with its interfaces
+`[source: src/Jellyfin.Networking/Manager/NetworkManager.cs:891-905 @ v10.11.11]`; the ordering
+itself is the caller's to establish, so no order derives from a map (Principle VII). And an
+installation with **no** published URL, **no** derivation and **no** bound address answers from the
+request anyway, because an empty `LocalAddress` is a field every client reads and none can use.
+
 ### 6.7 Pipeline order
 
 Order is contract, so it is declared once and tested:

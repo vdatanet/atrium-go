@@ -358,10 +358,30 @@ list is long for four routes.
 
 ## T15 — `LocalAddress`, as a pure function over `RequestFacts`
 
-- [ ] **Changes:** `internal/system` — the three tiers of §3.4 over the domain's own
+- [x] **Changes:** `internal/system` — the three tiers of §3.4 over the domain's own
   `RequestFacts`. Tier 1 accepts the **subnet-scoped** published-URL form and picks the most
   specific matching prefix; tier 2 omits the port when it is the scheme's default; tier 3 returns
   the scheme and port the server is actually reachable on.
+- **Amended 2026-09-03, on doing it.** Three things the wording did not settle, all recorded in
+  `plan.md` §6.6.
+  **The trailing slash is ~~one~~ every one, at both ends.** The reference spells it
+  `PublishedServerUrl.Trim('/')`
+  `[source: Emby.Server.Implementations/ApplicationHost.cs:877 @ v10.11.11]`, which is what §3.4's
+  *"any trailing `/` removed"* says and what plan §6.6's *"one"* did not. A published URL
+  configured with two trailing slashes would have come back carrying one.
+  **The order of tiers 1 and 2 contradicts the reference's own source, and the spec was
+  implemented as written.** `LocalAddress` is served by the `HttpRequest` overload
+  `[source: Emby.Server.Implementations/SystemManager.cs:77, 120 @ v10.11.11]`, which tests
+  `EnablePublishedServerUriByRequest` **before** the published URL
+  `[source: Emby.Server.Implementations/ApplicationHost.cs:885-901 @ v10.11.11]`. The two readings
+  differ on exactly one installation — both configured — and there is no running reference here to
+  settle it (AGENTS.md §1.3), so it is recorded as one request owed rather than closed by editing
+  the spec. Same shape as §3.5 at T13.
+  **The certificate had to become an input for the divergence to be assertable.** §4.2 argues that
+  v1 cannot configure a certificate at all, which would leave the *Verified by* line's last clause
+  with nothing to set. `AddressConfig` carries `CertificateConfigured` and `HTTPSPort`, no branch
+  reads either, and the check sets them and asserts the answer does not move **on every tier** —
+  a divergence with no input can only be assumed.
 - **Depends on:** T3
 - **Verified by:** a table test with synthesised requester addresses covering AC-7, AC-8 and AC-13,
   and a case where a certificate is configured and tier 3 still answers the reachable scheme — the

@@ -9,7 +9,8 @@
 // RequestFacts, filled in by the edge; the store arrives as the narrow
 // interface plan 5 declares.
 //
-// What is here so far is the installation identity, which is the one piece of
-// this package's state that lives in a file rather than in the store, and
-// plan 4 argues why.
+// What is here so far is the installation identity — the one piece of this
+// package's state that lives in a file rather than in the store, and plan 4
+// argues why — and the three-tier LocalAddress choice, which is a pure function
+// of RequestFacts and AddressConfig and reaches for nothing else.
 package system

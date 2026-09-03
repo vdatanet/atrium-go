@@ -320,12 +320,35 @@ only where each one lives.
 | Level | Where | Runs in CI |
 |---|---|---|
 | **L0 — Routed** | `conformance/`, over `surface.yaml`: exactly these routes and no others | yes |
-| **L1 — Shape** | `conformance/`, goldens in `testdata/golden/`, plus the two reflection sweeps | yes |
+| **L1 — Shape** | `conformance/`, goldens in `testdata/golden/`, plus ~~the two reflection sweeps~~ **the wire half of the two sweeps; the reflection half is in `internal/httpapi` — see the amendment below** | yes |
 | **L2 — Semantic** | `conformance/`, over the fixture libraries | yes |
 | **L3 — Differential** | not `go test` at all — the harness, against a real Jellyfin | **never** |
 
 **Unit tests live beside their package**, as Go expects. What may not live beside a package is an
 assertion about a wire fact: those go through the HTTP boundary or they are not evidence.
+
+**Amended 2026-09-03, at 001's T19. The two cross-cutting sweeps are split, because this section
+and §3 could not both be honoured.** The row above put "the two reflection sweeps" in
+`conformance/`; §3 forbids that package from importing anything under `internal/`, and
+`tools/check_conformance_imports` enforces it over `go list -deps`. A reflection sweep over this
+project's response models needs those models. **The import rule is the one honoured** — it is
+mechanically enforced, ADR-0007 depends on the boundary it draws, and what it buys is that
+everything a conformance test knows is something a client could have known. Relaxing it to make a
+placement sentence true would have traded the boundary for a directory name.
+
+So the sweeps are split by what each half can see, and each reaches something the other cannot:
+
+| Half | Where | What only it sees |
+|---|---|---|
+| **Model sweep** — reflection over every registered response type | `internal/httpapi` | Every declared field, including ones no response has yet carried a value for. `PackageName` is never sent, so no body sweep will ever meet it, and its name is still contract |
+| **Wire sweep** — a walk of the response bytes | `conformance/` | The **values**, which is where the date rule lives: a date is recognised by its value, not by its name, because three of the nine date-valued fields observed do not end in `Date` ([conformance L1](compatibility/conformance.md#l1--shape)). It is also the only half that sees inside an `any` |
+
+**The split's one gap is named rather than papered over.** A field is swept by neither half if it is
+in no registered model *and* in no body the wire half requests. The first clause is closed: the
+model sweep's registry is checked against the operations the router is actually built with, so a
+route added without a model fails. The second is open — the wire half's request list is
+hand-written — and it is stated in that file, addressed to the route-registration check and to
+whichever feature adds the fifth route.
 
 **Goldens are reviewed, never blindly regenerated.** An update flag exists; a diff in a golden file
 is a contract change and is read like one in review.

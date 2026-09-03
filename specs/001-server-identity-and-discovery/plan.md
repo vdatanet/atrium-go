@@ -921,7 +921,7 @@ Each acceptance criterion becomes a named test at the level §6 of the spec decl
 | 6 | L1 golden | Exact bytes `"Jellyfin Server"`, both methods |
 | 7, 8, 13 | L2 | Table-driven over the three tiers with synthesised `RequestFacts` — a pure-function test, which is what §5's seam buys |
 | 9 | L1 | Plain and `PascalCase` byte-identical; `CamelCase` same values, camelCase names at depth, dictionary keys untouched, content type echoing the match |
-| 10 | L1 sweep | Reflection over every registered response type: every field name PascalCase |
+| 10 | L1 sweep | ~~Reflection over every registered response type: every field name PascalCase~~ **two halves — reflection over every registered response type, and a walk of every response's bytes; see the T19 amendment below** |
 | 11 | L0 | Every route of `surface.yaml` registered and nothing outside it; casing and one trailing slash; two slashes `404`; empty `404` and `405`; `Allow` complete and alphabetical |
 | 12 | L2 | Requests issued against a server held pre-ready: `503`, integer `Retry-After`, `Message`, `text/html` |
 
@@ -1000,6 +1000,40 @@ stopped being a byte comparison — and softening is exactly what the T16 amendm
 What a golden buys is bought by two assertions instead: the **property names in order**, which is
 the count, the order and the absence of `PackageName` in one line, and the per-field raw-JSON
 values. Both are byte-level; neither can be held still as a file.
+
+**Amended 2026-09-03, at T19. The two sweeps are split, and the split is not a compromise.**
+[architecture §8](../../docs/architecture.md#8-testing-and-conformance) put both reflection sweeps
+in `conformance/` and [§3](../../docs/architecture.md#3-repository-layout) forbids that package from
+importing `internal/`; the import rule wins, and architecture §8 carries the amendment. What each
+half is worth is the part to read:
+
+- **The model sweep is in `internal/httpapi`**, over `reflect.Type`. It walks pointers, slices,
+  dictionary *values* and embedded structs — `SystemInfo` embeds `PublicSystemInfo`, and a walk that
+  did not recurse into an anonymous field would see one field named after a type and miss seven. It
+  is the only half that sees a field no response has carried yet: `PackageName` is never sent, and
+  its name is still contract.
+- **The wire sweep is in `conformance/`**, over bytes. It is the half that reaches the corrected
+  rule: **a date is recognised by its value**, since `DateCreated`, `DateLastMediaAdded` and
+  `LastPlaybackCheckIn` do not end in `Date`. It is also the only half that sees inside an `any` —
+  001's two empty arrays are `[]any`, and an interface has no fields to reflect over.
+- **The registry is checked, not trusted.** The model sweep's list of operations is compared against
+  the operations the router is actually built with, by walking it. A route added without a model
+  fails, which is what stops the split from becoming a hole. The wire half's request list has no
+  such check yet — T20 is the check that the router serves exactly the surface file's rows, and
+  nothing ties the two lists together. Named in both files.
+- **Both halves are proven able to fail**, over models declared in `_test.go` files, which is the
+  strong form of "cannot leak into the served surface": the file is in no package the server is
+  built from. The casing half additionally fires on a real response — the `profile="CamelCase"`
+  body of `/System/Info/Public`, whose seven property names are camelCase *by contract* — which is
+  why that profile is deliberately absent from the swept set.
+- **The PascalCase rule is measured against the pinned document rather than guessed.** A rule
+  spelled "a capital then lower-case letters, repeated" refuses `EnableIPv4`, `Video3DFormat` and
+  `Hdr10PlusPresentFlag`, all of which the document contains, and would then be loosened by whoever
+  met it. **23 of the 1026 names are not PascalCase** — five are RFC 7807's problem-details members
+  and eighteen the plugin repository manifest's, none of them on a v1 route — so
+  [behaviours §1.1](../../docs/compatibility/behaviours.md)'s *"every JSON property in PascalCase"*
+  is 1003 of 1026 over the document. Recorded here rather than edited into the exported
+  measurement; T21 or 010 decides whether it belongs there.
 
 **Two differences from the reference are owed to 010, and neither is in `allowlist.yaml`.**
 `SystemArchitecture` (`""` here, `"X64"` there) and `EncoderLocation` (`""` here, `"System"`

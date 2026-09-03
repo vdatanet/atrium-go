@@ -492,7 +492,8 @@ list is long for four routes.
 
 ## T19 — The two cross-cutting sweeps
 
-- [ ] **Changes:** `conformance` — the casing sweep over every registered response type, and the
+- [x] **Changes:** ~~`conformance`~~ **`conformance` *and* `internal/httpapi`, split — see the
+  amendment** — the casing sweep over every registered response type, and the
   unit sweep. The unit sweep recognises **a date by its value, not by its name**, since
   `DateCreated` does not end in `Date`.
 - **Depends on:** T16, T17, T18
@@ -500,6 +501,16 @@ list is long for four routes.
   camelCase field and a deliberately three-digit date, in test-only models, must each be caught.
   **A sweep that has never failed has proved nothing.**
 - **Spec reference:** §6; [conformance L1](../../docs/compatibility/conformance.md#l1--shape).
+- **Amended 2026-09-03, at T19. The sweeps are split by what each half can see**, because
+  `conformance/` may not import `internal/` and a reflection sweep over Go types therefore cannot
+  live there. The **model sweep** is in `internal/httpapi` and walks `reflect.Type`; the **wire
+  sweep** is in `conformance/` and walks response bytes, which is where the "by value" date rule
+  belongs. `docs/architecture.md` §8 carries the amendment for the placement it stated, and
+  `plan.md` §8 the reasoning. The registry the model sweep walks is checked against the operations
+  the router is really built with, so the split cannot silently leave a model unswept; the wire
+  half's request list has no such check until T20, and that is said in the file.
+- **Carried:** nothing. Both halves fail on demand — see the mutation runs in this task's pull
+  request.
 
 ## T20 — The L0 registration check
 

@@ -139,8 +139,14 @@ rebuilds and a *precious* half that is migrated
 identity is derived from the path rather than stored as a sequence, so the library is
 reconstructible and only what a user did is not.
 
-The password hashing scheme is still open. Its record number — `0006` — is reserved and
-deliberately absent: it was withheld as a decision this project takes for itself.
+**The password hashing scheme was decided on 2026-09-03**: Argon2id at `m=64 MiB, t=3, p=2`, in a
+self-describing record so the parameters can be raised without a migration, with at most four
+verifications in flight and a decoy derivation so that an unknown username and a wrong password
+cost the same time as well as the same bytes
+([ADR-0006](docs/decisions/0006-password-hashing.md)). The record number was withheld from the
+export as a decision this project takes for itself, and the index row that already named the
+algorithm was deliberately not read as evidence — the argument was re-derived from four candidates
+measured here, and landed in the same place.
 
 ## Relationship to Jellyfin
 

@@ -181,12 +181,16 @@ Writing them is the work, and they must be written in Go's terms, not Python's.
 
 Withheld because they belong to the receiving project:
 
-- **ADR-0006** password hashing. The number is reserved; `docs/decisions/README.md` still indexes
+- ~~**ADR-0006** password hashing. The number is reserved; `docs/decisions/README.md` still indexes
   it. Kept in the index because ADRs are numbered immutably and a gap would be a lie about the
-  history.
+  history.~~ **Taken on 2026-09-03**: [ADR-0006](docs/decisions/0006-password-hashing.md) decides
+  Argon2id, its parameters, and the verification path that keeps an unknown username and a wrong
+  password indistinguishable in time as well as in bytes. The index row already named the algorithm
+  — it is exported bytes — and was deliberately not read as evidence; the second derivation reached
+  it anyway, which is the experiment's own logic applied to an ADR.
 - `tools/README.md`.
 
-**Five of these have been taken, on 2026-09-02.** [ADR-0002](docs/decisions/0002-go-and-the-runtime-stack.md)
+**~~Five~~ six of these have been taken, five on 2026-09-02 and ADR-0006 on 2026-09-03.** [ADR-0002](docs/decisions/0002-go-and-the-runtime-stack.md)
 decides the runtime stack — Go, chi over `net/http`, `encoding/json` behind one wire package, and
 no cgo — after measuring the three things that decide it rather than assuming them.
 [docs/architecture.md](docs/architecture.md) is the project-level shape every `plan.md` inherits

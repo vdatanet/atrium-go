@@ -430,9 +430,18 @@ clients work; the second is what makes measurement possible.
 
 ## 10. What this document does not decide
 
-- **The store** — [ADR-0003](decisions/), reserved and unwritten. §6 gives it a boundary, not an
-  answer.
-- **Password hashing** — [ADR-0006](decisions/), reserved and unwritten.
+- **The store** — ~~[ADR-0003](decisions/), reserved and unwritten~~
+  **[ADR-0003](decisions/0003-sqlite-as-the-store.md), written on 2026-09-02**. §6 gives it a
+  boundary, not an answer, and that is still true of this document.
+- **Password hashing** — ~~[ADR-0006](decisions/), reserved and unwritten~~
+  **[ADR-0006](decisions/0006-password-hashing.md), written on 2026-09-03**. This document still
+  decides nothing about it; §9's rule that settings are few and not a feature is what that record
+  inherits.
+
+> **Amended 2026-09-03, when ADR-0006 was written.** Both rows said *reserved and unwritten* and
+> both had stopped being true — the store's on the day this document was written, which is the
+> failure mode a "does not decide" list has: it is correct when written and nobody re-reads it.
+> What each record does **not** decide is what belongs here, and that is what the rows now say.
 - **The package split inside the domain.** §3 names the directories; which feature gets which
   package, and where a boundary falls between two of them, is a `plan.md`'s §3 and is argued with
   the feature in front of it.

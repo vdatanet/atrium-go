@@ -96,5 +96,5 @@ cites from it.
 
 | | |
 |---|---|
-| **ADR-0006** — password hashing | Reserved and unwritten. |
+| ~~**ADR-0006** — password hashing~~ | ~~Reserved and unwritten.~~ **Written on 2026-09-03**: [ADR-0006](decisions/0006-password-hashing.md), Argon2id, derived independently of the index row that already named it. |
 | `tools/README.md` | Waiting for there to be a `tools/`. |

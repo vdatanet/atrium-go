@@ -480,12 +480,13 @@ func (h *SystemHandler) admits(w http.ResponseWriter, r *http.Request) bool {
 	case AccessForbidden:
 		// 002 plan 7's row for a live token whose user was disabled after it
 		// was issued: behaviours 1.11's *policy* refusal — the status, an
-		// empty body and no content type at all, which is what 001's refuse
-		// already writes. 002 T11 gives that shape a name of its own
-		// (WriteForbidden) beside 001's four writers, and this call site takes
-		// it when it lands; what it must not do meanwhile is fall through to
-		// the default, which would answer a disabled account 500.
-		refuse(w, http.StatusForbidden)
+		// empty body and no content type at all. T10 wrote this as a bare
+		// refuse(w, 403) because the shape had no name yet; T11 gave it one
+		// and this call site took it, so the bytes are now decided in the same
+		// place as every other refusal's rather than here. What it must not do
+		// is fall through to the default, which would answer a disabled
+		// account 500.
+		WriteForbidden(w)
 		return false
 	case AccessUnauthenticated:
 		// behaviours 1.11's empty shape, written in one place (refusal.go):

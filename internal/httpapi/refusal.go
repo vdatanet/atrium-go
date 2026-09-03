@@ -2,10 +2,13 @@ package httpapi
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/vdatanet/atrium-go/internal/surface"
+	"github.com/vdatanet/atrium-go/internal/wire"
 )
 
 // The three empty refusal shapes of behaviours 1.11.
@@ -34,6 +37,13 @@ import (
 // The four remaining shapes in that table — problem details, the fixed 25-byte
 // text/plain body, the JSON-encoded bare string, the 415 — all belong to a
 // handler that got as far as looking something up. No route in 001 has one.
+//
+// **Three of those four are written below, added by 002 T11 on 2026-09-03.**
+// The sentence above stands as 001 wrote it — it was true of 001's routes and
+// it is why these were not written then — and what changed is the feature, not
+// the reading: 002 serves routes that read a store, so the shapes became
+// reachable. The 415 is still nobody's, and problem details is a model rather
+// than a shape.
 //
 // A fourth function joined the three at T16, and it is deliberately not one of
 // the measured shapes: WriteInternalServerError. behaviours 1.11 has no 500
@@ -127,6 +137,193 @@ func WriteUnauthorized(w http.ResponseWriter) {
 // rather than left as a silence.
 func WriteInternalServerError(w http.ResponseWriter) {
 	refuse(w, http.StatusInternalServerError)
+}
+
+// The three shapes 001 could not reach, added by 002 T11.
+//
+// 001 wrote the empty shapes because no route it served ever got as far as
+// looking something up: a refusal decided before routing has nothing to say.
+// 002 serves routes that read a store, and behaviours 1.11's remaining rows
+// become reachable one at a time. Three of them are shapes rather than models
+// and live here, beside the four above, for the reason the file opens with —
+// a shape is defined as much by the headers it does *not* carry as by the
+// status it does, and an absence cannot be restored by a later stage.
+//
+// The fourth remaining row, RFC 9457 problem details, is deliberately not
+// here. It carries a traceId, which makes it a model with fields rather than a
+// header decision, and plan 7 puts it with the handler that binds the request
+// that failed.
+//
+// What each of these three is, measured:
+//
+//	the controller's own refusal   4xx, `text/plain` with **no charset**, the
+//	                               fixed 25 bytes `Error processing request.`
+//	the controller's own message   4xx, the message as a JSON-encoded bare
+//	                               string under `application/json; charset=utf-8`
+//	an authorization policy         403, **no content type and no body at all**
+//
+// The last two rows of that table are the one worth reading twice. A `403` is
+// two shapes, split by *how* the refusal was expressed rather than by which
+// layer expressed it: a refusal thrown as an exception is rendered by the
+// error middleware and carries the 25 bytes
+// [source: Jellyfin.Api/Helpers/RequestHelpers.cs:77-81 @ v10.11.11], while
+// one returned as a result carries nothing at all
+// [source: Jellyfin.Api/Controllers/PlaylistsController.cs:421-427 @ v10.11.11]
+// — both measured on one status
+// [probe: tools/probe_playlist_visibility.py, Jellyfin 10.11.11, 2026-08-31]
+// [probe: tools/probe_playlist_shares.py, Jellyfin 10.11.11, 2026-08-31].
+// So WriteControllerRefusal(w, 403) and WriteForbidden(w) are not two spellings
+// of the same thing, and a caller that reaches for whichever it remembers
+// first is wrong half the time.
+
+// controllerRefusalBody is the fixed body of behaviours 1.11's controller
+// refusal: twenty-five bytes, the same on every status and every route
+// [probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11, 2026-08-26]
+// [probe: tools/probe_playlist_visibility.py, Jellyfin 10.11.11, 2026-08-31].
+//
+// It is a constant for two reasons. It is the same bytes wherever it is sent,
+// so spec 3.3's four refusals differ in nothing but their status — and a
+// constant is a body no error path can interpolate a password into, which is
+// half of what plan 7 says AC-11 stands on.
+const controllerRefusalBody = "Error processing request."
+
+// WriteControllerRefusal answers behaviours 1.11's controller refusal: the
+// given status, `text/plain` with **no charset parameter**, and the fixed
+// twenty-five bytes `Error processing request.`
+//
+// The status is an argument because the shape is not one status. Spec 3.3
+// sends it on `401` for an unknown username or a wrong password, on `403` for
+// a disabled or locked-out account and on `400` for a missing
+// `X-Emby-Authorization`, and spec 3.8 sends it on the `403` for a
+// non-administrator naming somebody else in `controllableByUserId`. **The
+// status is the whole of the difference between them**, which is why the
+// bytes are written once here rather than four times at four call sites.
+//
+// # The missing charset is the detail a framework will add for you
+//
+// The measured content type is `text/plain`, bare
+// [probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11, 2026-08-26]. Go
+// sniffs `text/plain; charset=utf-8` for bytes like these, so leaving the
+// header to net/http would put a parameter on the wire that the reference does
+// not send — invisible to every client, visible to L3, and a difference on
+// every refusal this feature sends at once. Hence the explicit Set.
+//
+// # The length is declared here, and that Set is currently unassertable
+//
+// 001's reason for setting a length explicitly does not carry over, and this
+// says so rather than borrowing it. That finding was about a **body-less**
+// response: net/http adds no `Content-Length` to one answering a HEAD. This
+// shape writes a body, and net/http computes the length from it — **including
+// for a HEAD, where the body is then discarded and the header kept**
+// [measurement: net/http, Go 1.27.0, 2026-09-03]. Removing the Set below
+// changes no byte on any request, and a mutation that removed it survived the
+// whole suite.
+//
+// It stays for the reason refuse() gives, which is not an assertion about the
+// wire: a shape this project depends on should be a property of this project's
+// code rather than of the runtime under it, and the next ResponseWriter
+// wrapper in this pipeline is one buffering middleware away from making that
+// difference real. What is recorded rather than tested is that the two agree
+// today — 001 recorded an unassertable distinction the same way, in the pull
+// request rather than in a test that would have passed either way.
+func WriteControllerRefusal(w http.ResponseWriter, status int) {
+	header := w.Header()
+	// Not Del("Content-Type"): this shape has one, and Set replaces whatever
+	// an earlier stage left behind — which is refuse()'s rule, one line
+	// further on.
+	header.Set("Content-Type", "text/plain")
+	header.Set("Content-Length", strconv.Itoa(len(controllerRefusalBody)))
+	header.Del("WWW-Authenticate")
+	w.WriteHeader(status)
+	// The write can only fail once the status line and the headers are already
+	// on the wire, and there is no second response to send instead. It is
+	// discarded rather than handled for that reason, and not because nothing
+	// can go wrong.
+	_, _ = io.WriteString(w, controllerRefusalBody)
+}
+
+// WriteJSONMessage answers behaviours 1.11's fourth shape: the given status
+// and the message as a **JSON-encoded bare string** — quotes included — under
+// `application/json; charset=utf-8`.
+//
+// Three routes are measured sending it, and the one this feature owns is
+// `GET /Users/{userId}` naming nobody: sixteen bytes of `"User not found"`,
+// the same body to an administrator and to a non-administrator
+// [probe: tools/probe_user_read.py, Jellyfin 10.11.11, 2026-09-01]. It is not
+// only a `404` shape — `DELETE /Items/{itemId}` refuses a caller who may not
+// delete with `401` and `"Unauthorized access"`
+// [probe: tools/probe_item_deletion.py, Jellyfin 10.11.11, 2026-09-01] — which
+// is why the status is an argument here too.
+//
+// # The body goes through internal/wire and is not fmt.Fprintf'd
+//
+// A JSON-encoded string is still a JSON document, so behaviours 1.16's escape
+// pass applies to it: a message carrying an apostrophe or an ampersand — an
+// item name, a playlist name — is escaped by the reference and would not be by
+// a hand-rolled `"` + message + `"`. Writing it through wire is what keeps the
+// two agreeing, and it is the rule this project states as calling the thing
+// rather than copying its pattern.
+//
+// # The profile is pinned to plain, and that is a decision rather than an
+// oversight
+//
+// wire.Write echoes the content type of the profile it is handed, and this
+// hands it ProfilePlain unconditionally: `application/json; charset=utf-8`,
+// which is exactly what the three probes above measured. What the reference
+// answers to a refusal on a request that *negotiated* `profile="CamelCase"` is
+// unmeasured — a bare string carries no property names, so only the echoed
+// content type could differ — and this signature takes no request, so there is
+// nothing here to negotiate from. A future measurement that finds an echo is a
+// change to this line and to the callers that would have to pass a profile in.
+func WriteJSONMessage(w http.ResponseWriter, status int, message string) {
+	header := w.Header()
+	// wire.Write sets the content type itself; the challenge is deleted for
+	// the reason refuse() deletes it, since this shape is sent on 401 too.
+	header.Del("WWW-Authenticate")
+	if err := wire.Write(w, status, message, wire.ProfilePlain); err != nil {
+		// Unreachable for a string — encoding one cannot fail and the plain
+		// profile is always known — and handled anyway, the way Ping handles
+		// it: wire.Write writes nothing to w unless the whole body was
+		// produced, so there is still a refusal to send.
+		WriteInternalServerError(w)
+	}
+}
+
+// WriteForbidden answers behaviours 1.11's *policy* refusal: `403`, no body,
+// and **no content type at all**.
+//
+// This is the shape a refusal takes when it is returned rather than thrown
+// [probe: tools/probe_playlist_visibility.py, Jellyfin 10.11.11, 2026-08-31],
+// and plan 7 gives it one row in this feature: a live token whose account was
+// disabled after it was issued, refused by the authenticator before any
+// handler runs. It is **not** the shape of spec 3.3's `403` for a disabled
+// account attempting to log in, which is a controller refusal carrying the
+// twenty-five bytes; one status, two shapes, and the login route and the
+// authenticator are on opposite sides of the split.
+//
+// # Content-Length: 0 is sent here, and behaviours 1.11 does not measure it
+//
+// This goes through refuse(), so it declares a zero length like 001's four.
+// The measurement behind this row is *no content type, no body*; it says
+// nothing either way about the length, and a silent measurement is not a
+// measured absence — the earlier reading of that same probe could not even
+// tell an empty body from a body-less refusal.
+//
+// Sending it is the deliberate choice, for three reasons. Omitting the header
+// would not produce an absence on the wire in the first place: net/http adds
+// `Content-Length: 0` to a body-less response of its own accord, and the only
+// request that would see the difference is a HEAD, which no route refused by
+// policy answers. Making this shape the exception would mean two spellings of
+// an empty refusal in one file, which is the thing this file exists to prevent.
+// And 001 took the same decision for the same reason on the `404` and the
+// `405`, where 1.11 does not name a length either.
+//
+// So what is unmeasured here is one header on one shape, and it belongs in the
+// register of things this project asserts and has never measured rather than
+// in a comment nobody will find. Changing the answer means changing refuse()
+// and 001's assertEmptyRefusal together, not this function alone.
+func WriteForbidden(w http.ResponseWriter) {
+	refuse(w, http.StatusForbidden)
 }
 
 // refuse writes an empty refusal, and is where the three shapes agree.

@@ -416,3 +416,347 @@ func TestTheDoubledSlash404IsTheSameShapeAsTheRouters(t *testing.T) {
 		}
 	}
 }
+
+// The three shapes 002 T11 added, asserted over a real connection.
+//
+// Every assertion below goes through send() rather than through
+// httptest.ResponseRecorder, and that is not a style preference. 001 T11
+// measured that three of the four things behaviours 1.11 states about a
+// refusal shape are invisible to a recorder: it synthesises no
+// Content-Length, it never sniffs a content type the way net/http does on the
+// wire, and it cannot show what a HEAD response leaves out. A recorder-based
+// test of a shape whose definition is "text/plain with **no** charset" would
+// pass against a handler that sends the charset.
+
+// TestTheControllerRefusalSendsTheMeasuredTwentyFiveBytes is spec 3.3's shape:
+// the fixed body, the bare media type, the declared length.
+//
+// The charset is the assertion with teeth. Go sniffs
+// `text/plain; charset=utf-8` for a body like this one, so a writer that let
+// net/http decide would put a parameter on the wire that the reference does
+// not send [probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11,
+// 2026-08-26] — on every refusal of this feature at once.
+func TestTheControllerRefusalSendsTheMeasuredTwentyFiveBytes(t *testing.T) {
+	// The four statuses spec 3.3 and spec 3.8 send this shape on. The bytes do
+	// not vary with the status, which is the property that makes the status
+	// the whole of the difference between the login refusals.
+	for _, status := range []int{http.StatusBadRequest, http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound} {
+		t.Run(fmt.Sprintf("%d", status), func(t *testing.T) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				httpapi.WriteControllerRefusal(w, status)
+			})
+
+			response := send(t, handler, "GET", "/Users/AuthenticateByName")
+
+			wantStatus := fmt.Sprintf("HTTP/1.1 %d ", status)
+			if !strings.HasPrefix(response.statusLine, wantStatus) {
+				t.Errorf("status line = %q, want it to begin %q", response.statusLine, wantStatus)
+			}
+			if response.body != "Error processing request." {
+				t.Errorf("body = %q, want %q", response.body, "Error processing request.")
+			}
+			if len(response.body) != 25 {
+				t.Errorf("body is %d bytes, want the measured 25", len(response.body))
+			}
+			if got := response.values("Content-Type"); len(got) != 1 || got[0] != "text/plain" {
+				t.Errorf("Content-Type = %v, want exactly [\"text/plain\"] — behaviours 1.11 measures no charset parameter on this shape, and net/http sniffs one", got)
+			}
+			if got := response.values("Content-Length"); len(got) != 1 || got[0] != "25" {
+				t.Errorf("Content-Length = %v, want exactly [\"25\"]", got)
+			}
+		})
+	}
+}
+
+// TestTheControllerRefusalDeclaresItsLengthToAHeadRequest asserts this shape
+// on the request that shows the least of it: the body is discarded and the
+// headers are all that arrive.
+//
+// It was written expecting to be the request that tells an explicit
+// Content-Length from an inherited one, the way 001's doubled-slash test is.
+// **It is not, and the measurement is worth more than the expectation was.**
+// 001's finding is about a *body-less* response: net/http adds no length to
+// one answering a HEAD. This shape writes a body, and net/http computes the
+// length from it and keeps the header when it drops the body for a HEAD
+// [measurement: net/http, Go 1.27.0, 2026-09-03] — so a mutation removing the
+// Set in WriteControllerRefusal survives this test and every other one here.
+// That is recorded at the writer rather than papered over.
+//
+// What this does assert is real and is not inherited: the bare content type
+// survives on a HEAD too. net/http sniffs `text/plain; charset=utf-8` from the
+// body it is about to discard, so the charset behaviours 1.11 does not measure
+// arrives here as readily as on a GET — a writer that let net/http decide
+// fails this test, and it does.
+func TestTheControllerRefusalDeclaresItsLengthToAHeadRequest(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		httpapi.WriteControllerRefusal(w, http.StatusForbidden)
+	})
+
+	response := send(t, handler, "HEAD", "/Users/AuthenticateByName")
+
+	if response.body != "" {
+		t.Errorf("HEAD body = %q, want it empty — the server discards it", response.body)
+	}
+	if got := response.values("Content-Length"); len(got) != 1 || got[0] != "25" {
+		t.Errorf("HEAD Content-Length = %v, want exactly [\"25\"] — the length of the body a GET would have carried", got)
+	}
+	if got := response.values("Content-Type"); len(got) != 1 || got[0] != "text/plain" {
+		t.Errorf("HEAD Content-Type = %v, want exactly [\"text/plain\"]", got)
+	}
+}
+
+// TestTheJSONMessageRefusalSendsAQuotedString is spec 3.7's 404 for a userId
+// nobody has: sixteen bytes including the quotes, under the JSON content type
+// [probe: tools/probe_user_read.py, Jellyfin 10.11.11, 2026-09-01].
+//
+// The quotes are the assertion. A JSON-encoded bare string is a document, and
+// a writer that sent `User not found` unquoted would answer fourteen bytes a
+// client's decoder refuses — which is invisible to any test comparing the
+// decoded value.
+func TestTheJSONMessageRefusalSendsAQuotedString(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		httpapi.WriteJSONMessage(w, http.StatusNotFound, "User not found")
+	})
+
+	response := send(t, handler, "GET", "/Users/00000000000000000000000000000000")
+
+	if !strings.HasPrefix(response.statusLine, "HTTP/1.1 404 ") {
+		t.Errorf("status line = %q, want a 404", response.statusLine)
+	}
+	if response.body != `"User not found"` {
+		t.Errorf("body = %q, want %q — the quotes are part of it", response.body, `"User not found"`)
+	}
+	if len(response.body) != 16 {
+		t.Errorf("body is %d bytes, want the measured 16", len(response.body))
+	}
+	if got := response.values("Content-Type"); len(got) != 1 || got[0] != "application/json; charset=utf-8" {
+		t.Errorf("Content-Type = %v, want exactly [\"application/json; charset=utf-8\"]", got)
+	}
+}
+
+// TestTheJSONMessageRefusalEscapesItsMessage is why the body goes through
+// internal/wire rather than being assembled here.
+//
+// behaviours 1.16 applies to every string in a JSON document, and the messages
+// this shape carries are not all constants: the measured one on another route
+// interpolates an item's name. A hand-rolled `"` + message + `"` would send an
+// apostrophe raw where the reference sends ', and the difference only
+// appears once somebody names a playlist with one.
+func TestTheJSONMessageRefusalEscapesItsMessage(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		httpapi.WriteJSONMessage(w, http.StatusNotFound, "Bob's & Alice's does not have an image of type Box")
+	})
+
+	response := send(t, handler, "GET", "/Items/abc/Images/Box")
+
+	// behaviours 1.16's seven characters, upper-cased and four hex digits wide:
+	// the apostrophe and the ampersand both go out escaped, which is what
+	// wire's pass does and what a `"` + message + `"` would not.
+	want := `"Bob\u0027s \u0026 Alice\u0027s does not have an image of type Box"`
+	if response.body != want {
+		t.Errorf("body = %s, want %s — behaviours 1.16's escape pass applies to a bare string too", response.body, want)
+	}
+}
+
+// TestThePolicyRefusalCarriesNoContentTypeAtAll is behaviours 1.11's second
+// 403, measured at 009 T2: no content type, no body
+// [probe: tools/probe_playlist_visibility.py, Jellyfin 10.11.11, 2026-08-31].
+//
+// It is asserted with 001's own assertEmptyRefusal, which is the point: this
+// shape is not a new one, it is the empty shape on a status 001 never sent.
+// The Content-Length: 0 that assertion also requires is *not* measured for
+// this row — see WriteForbidden's own note, which decides it deliberately and
+// hands the register a row.
+func TestThePolicyRefusalCarriesNoContentTypeAtAll(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		httpapi.WriteForbidden(w)
+	})
+
+	for _, method := range []string{"GET", "HEAD"} {
+		response := send(t, handler, method, "/Items/abc")
+		assertEmptyRefusal(t, response, http.StatusForbidden, method+" refused by policy")
+		if response.has("Allow") {
+			t.Errorf("%s: Allow = %v, want the header absent on a 403", method, response.values("Allow"))
+		}
+	}
+}
+
+// TestThePolicyRefusalDropsHeadersAStageBeforeItLeftBehind extends 001's own
+// test to the new empty shape, for the reason it gives: the header map is
+// shared by the whole chain, and a stage that already wrote a content type
+// would otherwise decide the shape of a refusal taken after it. The
+// authenticator refuses *after* the pipeline has run, which is exactly that
+// position.
+func TestThePolicyRefusalDropsHeadersAStageBeforeItLeftBehind(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("WWW-Authenticate", `Basic realm="Jellyfin"`)
+		httpapi.WriteForbidden(w)
+	})
+
+	response := send(t, handler, "GET", "/System/Info")
+	assertEmptyRefusal(t, response, http.StatusForbidden, "a policy refusal after a stage that set a content type")
+	if response.has("WWW-Authenticate") {
+		t.Errorf("WWW-Authenticate = %v, want the header absent", response.values("WWW-Authenticate"))
+	}
+}
+
+// TestTheTwoBodiedRefusalsDropAChallengeLeftBehind is the same rule for the
+// two shapes that do carry a body. Both are sent on 401 by a measured route,
+// so a stage above them that set a challenge has to be overruled here too — a
+// body is not a licence to inherit the rest of the header map.
+func TestTheTwoBodiedRefusalsDropAChallengeLeftBehind(t *testing.T) {
+	rows := []struct {
+		name  string
+		write func(http.ResponseWriter)
+	}{
+		{"the 25 bytes", func(w http.ResponseWriter) { httpapi.WriteControllerRefusal(w, http.StatusUnauthorized) }},
+		{"the bare string", func(w http.ResponseWriter) {
+			httpapi.WriteJSONMessage(w, http.StatusUnauthorized, "Unauthorized access")
+		}},
+	}
+	for _, row := range rows {
+		t.Run(row.name, func(t *testing.T) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.Header().Set("WWW-Authenticate", `Basic realm="Jellyfin"`)
+				row.write(w)
+			})
+
+			response := send(t, handler, "DELETE", "/Items/abc")
+			if response.has("WWW-Authenticate") {
+				t.Errorf("WWW-Authenticate = %v, want the header absent — behaviours 1.11 measures none on any 401 shape", response.values("WWW-Authenticate"))
+			}
+			if got := response.values("Content-Type"); len(got) != 1 || got[0] == "text/html; charset=utf-8" {
+				t.Errorf("Content-Type = %v, want exactly one field line, and this shape's own rather than the one an earlier stage left", got)
+			}
+		})
+	}
+}
+
+// shapeOf renders one refusal writer over a real connection and returns what a
+// differential run would compare: the status line, every header field line
+// sorted, and the body.
+//
+// Date is dropped because it moves with the clock and nothing else is: the
+// point of the fingerprint is that two shapes differ for a reason somebody
+// chose, and a timestamp would make every pair differ for free.
+func shapeOf(t *testing.T, write func(http.ResponseWriter)) (statusLine, headers, body string) {
+	t.Helper()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { write(w) })
+	response := send(t, handler, "GET", "/System/Info")
+
+	var lines []string
+	for name, values := range response.header {
+		if name == "Date" {
+			continue
+		}
+		for _, value := range values {
+			lines = append(lines, name+": "+value)
+		}
+	}
+	sort.Strings(lines)
+	return response.statusLine, strings.Join(lines, "\r\n"), response.body
+}
+
+// refusalWriters is every shape this file writes, named as a differential
+// report would name it.
+//
+// A writer taking a status is rendered on 403 rather than on a status of its
+// own, so that the comparison below is about the *shape* and not about the
+// number in the status line. That is the whole of behaviours 1.11's finding
+// about this status: a 403 is two shapes, and the reference sends both.
+func refusalWriters() []struct {
+	name  string
+	write func(http.ResponseWriter)
+} {
+	return []struct {
+		name  string
+		write func(http.ResponseWriter)
+	}{
+		{"WriteNotFound", httpapi.WriteNotFound},
+		{"WriteMethodNotAllowed", func(w http.ResponseWriter) { httpapi.WriteMethodNotAllowed(w, "GET, POST") }},
+		{"WriteUnauthorized", httpapi.WriteUnauthorized},
+		{"WriteInternalServerError", httpapi.WriteInternalServerError},
+		{"WriteControllerRefusal", func(w http.ResponseWriter) { httpapi.WriteControllerRefusal(w, http.StatusForbidden) }},
+		{"WriteJSONMessage", func(w http.ResponseWriter) {
+			httpapi.WriteJSONMessage(w, http.StatusForbidden, "User not found")
+		}},
+		{"WriteForbidden", httpapi.WriteForbidden},
+	}
+}
+
+// TestNoTwoRefusalWritersProduceTheSameResponse is the check that catches the
+// realistic mistake, and it is one assertion rather than a property of seven
+// separate tests.
+//
+// The mistake is a copy-paste: a new shape written from the shape beside it,
+// keeping a header it should not have or losing one it should. Every
+// individual test above would still pass — each asserts what its own shape
+// carries, and none asserts what another shape carries instead. This one fails
+// the moment two writers agree, which is a year before a differential run
+// would have said so.
+//
+// The comparison is over the whole response because that is what a client and
+// a differential report see. Four of the seven agree on every header they send
+// and are told apart by their status alone, which is not a weakness of the
+// check but the measurement: behaviours 1.11's empty shape *is* one shape, and
+// 001's argument for writing it in one place is that it stays that way.
+func TestNoTwoRefusalWritersProduceTheSameResponse(t *testing.T) {
+	type fingerprint struct{ statusLine, headers, body string }
+
+	seen := make(map[fingerprint]string)
+	for _, writer := range refusalWriters() {
+		statusLine, headers, body := shapeOf(t, writer.write)
+		print := fingerprint{statusLine, headers, body}
+		if earlier, clash := seen[print]; clash {
+			t.Errorf("%s and %s send the same response — %q, %q, body %q. Two refusal shapes that cannot be told apart on the wire are one shape, and behaviours 1.11 measures them as different", earlier, writer.name, statusLine, headers, body)
+			continue
+		}
+		seen[print] = writer.name
+	}
+}
+
+// TestTheThreeShapesOnOneStatusAreToldApartWithoutTheStatus is the sharper
+// half, and it is the one behaviours 1.11 forces.
+//
+// A `403` is two shapes there, split by how the refusal was expressed rather
+// than by which layer expressed it — and this feature sends both: the login
+// route refuses a disabled account with the twenty-five bytes, and the
+// authenticator refuses a token whose account was disabled afterwards with
+// nothing at all. So the status cannot be what tells them apart, and this
+// asserts the headers and the body alone.
+//
+// The JSON message is in here on the same status for the same reason: it is
+// measured on 401 and on 404 on two different routes, so nothing stops a third
+// route sending it on 403, and a shape that is only distinct because nobody
+// has sent it yet is not distinct.
+func TestTheThreeShapesOnOneStatusAreToldApartWithoutTheStatus(t *testing.T) {
+	type shape struct{ headers, body string }
+
+	rows := []struct {
+		name  string
+		write func(http.ResponseWriter)
+	}{
+		{"WriteControllerRefusal(403)", func(w http.ResponseWriter) { httpapi.WriteControllerRefusal(w, http.StatusForbidden) }},
+		{"WriteJSONMessage(403)", func(w http.ResponseWriter) {
+			httpapi.WriteJSONMessage(w, http.StatusForbidden, "User not found")
+		}},
+		{"WriteForbidden()", httpapi.WriteForbidden},
+	}
+
+	seen := make(map[shape]string)
+	for _, row := range rows {
+		statusLine, headers, body := shapeOf(t, row.write)
+		if !strings.HasPrefix(statusLine, "HTTP/1.1 403 ") {
+			t.Fatalf("%s: status line = %q, want a 403 — this test compares three shapes on one status and proves nothing if they are not on one", row.name, statusLine)
+		}
+		print := shape{headers, body}
+		if earlier, clash := seen[print]; clash {
+			t.Errorf("%s and %s send the same headers and body on 403 — %q, body %q. behaviours 1.11 measures a 403 as two shapes and one status cannot carry two spellings of one", earlier, row.name, headers, body)
+			continue
+		}
+		seen[print] = row.name
+	}
+}

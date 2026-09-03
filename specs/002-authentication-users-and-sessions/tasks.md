@@ -311,7 +311,7 @@ still owe.
 
 ## T11 — The three refusal shapes 001 could not reach
 
-- [ ] **Changes:** `internal/httpapi/refusal.go` — `WriteControllerRefusal(w, status)` for the 25
+- [x] **Changes:** `internal/httpapi/refusal.go` — `WriteControllerRefusal(w, status)` for the 25
   bytes, `WriteJSONMessage(w, status, message)` for the JSON-encoded bare string, and
   `WriteForbidden(w)` for the empty policy `403`. Beside 001's four, in the same file and for the
   reason it gives: a shape is defined as much by what it does **not** carry, and an absence cannot be

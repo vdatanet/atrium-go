@@ -461,7 +461,7 @@ func (h *SystemHandler) Info() http.HandlerFunc {
 // ships without one, and "this server recognises no credential" is the true
 // answer for a server that has issued none.
 func (h *SystemHandler) admits(w http.ResponseWriter, r *http.Request) bool {
-	access := AccessUnauthenticated
+	var authentication Authentication
 	if h.authenticator != nil {
 		decided, err := h.authenticator.Authenticate(r)
 		if err != nil {
@@ -471,12 +471,22 @@ func (h *SystemHandler) admits(w http.ResponseWriter, r *http.Request) bool {
 			WriteInternalServerError(w)
 			return false
 		}
-		access = decided
+		authentication = decided
 	}
 
-	switch access {
+	switch authentication.Access {
 	case AccessGranted:
 		return true
+	case AccessForbidden:
+		// 002 plan 7's row for a live token whose user was disabled after it
+		// was issued: behaviours 1.11's *policy* refusal — the status, an
+		// empty body and no content type at all, which is what 001's refuse
+		// already writes. 002 T11 gives that shape a name of its own
+		// (WriteForbidden) beside 001's four writers, and this call site takes
+		// it when it lands; what it must not do meanwhile is fall through to
+		// the default, which would answer a disabled account 500.
+		refuse(w, http.StatusForbidden)
+		return false
 	case AccessUnauthenticated:
 		// behaviours 1.11's empty shape, written in one place (refusal.go):
 		// no body, Content-Length: 0, no Content-Type and no

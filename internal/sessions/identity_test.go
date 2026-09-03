@@ -107,3 +107,61 @@ func TestTheReferencesOwnConcatenationCollidesWhereThisDerivationDoesNot(t *test
 		t.Error(`DeriveID("ab", "c") equals DeriveID("a", "bc"): the derivation has inherited the reference's collision`)
 	}
 }
+
+// TokenDigest is what the store holds instead of the token, and it is pinned
+// against a value computed outside this program.
+//
+// A round-trip assertion — digest it twice and compare — would pass on any
+// function at all, including one that returned its argument. The vector below
+// is `printf 'a-token' | shasum -a 256`, so what is asserted is SHA-256, of the
+// token's bytes and nothing else, hex-encoded in lowercase: three decisions,
+// each of which a plausible alternative gets wrong. A digest of a *salted*
+// token, or an uppercase encoding, would make every credential this server
+// issues fail to authenticate the moment the two sides of the token's life
+// disagreed — and both sides call this function precisely so that they cannot.
+func TestTokenDigestIsTheUnsaltedSHA256OfTheTokenInLowercaseHex(t *testing.T) {
+	const (
+		token = "a-token"
+		want  = "1f6076e3a47ba1ded08025ffe06e57af217c14f9407f33fba50f99b1c7019387"
+	)
+	if got := sessions.TokenDigest(token); got != want {
+		t.Errorf("TokenDigest(%q) = %q, want %q", token, got, want)
+	}
+	// The empty token is not a case the authenticator reaches — an empty
+	// credential is answered before anything is digested — but it is the value
+	// a caller that forgot the check would hand over, and it must not collide
+	// with a digest of anything else.
+	if got := sessions.TokenDigest(""); got != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
+		t.Errorf(`TokenDigest("") = %q, which is not SHA-256 of no bytes`, got)
+	}
+}
+
+// The digest is the whole 32 bytes, where DeriveID keeps 16.
+//
+// The truncation there is because its output is an *identifier* and behaviours
+// 1.4 makes an identifier 32 hex characters. This output is a lookup key no
+// response carries, so there is nothing to match — and a reader who assumed the
+// two functions were the same shape would halve the key without any test
+// noticing, because a 16-byte prefix of SHA-256 collides no more often than
+// anything else a test would try.
+func TestTokenDigestIsNotTruncatedTheWayAnIdentifierIs(t *testing.T) {
+	digest := sessions.TokenDigest("a-token")
+	if len(digest) != 64 {
+		t.Errorf("TokenDigest is %d characters, want 64 — the whole SHA-256 in hex", len(digest))
+	}
+	if identifier := sessions.DeriveID("a", "b"); len(identifier) != 32 {
+		t.Errorf("DeriveID is %d characters, want 32; this test's contrast is with that", len(identifier))
+	}
+}
+
+// Two tokens are two digests, and one token is one digest. The second half is
+// what the store's primary key stands on: a lookup finds the row a login wrote
+// only if the two calls agree, and they agree because they are one function.
+func TestTokenDigestIsDeterministicAndDistinguishing(t *testing.T) {
+	if sessions.TokenDigest("a-token") != sessions.TokenDigest("a-token") {
+		t.Error("one token digested twice gave two answers")
+	}
+	if sessions.TokenDigest("a-token") == sessions.TokenDigest("b-token") {
+		t.Error("two tokens share a digest, so either would authenticate as the other")
+	}
+}

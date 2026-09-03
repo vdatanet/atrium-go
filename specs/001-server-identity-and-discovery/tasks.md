@@ -1,7 +1,7 @@
 ---
 feature: 001-server-identity-and-discovery
 title: Server identity and discovery — tasks
-status: Draft
+status: Implemented
 created: 2026-09-02
 updated: 2026-09-03
 plan_status_required: Accepted
@@ -551,7 +551,7 @@ list is long for four routes.
 
 ## T21 — The closing audit
 
-- [ ] **Changes:** whatever this task finds. It is not a formality: every implemented feature in the
+- [x] **Changes:** whatever this task finds. It is not a formality: every implemented feature in the
   exporting project found, in its own final task, **an acceptance criterion with no test or a test
   proving less than its name**.
 - **Depends on:** all of the above
@@ -563,17 +563,184 @@ list is long for four routes.
   change**, and any newly measured reference behaviour into `behaviours.md` with provenance.
 - **Spec reference:** all of §5; AGENTS.md §5.
 
+### The record — 2026-09-03
+
+**It found two, and they are the same finding twice.** AGENTS.md §5 says to budget for a criterion
+with no test or a test proving less than its name. AC-9 and AC-11 each had a thorough, correct test
+suite proving the *mechanism* and nothing proving the *criterion*, and in both cases the gap was
+invisible to reading and obvious to a mutation. Both are closed in this change; the fixes are two
+files in `conformance/` and no change to any behaviour.
+
+#### Pass (a) — thirteen criteria, thirty-two mutations, two findings
+
+Every row was verified by breaking the behaviour in the production code and watching the named
+tests fail. **A mutation that merely deletes the code is not on this list**, because a test that
+fails only when a function is missing is a test of the build.
+
+| AC | The tests that carry it | Mutation, and what fell over |
+|---|---|---|
+| 1 | `conformance`: `TestPublicSystemInfoCarriesSevenFieldsInSpecOrder`, `TestPublicSystemInfoMatchesItsGolden`; `internal/httpapi`: `TestPublicInfoAnswersTheSevenFieldsOfSpecThreeOne` | An eighth field on the model → **8 tests**. Note the field-by-field test is **not** among them: it asserts seven values and never counts, which is why the count test exists beside it |
+| 2 | `conformance`: `TestPublicSystemInfoAnswersFieldByFieldOnAnEmptyInstallation`, `TestPublicSystemInfoMatchesItsGolden`; `internal/httpapi`: `TestPublicInfoIdentifiesAsJellyfinAndNotAsAtrium` | `ProductName` → `"Jellyfin server"` (one letter) → **13**; `OperatingSystem` → `"Linux"` → **6** |
+| 3 | the same three | `ReportedVersion` → `"10.11.10"` → **5** |
+| 4 | `internal/system`: `TestInstallationIDIsTheSameOnASecondStart`, `TestInstallationIDSurvivesARebuildOfTheStore`, `TestInstallationIDIsCreatedOnAFreshDataDirectory`, `TestConcurrentStartsAgreeOnOneInstallationID`; `internal/app`: `TestRunReportsTheInstallationIDItStartedWith` | Regenerate on every start, keeping the file → **5**; generate the same value upper-case → **6** |
+| 5 (`401`) | `internal/httpapi`: `TestSystemInfoRefusesWithoutACredentialOnceSetupIsComplete` | Never consult the admission port → **3** |
+| 5 (superset) | `conformance`: `TestSystemInfoIsASupersetOfThePublicBody`; `internal/httpapi`: `TestSystemInfoAgreesWithThePublicBodyOnEverySharedField` | One shared field altered between the two bodies → **4** |
+| 5 (`200` with a valid token) | **carried** — [002 AC-14](../002-authentication-users-and-sessions/spec.md#5-acceptance-criteria) | — see pass (c) |
+| 6 | `conformance`: `TestPingMatchesItsGoldenOnBothMethods`, `TestAMethodPingDoesNotHaveIsStillRefused`; `internal/httpapi`: `TestPingAnswersTheProductNameOnBothMethods` | `202` instead of `200` → **3**; drop the `POST` registration → **10** |
+| 7 | `internal/system`: `TestLocalAddressChoosesByTierAndByRequester`; `internal/httpapi`: `TestPublicInfoReportsTheConfiguredPublishedURL` | Keep the trailing slash → **2**; never consult tier 1 → **2** |
+| 8 | `internal/system`: `TestTwoNetworksReceiveTwoDifferentAddresses`; `internal/httpapi`: `TestPublicInfoAnswersEachNetworkWithItsOwnAddress` | Tier 3 answers every requester the first bound address → **3** |
+| 9 | `internal/wire`: `TestTheThreeDeclaredContentTypesAnswerAsTheReferenceDoes`, `TestNegotiateAnswersEveryProfileWithItsOwnContentType`, `TestNegotiateFollowsTheFourRules`; **new** in `conformance`: `TestThePlainTypeAndThePascalCaseProfileAnswerOneBodyUnderTwoContentTypes`, `TestTheCamelCaseProfileAnswersSpecThreeOnesValuesUnderConvertedNames`, `TestTheCamelCaseProfileConvertsTheSupersetsNamesAndNotItsValues` | **Finding F-1, below.** Three mutations after the fix: the PascalCase profile converting → **2**; the CamelCase profile not converting → **8**; the echo removed → **6**; and each `/System/Info*` handler ignoring the negotiation → **4** and **3** |
+| 10 | `internal/httpapi`: `TestEveryResponseFieldNameIsPascalCase`; `conformance`: `TestEveryResponseSweepsClean` | A `json:"encoderVersion"` tag on a served model → **4**, one from each half of the sweep |
+| 11 | `internal/httpapi`: `TestEveryAcceptedSpellingReachesTheSameRouteWithTheSameBytes`, `TestTwoOrMoreTrailingSlashesAreRefused`, `TestNoRedirectIsEverIssued`, `TestAnUnroutablePathIsAnEmpty404`, `TestTheMeasuredCaseChiGetsWrong`; `conformance`: `TestAMethodPingDoesNotHaveIsStillRefused`, `TestTheServerIsReachableOnExactlyTheImplementedRowsOfTheSurfaceDocument`; **new** in `conformance`: `TestEveryAcceptedSpellingOfAServedRouteAnswersTheSameBytes`, `TestATrailingSlashIsNotAnsweredWithARedirect`, `TestTwoTrailingSlashesOnAServedRouteAreRefused` | **Finding F-2, below.** Also: `Allow` naming only the first method → **7**; no `Allow` at all → **5**; a `Content-Type` on a refusal → **17**; two trailing slashes folded away → **5** |
+| 12 | `internal/httpapi`: `TestEveryRouteAndEveryNonRouteAnswers503WhileStarting`, `TestTheGateAnswersBeforeTheStampSoA503CarriesBothHeaders`, `TestAHintIsRoundedUpToAWholeSecond`, `TestTheStartingBodyIsTheReferencesOwnMessage` | Exempt the liveness probe → **6**; JSON instead of `text/html` → **6**; a fractional `Retry-After` → **8**; no `Message` → **8** |
+| 13 | `internal/system`: `TestLocalAddressChoosesByTierAndByRequester` | Never consult tier 2 → **1**; keep the scheme's default port → **1** |
+
+**F-1 — AC-9 was proven about the serialiser and not about any endpoint.** The criterion says
+requests to this feature's endpoints receive byte-identical bodies under two of the three content
+types, camelCase names under the third, and an echo. `internal/wire` proves all of it — over a model
+declared in a `_test.go` file, with a recorder. Making `/System/Info/Public` write with a constant
+`wire.ProfilePlain` instead of the negotiated profile **left every test in `conformance/` green
+except `TestTheCasingSweepFiresOnTheCamelCaseProfile`**, which is the casing sweep's own failure
+proof, is named for AC-10's machinery, and asserts a *count of findings* rather than anything AC-9
+says. Nothing at the boundary compared the two PascalCase answers with each other, and nothing
+checked the echo on either `/System/Info` route. `conformance/profiles_test.go` is the fix, and the
+same mutation now fails four tests.
+
+**F-2 — AC-11's "the same bytes" was proven about an echo handler.** `internal/httpapi`'s spelling
+tests run against a router whose handler writes back the route it was reached through, so the bytes
+compared are the route's name; every assertion of that shape holds equally on a server whose real
+handlers are wired to the wrong rows. A pipeline whose path folder recognises the doubled slash and
+then **folds nothing** left the entire `conformance/` package green. `conformance/spellings_test.go`
+is the fix — the four served rows in every accepted spelling, compared as responses — and the same
+mutation now fails two of its tests.
+
+**One instrument fault, found writing F-2's fix and worth carrying.** Go's `http.Client` follows a
+`301` on its own, so a server answering every accepted spelling with a redirect to the canonical one
+**passes a byte comparison of the followed response**. §3.6's *"Not a redirect"* needs a client that
+does not follow, and it is a separate test for that reason. Measured: a fold stage rewritten to
+issue `301` fails `TestATrailingSlashIsNotAnsweredWithARedirect` and passes
+`TestEveryAcceptedSpellingOfAServedRouteAnswersTheSameBytes`.
+`[measurement: mutation of internal/httpapi.PathFolder.Wrap, Go 1.27.0, 2026-09-03]`
+
+**Three criteria are asserted below the HTTP boundary, each for a reason that is a property of
+001.** They are named in `spec.md` §6 rather than only here. AC-7, AC-8 and AC-13 have no
+configuration surface to reach from a client; AC-12 cannot be seen from a client at all, because
+the binary opens its gate before it serves and 001 routes nothing that withdraws it; AC-5's `401`
+needs a completed setup 001 cannot perform. The first closes with the first feature that adds
+configuration, the third with 002.
+
+#### Pass (b) — every paragraph of spec §3
+
+Tested, unless the row says otherwise. *"Tested"* here means at least one named test fails when the
+paragraph's behaviour is broken.
+
+| §3 paragraph | Status |
+|---|---|
+| 3.0.1 PascalCase property names | AC-10, both halves of the sweep |
+| 3.0.2 three names, two behaviours; the echo | AC-9, now at the boundary too |
+| 3.0.2 lenient match; a charset beside the profile stops it; an unknown profile falls back; ranking keeps the client's order at equal quality | `TestNegotiateFollowsTheFourRules`. **The charset rule's *ranking* half is a reading, not a measurement** — registered as U-6 |
+| 3.0.2 dictionary keys are never converted | `TestWriteConvertsPropertyNamesAndLeavesDictionaryKeys`, `TestADeclaredDictionarysKeysAreNotSweptAsPropertyNames` |
+| 3.0.2 the conversion is .NET's, not "lower the first letter" | `TestCamelNameIsTheReferencePolicy`, `TestTheTwoRulesDisagreeOnExactlyOneName` — over the 1026 names of the pinned document |
+| 3.0.3 absent optional values, verified per field | `TestSystemInfoDoesNotSendPackageName`, and the key-order tests, which is where an added `PackageName` would show |
+| 3.0.4 identifiers are 32 lowercase hex | AC-4 |
+| 3.1 request: no authentication, answers before any user or library | `TestPublicSystemInfoAnswersFieldByFieldOnAnEmptyInstallation`, on an installation the harness *asserts* was empty rather than assuming it |
+| 3.1 the seven fields, their values and their order | AC-1, AC-2, AC-3. **Their order is not measured against the reference** — U-3 |
+| 3.1 note: `Id` survives restarts and database rebuilds | Tested in `internal/system`. **Untested at the wire**: the harness runs one process per test and has no restart primitive. What the wire does prove is that the response reports what is on disk, because the golden's identity is written before the start |
+| 3.1 errors: `503` while starting | AC-12 |
+| 3.2 request: authenticated, and permitted during first-time setup | `TestSystemInfoIsServedDuringFirstTimeSetup`, and eight handler tests. **Mutation 8 of T18 is the thing to know**: setup outstanding is the only state a v1 installation can be in, so dropping the exemption fails twelve tests and the `401` tests are the only ones exercising the other branch |
+| 3.2 the superset and its five value rows | AC-5, `TestSystemInfoAnswersTheFlagsAndArraysOfSpecThreeTwo`, `TestSystemInfoReportsThisInstallationsPaths`, `TestSystemInfoReportsThePortItIsListeningOn` |
+| 3.2 OQ-1 | An open question, not a behaviour. Nothing to test |
+| 3.2 errors: `401` | Tested at the handler over a real connection; moves to `conformance/` with 002 |
+| 3.2 errors: `403` | **Untested, and unreachable.** 001 issues no credential, so no request can be valid *and* insufficient; the admission port declares two values on purpose and an unknown third is a loud `500`. §3.2 carries the amendment; 002 owns it |
+| 3.3 both methods, a bare JSON string | AC-6 |
+| 3.3 note: the product name, not the friendly name — "the code is the specification" | `TestPingIgnoresTheFriendlyNameTheSameHandlerReports` at the handler; at the wire the guard refuses to proceed if the two are equal. **The wire half is half-proven** — 001 has no route that renames a server — and it is carried into 002 with the assertion to complete |
+| 3.4 the three tiers | Tested over all three, in `internal/system` and at the handler. **Untested at the wire, and unreachable there**: 001 ships no configuration surface. **The order of tiers 1 and 2 contradicts the reference's source** — U-2, and §3.4 carries the amendment |
+| 3.4 the deliberate divergence (no HTTPS override) | `TestTierThreeIgnoresAConfiguredCertificate`, `TestACertificateChangesNothingOnAnyTier`. T15's mutation 12 — reintroducing the override — fails exactly those two and nothing else, which is what makes it asserted rather than assumed |
+| 3.5 the whole section | AC-12, against the assembled pipeline. **Untested at the wire, and unreachable there.** *"Nothing is exempt"* is contradicted by three source readings — U-1 — and `Retry-After`'s padding and the body's bytes ride with it as U-4 and U-5. §3.5 carries the amendment and is **deliberately not corrected on source evidence** |
+| 3.6 the six-row table | AC-11, now at the wire as well |
+| 3.6 `Allow` names every method the *path* has | `TestAllowIsAPropertyOfThePathNotOfTheRoute`, `TestTheThreeMethodPathsAdvertiseAllThree`, `TestAMethodPingDoesNotHaveIsStillRefused` |
+| 3.6 "Nothing is automatic" — `HEAD` and `OPTIONS` are `405` | `TestTheMeasuredCaseChiGetsWrong`, over a real connection, on six method tokens. **At the wire only `PUT` is sent**, and that request is there to prove the harness honours the method it is handed rather than to cover the token set |
+| 3.6 path parameters are values, not spellings | `TestAPathParameterReachesTheHandlerByteForByte`, over stand-in routes. **Not testable at the wire in this feature: no route 001 serves has a parameter.** 002 is the first that can |
+| 3.6 an unknown method token on an unrouted path | Answered `404`. **A reading of §3.6, not a measurement** — U-9 |
+
+#### Pass (c) — AC-5's carried half
+
+Written into 002 as **AC-14**, with the two conditions that discharge it: 001's authentication port
+filled, and the request issued to the running binary carrying a token 002's own route returned. Two
+smaller carried notes ride with it in the same amendment — the `401` assertion that moves to
+`conformance/` when 002 can finish setup over HTTP, and the `/System/Ping` friendly-name
+discrimination that completes when a rename endpoint exists. 002's front matter records the
+amendment. *A criterion carried in a sentence is one nobody closes.*
+
+#### Pass (d) — what went back into the documents
+
+- **`spec.md`** — §3.2's `403` is unreachable here and says so; §3.4 records that the reference's
+  source orders tiers 1 and 2 the other way and that this document is **deliberately not amended on
+  source evidence**; §3.5 records the same for *"nothing is exempt"*, with all three source
+  readings; §5 records where AC-5's carried half now lives and that AC-9 and AC-11 were proven a
+  level too low; §6 gains a row for the three content types and names the three behaviours asserted
+  below the HTTP boundary.
+- **`behaviours.md`** — **§4.5 is new**: the four value differences on `/System/Info`, with the
+  reference's values, their obsolete markers and the argument. It exists because an
+  `allowlist.yaml` entry must cite a `behaviours §N` or a derivation class, these have neither, and
+  the file's own load would have refused an entry — so 010 would have met four **undeclared**
+  differences on the second response of the API. §1.13's *"1043 names"* is corrected to **1026**:
+  the pin moved on 2026-09-01 and this sentence was not among the things that recount recounted;
+  the conclusion is unaffected. §1.1's *"every JSON property in PascalCase"* is amended to **1003
+  of 1026**, with the eighteen manifest members and the five RFC 7807 ones, none on a v1 route, and
+  with the rule-shape finding that matters more than the count.
+- **`reference-target.md`** — a new register beside the prior-measurement one: **twelve claims this
+  project asserts and has never measured**, U-1 to U-12, each with what is unmeasured, what this
+  server does today, where it was recorded and whether one request settles it. Four tasks wrote
+  *"this belongs in the register"* and nobody owned the document. It also carries T11's warning for
+  010, which is about the **instrument** rather than the reference: a header reader that returns one
+  field line per name cannot see a repeated header, and this project's own chi measurement was wrong
+  in exactly that way before it was re-measured.
+- **`docs/architecture.md` §2** — the layer table said a port imports *"nothing of ours"* and its own
+  prose three sentences later said the unit types are *"a leaf, imported by both"*. T4 implemented
+  the prose and flagged that an ADR might be the remedy. The audit agrees with the prose: the table
+  is corrected in place, struck rather than replaced, and **no ADR is needed** — this is the
+  document stating what it already meant, not a deviation from it.
+- **Not changed, deliberately:** `allowlist.yaml`. It is one third of a three-way pairing compared
+  row for row against `conformance.md` L3 and `010 spec §3.3`, and writing one third of a triple is
+  how a paired set drifts. §4.5 is what those rows will cite; 010 writes them.
+
 ---
 
 ## Definition of done
 
 The feature is done when **all** of these hold:
 
-- [ ] Every acceptance criterion in `spec.md` §5 has a passing test — **except AC-5's second half,
-  which T18 records as carried into 002 with the reason, rather than as met.**
-- [ ] Every endpoint reaches the conformance level declared in `spec.md` §6. `/System/Info/Public`
+- [x] Every acceptance criterion in `spec.md` §5 has a passing test — **except AC-5's second half,
+  which T18 records as carried into 002 with the reason, rather than as met.** Closed at T21 with
+  the exception intact and now numbered: it is [002 AC-14](../002-authentication-users-and-sessions/spec.md#5-acceptance-criteria).
+  Every other criterion is mapped to named tests in T21's pass (a), and each mapping is verified by
+  **breaking the behaviour** rather than by reading — thirty-two mutations, two of which found a
+  criterion proven a level below the one it is written at.
+- [x] Every endpoint reaches the conformance level declared in `spec.md` §6. `/System/Info/Public`
   reaches **L2**; its L3 half is deferred on the spec's own terms and closes the first time 010 runs.
-- [ ] `docs/compatibility/surface.yaml` lists every route added, and no route exists outside it.
-- [ ] Anything learned during implementation is back in `spec.md`, in this same change.
-- [ ] Any new measured Jellyfin behaviour is in `docs/compatibility/behaviours.md` with provenance.
-- [ ] `spec.md`, `plan.md` and `tasks.md` are all marked `Implemented`.
+  **Three of §3's behaviours are asserted below the HTTP boundary** — §3.4's tiers, §3.5 and §3.2's
+  `401` — each because of something 001 does not have rather than something it skipped, each named
+  in `spec.md` §6 and in T21's pass (b), and each closing in a named later feature.
+- [x] `docs/compatibility/surface.yaml` lists every route added, and no route exists outside it.
+  Proven twice over and by two instruments that cannot agree by construction: a `chi.Walk` of the
+  router the binary is built with, and one real request per row against the running binary (T20).
+- [x] Anything learned during implementation is back in `spec.md`, in this same change — §3.2, §3.4,
+  §3.5, §5 and §6, listed in T21's pass (d). **Two of those amendments record a contradiction and
+  decline to resolve it**, which is the correct move under AGENTS.md §1.3 and is written down as one
+  taken rather than left to look like an oversight.
+- [x] Any new measured Jellyfin behaviour is in `docs/compatibility/behaviours.md` with provenance —
+  §4.5 is new, §1.1 and §1.13 are amended. **And the honest half of this line: twelve claims this
+  project asserts and has never measured are now enumerated as U-1 to U-12 in `reference-target.md`
+  rather than scattered across a plan.** None of them is a measured behaviour, which is exactly why
+  none of them belongs in `behaviours.md`.
+- [x] `spec.md`, `plan.md` and `tasks.md` are all marked `Implemented`.
+
+**One line of this list does not hold as written, and it is worth saying so plainly rather than
+ticking it.** The second bullet reads *"every endpoint reaches the conformance level declared in
+§6"*, and the level a route reaches is only as good as the level its **behaviours** are asserted at.
+`/System/Info/Public` reaches L2 and `/System/Ping` reaches L2 in full. `/System/Info` reaches L2 for
+everything a v1 installation can be in the state to answer — which is every field of §3.2, and not
+its two refusals: the `401` is asserted one layer in and the `403` is unreachable. Neither is a
+level this feature failed to reach; both are states this feature cannot enter. The distinction
+matters because the row in §6 says *L2* and a reader deserves to know which requests that covers.

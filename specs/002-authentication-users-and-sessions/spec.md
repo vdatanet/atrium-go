@@ -5,7 +5,7 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-01
 accepted: 2026-08-26
-amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid
+amended: 2026-08-26 by the T1 probe - sections 3.1, 3.2, 3.3, 3.5, AC-2, AC-3 and the open questions; by T7 - sections 2, 3.1, 3.2, AC-3 and section 6; by T11 - sections 3.3, 3.4, 3.5 and AC-6; by T12 - section 3.8; by T18 - AC-3 and AC-10. 2026-08-28 by the L2 probe fold - section 3.8: an unknown capabilities property is dropped from the session's echo, not kept. 2026-09-01 by tools/probe_user_read.py - section 3.7, AC-7 and the section 6 matrix: GET /Users/{userId} refuses no authenticated caller, the 403 it stated with no provenance is withdrawn, and the two identifiers that name nobody are a 404 and a 400 rather than that same refusal; and 2026-09-01 at the closing audit - OQ-5 is narrowed to the three refusals still unmeasurable without costing somebody's account a lockout counter. It also held the `403` for insufficient permission and the shape of both `403`s, on the premise that the only account available to measure with is an administrator; three probes now create throwaway non-administrators, and 009 T2 measured both shapes, so that half was a debt the table was still reporting after it had been paid. 2026-09-03 at 001's closing audit (001 T21) - section 5 gains AC-14, the half of 001 AC-5 that needs a credential only this feature can issue, together with the two assertions 001 parked at a lower level for the same reason
 depends_on: [001]
 ---
 
@@ -435,6 +435,40 @@ verbatim.
     the next flush; and `POST /Sessions/Capabilities/Full` answers `204` with no body and
     **replaces** the previous set rather than merging into it (§3.8). *(Added at the same
     audit — M29.)*
+14. **`GET /System/Info` answers `200` to a request carrying a token this feature issued**, with
+    the body [001 §3.2](../001-server-identity-and-discovery/spec.md#32-get-systeminfo--getsysteminfo)
+    describes. *(Carried from [001 AC-5](../001-server-identity-and-discovery/spec.md#5-acceptance-criteria)
+    at 001's closing audit, 2026-09-03 — see the amendment below.)*
+
+**Amended 2026-09-03. AC-14 is 001's, and it is here because 001 cannot reach it.**
+[001 AC-5](../001-server-identity-and-discovery/spec.md#5-acceptance-criteria) is three claims —
+`401` without a token, `200` with a valid one, and a body that is a superset of
+`/System/Info/Public` agreeing on every shared field. 001 proves the first and the third. The
+second needs a **valid credential**, and a credential is something this feature issues: 001 serves
+no route that authenticates anybody, so the strongest thing it can say is that its handler asks its
+authentication port and obeys the answer, which it asserts under that name
+(`TestSystemInfoAdmitsWhatTheAuthenticatorAdmits`) rather than under AC-5's.
+
+It is written here as a criterion rather than left as a note because the alternative was a test in
+001 that admitted a **fictional** token — which would have proved the wiring, been named for AC-5,
+and quietly closed a criterion nothing had met. Two things discharge it, and both belong to this
+feature:
+
+- 001's `Authenticator` port is filled — it is `httpapi.Authenticator`, `Authenticate(request)
+  (Access, error)`, and it takes the whole request because §3.1's five mechanisms are three header
+  names and two query names with a measured precedence;
+- the request goes to the running binary in `conformance/`, carrying a token this feature's own
+  authentication route returned, and the response is the superset body.
+
+**Two smaller carried notes ride with it**, both recorded in 001's `tasks.md` and repeated here so
+that this feature meets them as work rather than as a surprise. 001's `401` on `/System/Info` is
+asserted at the HTTP boundary in `internal/httpapi` rather than in `conformance/`, because the
+refusal needs an installation whose setup is **complete** and 001 serves no route that completes
+one — **when this feature can complete setup over HTTP, that assertion moves to `conformance/`,
+where it belongs**. And 001's `/System/Ping` discrimination — that the body is the product name and
+not the operator's friendly name — is proven at the wire against a server whose friendly name is
+still the default, because 001 has no route that renames one; **when the rename endpoint lands,
+send it in `TestPingAnswersTheProductNameAndNotThisServersFriendlyName` and drop the caveat.**
 
 ## 6. Conformance
 

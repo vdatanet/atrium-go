@@ -38,8 +38,8 @@ described about a per-route flag somebody eventually forgets.
 **Two things were measured before this plan was written, and both changed it.**
 
 `chi` answers `405` with an empty body, which is what [§1.11](../../docs/compatibility/behaviours.md)
-wants. Its `Allow` header is wrong, and not only in ordering. On a path carrying `GET` and `POST` it
-names **one** method, and which one varies with the request:
+wants. Its `Allow` header is wrong, and not only in ordering. ~~On a path carrying `GET` and `POST`
+it names **one** method, and which one varies with the request:~~
 
 ```
 HEAD    /System/Ping -> 405  Allow: POST      PUT    /System/Ping -> 405  Allow: POST
@@ -48,10 +48,41 @@ OPTIONS /System/Ping -> 405  Allow: GET       DELETE /System/Ping -> 405  Allow:
 
 `[measurement: github.com/go-chi/chi/v5 v5.3.2, Go 1.27.0, 2026-09-02]`
 
+**Amended 2026-09-03, at T11 — the reading above is wrong, and the conclusion it supports is not.**
+Re-measured over a raw connection, with every `Allow` field line kept rather than one of them, on
+the same chi and the same Go:
+
+```
+PUT /System/Ping -> 405  Allow: GET\r\nAllow: POST      FOO /System/Ping -> 405  (no Allow at all)
+```
+
+`[measurement: github.com/go-chi/chi/v5 v5.3.2, Go 1.27.0, 2026-09-03]`
+
+chi names **both** methods, in **two field lines**, and there are three faults rather than one:
+
+1. **Two field lines where the reference sends one comma-joined line.** §1.11 measured
+   `Allow: DELETE, POST`. HTTP combines the two spellings into the same field value, which is why
+   the difference is invisible to a client and visible to L3, and it is why the original reading —
+   a reader that took one field line of two — saw a single method.
+2. **The order is not stable.** chi builds the list by ranging over a Go map, so it is
+   map-iteration order: over 200 identical requests it was `GET` then `POST` 171 times and `POST`
+   then `GET` 29. §1.11 measured alphabetical, and Principle VII wants an order derived from a
+   stable input rather than from a hash seed.
+3. **A method token chi does not know reaches the `405` branch carrying no methods**, so the header
+   goes missing entirely — and, before that, an unroutable *path* reaches the `405` branch too
+   rather than the `404` one, because chi checks the method against its own nine before it routes.
+
 §3.6 requires every method **the path** has. So `Allow` is computed from the route table and set by
 this project, and ADR-0002's first `⚠️ UNVERIFIED` is discharged as a finding rather than a
 confirmation. The same run settles the other half of §3.6 in our favour: `HEAD` and `OPTIONS` are
 already `405` with an empty body, so *"nothing is automatic"* costs nothing to hold.
+
+**The correction is kept rather than swallowed because of what it cost nothing to catch and would
+have cost everything to miss.** A measurement of a header taken through a reader that returns one
+field line per name cannot see a repeated header, and the same instrument reads Jellyfin. Nothing
+in this feature depends on it — the reference's `Allow` was measured as one line by a probe this
+project did not write — but a repeated header anywhere in the v1 surface would be invisible to a
+run made the same way, and that belongs in 010's territory rather than in a footnote here.
 
 **And §3.0's content-type profiles make the serialiser bigger than
 [ADR-0002](../../docs/decisions/0002-go-and-the-runtime-stack.md) assumed.** Three media types, two
@@ -488,6 +519,22 @@ From the route table: every method registered on **that path**, sorted alphabeti
 `", "`. Not chi's, for the reason in §1 — and it is a property of the path rather than of the route,
 so `/System/Ping` answers `GET, POST` to a `PUT`, a `HEAD` and an `OPTIONS` alike.
 
+**Amended 2026-09-03, at T11.** Two things the rule did not say, both of which the router forces a
+decision on.
+
+A request never carries the pattern that matched it, so the lookup is `/Items/abc` →
+`/Items/{itemId}` → the table, using canonicalisation's own `pattern` (§6.1). Reading the request
+path against the table directly works for every path 001 serves and for none that takes a
+parameter.
+
+And **a path the table has no row for is a `404`, whatever the method**. chi checks the request's
+method against the nine it knows *before* it routes, so `FOO /Nowhere` arrives at the
+method-not-allowed branch rather than at the not-found one. §3.6 keys its `404` on the path — *"a
+path matching no route"* — and says nothing about the method, so the path decides; a `405` there
+would have to carry an `Allow` naming methods that do not exist. This is a reading of §3.6 rather
+than a measurement: what the reference answers to an unknown method **token** has not been probed,
+and it is one request to settle.
+
 ### 6.6 `LocalAddress` (§3.4)
 
 Three tiers, in order, in `internal/system`:
@@ -605,9 +652,10 @@ the first time 010 runs.
 ## 10. Alternatives considered
 
 **Let chi answer `405` and `404` itself.** It already returns an empty body, so it is closer than
-the standard library. Its `Allow` is wrong — one arbitrary method, measured — and correcting a
-header after the router has decided means reconstructing what the router knew. Computing it from the
-table is less code and the table already exists.
+the standard library. Its `Allow` is wrong — ~~one arbitrary method, measured~~ **two field lines in
+map-iteration order, and none at all for a method it does not know; re-measured at T11, §1** — and
+correcting a header after the router has decided means reconstructing what the router knew.
+Computing it from the table is less code and the table already exists.
 
 **Do the camelCase conversion as a pass over the encoded bytes**, the way the escape pass works.
 Rejected on §3.0.2's own wording: **dictionary keys are never converted**, and after encoding a

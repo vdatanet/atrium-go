@@ -792,6 +792,45 @@ name**, since `DateCreated` does not end in `Date`
 **Fixtures:** none. 001 answers before any user exists and before any library is configured, which
 is precisely what makes it testable with nothing on disk but a data directory.
 
+**Amended 2026-09-03, at T16.** This section named the levels and never said what a conformance test
+*is* here, and the first one had to decide it.
+
+- **`conformance/` starts the binary, not a server object.**
+  [architecture §3](../../docs/architecture.md#3-repository-layout) forbids this package from
+  importing anything under `internal/`, which rules out `app.NewServer` along with everything else —
+  so the harness builds `./cmd/atrium` once in `TestMain` and runs one process per test on
+  `127.0.0.1:0`, reading the bound address back out of the server's own log line, which is the only
+  place a caller that did not choose the port can learn it. It reaches nothing outside this machine
+  (AGENTS.md §1.6). The cost is a `go build` per package run; what it buys is that everything a
+  conformance test knows is something a client could have known.
+- **A golden holds the exact bytes, and stating an input is how one is made possible.** Two of
+  §3.1's seven fields derive from the run rather than from the specification — `Id` is random on a
+  first start, `LocalAddress` is built from the request — and normalising either away would give up
+  the byte comparison that is the whole point (Principle VIII). So the identity file is **written
+  before the server starts** and the `Host` header is **stated in the request**, and the recorded
+  body is spec §3.1's own. The per-field assertions run on a fresh installation instead, where `Id`
+  is asserted by shape. Every later golden in this repository has the same problem to solve and can
+  copy the shape: hold the derived input still, do not soften the comparison.
+- **The update flag rewrites and then fails.**
+  [architecture §8](../../docs/architecture.md#8-testing-and-conformance) says a golden is reviewed
+  rather than regenerated, and a flag that left the run green would make it a record of whatever the
+  code last did. `-update-golden` writes the file and fails the test with the new bytes in the
+  message; the suite is re-run without it once the diff has been read.
+- **Key order is part of the response and is not measured.** L3 compares bytes. The order
+  implemented is §3.1's, which is also the reference model's declaration order
+  `[source: MediaBrowser.Model/System/PublicSystemInfo.cs:14-53 @ v10.11.11]` — but no probe in this
+  repository records the key order of any body, and this repository's two sample bodies for this
+  route disagree about it. Marked `⚠️ UNVERIFIED` at the model. **One request settles it**, and
+  failing that it is an undeclared difference in 010's run. Same shape as §6.6 and §6.8.
+- **`LocalAddress` reaches only its fallback in a v1 deployment, and that is not a defect of §6.6.**
+  001 declares no configuration surface for any of the three tiers — no published URL, no derive
+  flag, no bound-address list — so the entry layer passes the zero `AddressConfig` and every
+  installation this binary can be started as answers from the request itself, which §6.6 already
+  states as the deliberate answer for an installation with none of the three. The domain function is
+  whole and tested over all three tiers (T15); what is missing is a caller, and the feature that adds
+  the configuration is where it arrives. Worth naming because a reader of §6.6 would otherwise
+  expect tier 3 to be reachable today: it is not.
+
 ### 8.5 Routes against `surface.yaml`
 
 *The number is the one [conformance.md](../../docs/compatibility/conformance.md#l0--routed) already

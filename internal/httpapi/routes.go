@@ -53,8 +53,14 @@ func Routes(table *surface.Table, handlers Handlers) (func(chi.Router), error) {
 
 	var registrations []registration
 	if handlers.System != nil {
+		// Both spellings of /System/Ping take the same handler value. spec 3.3
+		// gives them one request shape and one response, so two handlers would
+		// be two things to keep identical (ping.go).
+		ping := handlers.System.Ping()
 		registrations = append(registrations,
 			registration{operationPublicSystemInfo, handlers.System.PublicInfo()},
+			registration{operationGetPingSystem, ping},
+			registration{operationPostPingSystem, ping},
 		)
 	}
 
@@ -87,6 +93,13 @@ func Routes(table *surface.Table, handlers Handlers) (func(chi.Router), error) {
 // spelling of a route that does not change when a path does.
 const (
 	operationPublicSystemInfo = "GetPublicSystemInfo"
+
+	// The two rows of /System/Ping. They are two operations on one path, which
+	// is why the table is indexed by operation here and not by path: a lookup
+	// by path would have to choose between them, and the method each is
+	// registered on is exactly what distinguishes them.
+	operationGetPingSystem  = "GetPingSystem"
+	operationPostPingSystem = "PostPingSystem"
 )
 
 // endpointForOperation finds one row by its operationId.

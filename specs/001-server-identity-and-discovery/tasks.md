@@ -429,8 +429,27 @@ list is long for four routes.
 
 ## T17 — `GET /System/Ping` and `POST /System/Ping`
 
-- [ ] **Changes:** both methods returning the bare JSON string `"Jellyfin Server"` — the **product
+- [x] **Changes:** both methods returning the bare JSON string `"Jellyfin Server"` — the **product
   name**, not the operator's friendly name.
+- **Amended 2026-09-03, on doing it:** two things this wording did not settle, and the second is
+  the one a later task has to finish.
+  **A test that sends two methods does not prove it sent two methods.** Every assertion here runs
+  over `GET` and `POST`, and a harness that ignored the method it was handed and issued `GET` every
+  time passed all of them — measured, by making it do exactly that: the whole `conformance` package
+  stayed green. Nothing that answers `200` to both methods can tell them apart. What tells them
+  apart is a request that must answer *differently* by method, so `PUT /System/Ping` → `405` is
+  asserted at the wire beside them, and it fails when the harness is broken that way. T11 owns the
+  `Allow` computation and is not re-run; this row records only that the value a client receives did
+  not move when two real handlers arrived on one path.
+  **The fixture cannot set a friendly name here, and the *Verified by* line above asks it to.**
+  001 gives an operator no way to rename an installation — `SetServerName` exists on the port and
+  nothing calls it, because the rename endpoint belongs to 002 — so the only friendly name this
+  binary can be started with is plan §4's default, `atrium`. The discrimination is therefore proven
+  where a fixture *can* choose one: the handler-level test sets a deliberately unlike name through
+  the store, and the conformance test reads `ServerName` off the same running server, refuses to
+  proceed if it has become the product name, and then asserts the ping bytes. Both guards were run
+  against a mutation that makes the two names equal, and both fire. **→ 002: when the rename
+  endpoint lands, send it here and drop the caveat.**
 - **Depends on:** T14
 - **Verified by:** exact bytes on both methods. A test that would pass if the handler returned
   `ServerName` is not a test of this; the fixture sets a friendly name that differs.

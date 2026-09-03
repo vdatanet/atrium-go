@@ -235,11 +235,14 @@ func TestTheAssembledPipelineRefusesAMethodThePathDoesNotHave(t *testing.T) {
 // TestTheAssembledPipelineFoldsAQueryNameBeforeTheHandlerReadsIt is the stage
 // no request the server actually serves can see.
 //
-// V1QuerySpellings is empty — none of 001's four routes takes a query
+// ~~V1QuerySpellings is empty — none of 001's four routes takes a query
 // parameter (T10) — so removing query canonicalisation from the chain
-// altogether breaks no other test in this repository. The declaration here is
-// this test's own, and it exists so that the stage's presence in the assembly
-// is asserted rather than assumed until a feature declares a real one.
+// altogether breaks no other test in this repository.~~ **002 T16 declared the
+// first real names, on GET /Sessions, and removing the stage now fails
+// sessions_test.go too.** The declaration here stays this test's own: it is
+// about a route of 001's, which still takes no parameter, so this remains the
+// assertion that the stage is in the assembly independently of any feature's
+// declarations.
 func TestTheAssembledPipelineFoldsAQueryNameBeforeTheHandlerReadsIt(t *testing.T) {
 	const route = "/System/Info/Public"
 	spellings := httpapi.QuerySpellings{

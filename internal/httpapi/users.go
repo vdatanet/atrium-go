@@ -179,8 +179,8 @@ type AuthenticationResult struct {
 // # What v1 does not send, and why it is stated here rather than discovered
 //
 // The reference's DTO declares twenty-eight members and this model declares
-// fifteen. Every omission is a member spec 3.8 does not name, and they fall
-// into three groups:
+// ~~fifteen~~ **sixteen, since T16 added `Capabilities`**. Every omission is a
+// member spec 3.8 does not name, and they fall into three groups:
 //
 //   - `PlayState`, `NowPlayingItem`, `NowViewingItem`, `TranscodingInfo`,
 //     `NowPlayingQueue`, `NowPlayingQueueFullItems`, `LastPausedDate` and
@@ -198,16 +198,54 @@ type AuthenticationResult struct {
 //     request-response server can report, no operator-renamed device, no
 //     device typing and no user avatar (spec 3.5's `PrimaryImageTag` is absent
 //     for the same reason).
-//   - `Capabilities` is spec 3.8's declared capabilities, and it is added by
+//   - ~~`Capabilities` is spec 3.8's declared capabilities, and it is added by
 //     the task that serves `POST /Sessions/Capabilities/Full`: a session that
 //     has just authenticated has posted none, so it would be absent on this
-//     route's body whichever task declared it.
+//     route's body whichever task declared it.~~ **Declared by T16, which
+//     serves that route.** Twelve members are absent now, not thirteen.
 //
 // spec 3.8 lists what a session carries and this model is that list; the
 // counting is written down because Principle I is a count as much as it is a
-// spelling, and thirteen absent members is the kind of gap that is only ever
+// spelling, and twelve absent members is the kind of gap that is only ever
 // found by counting.
 type SessionInfo struct {
+	// Capabilities is the declaration POST /Sessions/Capabilities/Full posted,
+	// echoed **whole** — behaviours 5.9's recorded divergence, where the
+	// reference drops a property outside its own schema and this server keeps
+	// it (spec 3.8, plan 6.10).
+	//
+	// It is first because the reference declares it third, behind PlayState and
+	// AdditionalUsers, and this model declares neither
+	// [source: MediaBrowser.Model/Dto/SessionInfoDto.cs:17-29 @ v10.11.11].
+	//
+	// # Why it is a raw document and not a struct
+	//
+	// A declared struct is what *drops* an unknown property, which is exactly
+	// what POST /Users/Configuration does to its own document (spec 3.6) and
+	// exactly what this route must not do. Keeping the posted bytes is what
+	// makes behaviours 5.9's divergence the stated one rather than an accident,
+	// and it is why ports.Session carries the declaration as bytes.
+	//
+	// # The consequence on the camelCase profile, stated rather than found
+	//
+	// internal/wire renames property names under NamingCamel by walking the
+	// document beside the value it was encoded from, and a json.Marshaler takes
+	// its subtree out of that walk (rename.go). So this member's keys travel
+	// exactly as the client posted them under **both** profiles, where the
+	// reference — which holds a real DTO here — would convert them under
+	// `profile="CamelCase"`. That is a second face of behaviours 5.9's
+	// divergence rather than a new one: a server that keeps bytes it never
+	// parsed cannot rename what it did not read. It is ⚠️ UNVERIFIED and the
+	// register at T23 is owed the row; no observed client negotiates camelCase
+	// and posts capabilities.
+	//
+	// It is a pointer because the member is **absent** until something is
+	// posted: the reference leaves it null on a fresh session — its constructor
+	// initialises AdditionalUsers, PlayState and both queues and not this one
+	// [source: MediaBrowser.Controller/Session/SessionInfo.cs:39-49 @ v10.11.11]
+	// — and behaviours 1.7 omits a null.
+	Capabilities *json.RawMessage `json:",omitempty"`
+
 	// RemoteEndPoint is the requester's address as this server normalised it,
 	// which is the reference's own choice of value
 	// [source: Jellyfin.Api/Controllers/UserController.cs:223 @ v10.11.11].
@@ -417,9 +455,14 @@ func (h *UsersHandler) openSession(r *http.Request, client ClientIdentification,
 		return AuthenticationResult{}, err
 	}
 
+	info, err := sessionInfo(stored, account.Username)
+	if err != nil {
+		return AuthenticationResult{}, err
+	}
+
 	return AuthenticationResult{
 		User:        object,
-		SessionInfo: sessionInfo(stored, account.Username),
+		SessionInfo: info,
 		AccessToken: token,
 		ServerId:    h.installationID,
 	}, nil
@@ -429,10 +472,27 @@ func (h *UsersHandler) openSession(r *http.Request, client ClientIdentification,
 //
 // The two hoisted arrays are empty and non-nil rather than nil: internal/wire
 // serialises a nil slice as `null`, and the reference's own members are
-// non-nullable and initialised empty. The task that serves
-// POST /Sessions/Capabilities/Full fills them from the declaration.
-func sessionInfo(session ports.Session, username string) SessionInfo {
-	return SessionInfo{
+// non-nullable and initialised empty. A session that has posted a declaration
+// carries that declaration's own two lists **verbatim**, and the declaration
+// itself whole (spec 3.8, behaviours 2.14).
+//
+// # The two flags are not hoisted, and that is the whole of behaviours 2.14
+//
+// `SupportsMediaControl` and `SupportsRemoteControl` stay `false` beside a
+// declaration that says `true`. The declaration is the client's claim and the
+// flag is the server's judgement about it, and the reference answers `false`
+// at the top level for a request-response client while echoing the `true` back
+// inside `Capabilities`
+// [probe: tools/probe_auth_mechanisms.py, Jellyfin 10.11.11, 2026-08-28]. So
+// this is measured parity and not a gap — and it is why the hoist is written
+// as two named members rather than as a copy of the object.
+//
+// It returns an error rather than sending an unreadable declaration: the
+// document is validated when it is posted (sessions.go), so a document that
+// will not decode here is a store that answered with bytes this server never
+// wrote, which is 002 plan 7's last row and not a request that is wrong.
+func sessionInfo(session ports.Session, username string) (SessionInfo, error) {
+	info := SessionInfo{
 		RemoteEndPoint:        session.RemoteEndpoint,
 		PlayableMediaTypes:    []string{},
 		Id:                    session.ID,
@@ -448,6 +508,27 @@ func sessionInfo(session ports.Session, username string) SessionInfo {
 		SupportsRemoteControl: false,
 		SupportedCommands:     []string{},
 	}
+	if len(session.CapabilitiesDocument) == 0 {
+		return info, nil
+	}
+
+	declaration, err := decodeCapabilities(session.CapabilitiesDocument)
+	if err != nil {
+		return SessionInfo{}, err
+	}
+	if declaration.PlayableMediaTypes != nil {
+		info.PlayableMediaTypes = declaration.PlayableMediaTypes
+	}
+	if declaration.SupportedCommands != nil {
+		info.SupportedCommands = declaration.SupportedCommands
+	}
+
+	// The document as it was stored, which is the document as it was posted.
+	// Copied into a value of its own so that the member points at bytes nothing
+	// else holds a reference to.
+	posted := json.RawMessage(session.CapabilitiesDocument)
+	info.Capabilities = &posted
+	return info, nil
 }
 
 // accessTokenBytes is the size of a minted token before it is rendered as hex:

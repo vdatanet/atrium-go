@@ -66,15 +66,35 @@ type QuerySpellings map[Route][]string
 // V1QuerySpellings is the declaration set this server runs on: every query
 // parameter name a route it serves binds.
 //
-// **It is empty, and that is the whole of 001's answer.** The four routes of
-// 001 — /System/Info/Public, /System/Info and the two on /System/Ping — take
-// no query parameter at all, so there is nothing to fold on any request this
-// server can answer today.
+// ~~**It is empty, and that is the whole of 001's answer.**~~ **002 T16 filled
+// it, with the three names GET /Sessions binds.** 001's four routes —
+// /System/Info/Public, /System/Info and the two on /System/Ping — still take no
+// query parameter at all, and 002's other six routes take none either: the
+// login route reads its client identification from a header, /Users/Public
+// reads nothing, and the two reads and the two writes each ignore the query
+// parameter the reference declares (U-14, and sessions.go's `id`). So one route
+// declares three names and the other ten declare none.
 //
-// The stage ships anyway because the order of the pipeline is contract
-// (plan 6.7) and a stage inserted later is a change to that contract rather
-// than a row in a map. A later feature adds its rows here.
-func V1QuerySpellings() QuerySpellings { return QuerySpellings{} }
+// The stage shipped ahead of them because the order of the pipeline is contract
+// (001 plan 6.7) and a stage inserted later is a change to that contract rather
+// than a row in a map. Until this change, no request this server could answer
+// exercised it — 001's own mutation testing recorded that — so the assertions
+// that it folds on a real route are 002 T16's and are in query_test.go and
+// sessions_test.go.
+func V1QuerySpellings() QuerySpellings {
+	return QuerySpellings{
+		// spec 3.8's three, spelled as the reference declares them
+		// [source: Jellyfin.Api/Controllers/SessionController.cs:52-59 @ v10.11.11].
+		// A name is written here exactly as sessions.go reads it, which is what
+		// makes `?DEVICEID=x` and `?deviceid=x` the same request as `?deviceId=x`
+		// (behaviours 1.15).
+		{Method: http.MethodGet, Path: "/Sessions"}: {
+			controllableByUserIDParameter,
+			deviceIDParameter,
+			activeWithinSecondsParameter,
+		},
+	}
+}
 
 // QueryFolder rewrites a request's query parameter *names* to the spellings
 // the matched route declares, so that a handler reads one spelling.

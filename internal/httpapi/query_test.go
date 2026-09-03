@@ -18,9 +18,14 @@ import (
 // It is a fixture over the *real* table, not a fixture table: the routes are
 // rows of surface.yaml and the route lookup is the shipped one, so a test that
 // passes here is a test about the code that runs. The declarations themselves
-// have to be invented, because the set this server runs on —
+// are invented, because ~~the set this server runs on —
 // httpapi.V1QuerySpellings — is empty: none of 001's four routes takes a query
-// parameter. TestTheSetTheServerRunsOnFoldsNothing is that state's own check.
+// parameter~~ **the set this server runs on covers one route, GET /Sessions,
+// which 002 T16 declared** — and none of the shapes below (three names on one
+// route, one name on one method of a two-method path, a route that declares
+// nothing) is a shape that set has. TestTheSetTheServerRunsOnFoldsNothing is
+// still 001's own check, and the fold on a real route is asserted where the
+// route lives (sessions_test.go).
 //
 // The names are spelled camelCase, which is how the pinned OpenAPI document
 // spells every parameter (behaviours 1.15).

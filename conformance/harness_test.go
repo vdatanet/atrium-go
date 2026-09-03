@@ -206,10 +206,22 @@ func directoryContents(t *testing.T, directory string) []string {
 // request goes where it was sent and the server is told what it was called.
 func (s *server) get(t *testing.T, path, host string, header http.Header) *response {
 	t.Helper()
+	return s.do(t, http.MethodGet, path, host, header)
+}
 
-	request, err := http.NewRequest(http.MethodGet, s.baseURL+path, nil)
+// do issues one request of any method.
+//
+// It exists because /System/Ping is answered on two methods and spec 3.3 gives
+// them one response, so "both methods answer the same bytes" has to be a thing
+// a test can send rather than a thing it can only assert about GET. The body is
+// always empty: no route in 001 takes one, and POST /System/Ping is a request
+// with no parameters at all.
+func (s *server) do(t *testing.T, method, path, host string, header http.Header) *response {
+	t.Helper()
+
+	request, err := http.NewRequest(method, s.baseURL+path, nil)
 	if err != nil {
-		t.Fatalf("building a request for %s: %v", path, err)
+		t.Fatalf("building a %s request for %s: %v", method, path, err)
 	}
 	if host != "" {
 		request.Host = host
@@ -227,13 +239,13 @@ func (s *server) get(t *testing.T, path, host string, header http.Header) *respo
 
 	got, err := client.Do(request)
 	if err != nil {
-		t.Fatalf("GET %s: %v\n%s", path, err, s.log.text())
+		t.Fatalf("%s %s: %v\n%s", method, path, err, s.log.text())
 	}
 	defer got.Body.Close()
 
 	body, err := io.ReadAll(got.Body)
 	if err != nil {
-		t.Fatalf("reading the body of GET %s: %v", path, err)
+		t.Fatalf("reading the body of %s %s: %v", method, path, err)
 	}
 	return &response{status: got.StatusCode, header: got.Header, body: body}
 }

@@ -266,11 +266,21 @@ func TestRoutesRegistersOnTheSurfaceFilesOwnPattern(t *testing.T) {
 		t.Fatalf("walking the router: %v", err)
 	}
 
-	if want := "GET /System/Info/Public"; !registered[want] {
-		t.Errorf("the router does not serve %q; it serves %v", want, registered)
+	// The three rows 001 has registered so far, spelled as surface.yaml spells
+	// them. /System/Ping appears twice, on the two methods its two operations
+	// are named with — which is what a registration keyed by operation buys
+	// and what a registration keyed by path could not express (spec 3.3).
+	for _, want := range []string{
+		"GET /System/Info/Public",
+		"GET /System/Ping",
+		"POST /System/Ping",
+	} {
+		if !registered[want] {
+			t.Errorf("the router does not serve %q; it serves %v", want, registered)
+		}
 	}
-	if len(registered) != 1 {
-		t.Errorf("the router serves %d routes, and 001 has registered one so far: %v", len(registered), registered)
+	if len(registered) != 3 {
+		t.Errorf("the router serves %d routes, and 001 has registered three so far: %v", len(registered), registered)
 	}
 }
 

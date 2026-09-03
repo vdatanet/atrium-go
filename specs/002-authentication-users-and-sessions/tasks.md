@@ -626,7 +626,7 @@ still owe.
 
 ## T19 — `conformance/`: the user routes over the wire
 
-- [ ] **Changes:** `conformance/` — AC-6, AC-7, AC-8 and AC-12 against the running binary.
+- [x] **Changes:** `conformance/` — AC-6, AC-7, AC-8 and AC-12 against the running binary.
 - **Depends on:** T18
 - **Verified by:** AC-6 — the hidden-user fixture and the all-hidden fixture, with `/Users/Public`
   **byte-compared against the authenticated reading of the same users**; AC-7 — the caller matrix at
@@ -639,6 +639,34 @@ still owe.
   request, and the general lesson it wrote for this feature is that **a criterion written about a
   request is not met by a test about the mechanism that serves it, however good that test is**.
 - **Spec reference:** AC-6, AC-7, AC-8, AC-12; §6; plan §8.
+- **Amended 2026-09-03, on landing. Four things this line did not name had to be decided, and two of
+  them are findings.**
+  - **The redaction AC-7 exists to rule out is invisible to AC-6, and only the caller matrix sees
+    it.** A handler made to blank one policy flag for a caller who is not the subject leaves
+    `/Users/Public` byte-identical to the authenticated reading of the same users — every account on
+    that list is a non-administrator, so the flag it withheld was already `false` there — and fails
+    only the seat-against-subject comparison and the named administrator pair
+    `[measurement: conformance/, UserByID redacting IsAdministrator for a stranger, Go 1.27.0,
+    2026-09-03]`. The two criteria look like one assertion written twice and are not: AC-6's
+    equality is across *routes* and AC-7's is across *callers*, and the fixture is what separates
+    them.
+  - **`LastLoginDate` is asserted at the wire in both of its states, which no earlier task could
+    do.** spec §3.5 makes the member absent until a first login, and this fixture holds both states
+    at once: four accounts hold seats and two — `disabled`, which the login route refuses, and
+    `locked-out`, which nothing logs in — have never logged in. So the member list is a function of
+    the account rather than a constant, and a build answering `0001-01-01T00:00:00.0000000Z` for an
+    account that has never logged in fails on two of the six subjects.
+  - **The all-zero `userId` is asserted here as what the implementation does, and the row is still
+    owed to [spec §3.7](spec.md#37-get-usersme-and-get-usersuserid)'s table at T22**, which the test
+    says in its own words. It is compared against the same golden AC-2's three refusals are compared
+    against, so **six** responses now stand on one file.
+  - **The all-hidden fixture is now one installation carrying two criteria rather than two carrying
+    one each**, which is T18's rule applied rather than a tidy-up:
+    `TestPresentingATokenChangesNothingWhenEveryUserIsHidden` became the AC-3 subtest of
+    `TestTheInstallationWhereEveryUserIsHidden`, and AC-6's clause over the same fixture is the
+    second. The package went from three provisioned installations to four and from 3.591 s to
+    3.962 s `[measurement: go test -count=1 ./conformance, Go 1.27.0 darwin/arm64, 2026-09-03]`;
+    without the sharing it would have been five.
 
 ## T20 — `conformance/`: sessions, the lockout, and the parameter matrix over the wire
 

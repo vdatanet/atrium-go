@@ -1,0 +1,1 @@
+{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,"errors":{"userId":["The value \u0027not-an-identifier\u0027 is not valid."]},"traceId":"{{TraceId}}"}

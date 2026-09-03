@@ -69,6 +69,48 @@ func nullableTime(column sql.Null[int64]) *units.Time {
 	return &at
 }
 
+// CreateUser writes a new account.
+//
+// It writes every column of the record it is handed, including the two
+// nullable dates: a fresh account has never logged in and has never been seen,
+// so both are NULL, and NULL there is what makes LastLoginDate *absent* rather
+// than the minimum date (spec 3.5). nullableTicks is what turns a nil pointer
+// into that NULL, so an account created with a date already on it — a restore,
+// one day — writes the date rather than losing it.
+//
+// The documents are bound as strings and not as []byte, because the table is
+// STRICT and a []byte bound to a TEXT column is refused as a BLOB.
+//
+// There is no ON CONFLICT clause and there deliberately is none. A second
+// account whose folded username is already taken is a mistake, not an update:
+// the identifier is derived from that name (002 plan 6.9), so an upsert would
+// silently overwrite somebody else's policy, configuration and login history
+// with a new account's defaults. The unique index refuses it instead.
+func (s *Store) CreateUser(ctx context.Context, user ports.User) error {
+	_, err := s.writer.ExecContext(ctx,
+		`INSERT INTO users (id, username, username_folded, policy_document,
+		                    configuration_document, invalid_login_attempt_count,
+		                    last_login_at, last_activity_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		user.ID, user.Username, user.UsernameFolded,
+		string(user.PolicyDocument), string(user.ConfigurationDocument),
+		int64(user.InvalidLoginAttemptCount),
+		nullableTicks(user.LastLoginAt), nullableTicks(user.LastActivityAt))
+	if err != nil {
+		return fmt.Errorf("%s: creating the account %q: %w", s.path, user.Username, err)
+	}
+	return nil
+}
+
+// nullableTicks is nullableTime's inverse: a nil date is the NULL the column
+// holds, and a date is its tick count.
+func nullableTicks(at *units.Time) any {
+	if at == nil {
+		return nil
+	}
+	return int64(at.Ticks())
+}
+
 // UserByFoldedName finds the account whose folded username is folded.
 //
 // It reads through the reading pool. This is the first thing an authentication

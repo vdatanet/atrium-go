@@ -369,7 +369,7 @@ still owe.
 
 ## T13 — One function builds the user object, and `GET /Users/Public`
 
-- [ ] **Changes:** `internal/httpapi` — the single filler of [plan §6.6](plan.md#66-building-the-user-object)
+- [x] **Changes:** `internal/httpapi` — the single filler of [plan §6.6](plan.md#66-building-the-user-object)
   that every route returning a user object calls, and the `/Users/Public` handler, which reads **no**
   credential even when one is present (plan §6.2).
 - **Depends on:** T2, T4, T10
@@ -384,6 +384,22 @@ still owe.
   — spec §3.5 records that this table had them the other way round until it was measured, and a
   member-by-member assertion cannot see it.
 - **Spec reference:** §3.4, §3.5, AC-6; plan §6.6.
+- **Amended 2026-09-03, on landing. The filler was already here, and four things the row did not
+  name were decided.** [plan §6.6](plan.md#66-building-the-user-object)'s single filler landed with
+  T12, because `POST /Users/AuthenticateByName` is the first route that returns a user object; this
+  task extended nothing of it and added no second one, which is the section's whole point. What is
+  new is the handler and every assertion the *Verified by* line names, none of which existed. The
+  four decisions are recorded in [plan §6.2](plan.md#62-which-routes-require-a-token-and-which-merely-accept-one)'s
+  amendment with the source that forced each: the answer's **order** is the store's and the
+  reference's is by the unfolded username; the reference excludes **disabled** accounts too, where
+  §3.4 names only the hidden — implemented as written, with the difference asserted as a test the
+  way T15 asserts U-14; the reference answers **every** account before setup completes, which
+  §6.8 makes unreachable here; and the reference narrows the list by device access and by
+  `EnableRemoteAccess` for a caller outside the local network, which is the second place that flag
+  is enforced and which qualifies §3.4's measured equality to a local caller. **The register at T23
+  is owed a row for all four.** One further finding is in the handoff: the credential-independence
+  assertion needs a **hidden** account in its fixture, because an installation whose only account is
+  visible answers the same bytes however the handler treats a token.
 
 ## T14 — `GET /Users/Me` and `GET /Users/{userId}`, and the caller matrix
 

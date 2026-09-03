@@ -198,10 +198,17 @@ list is long for four routes.
 
 ## T9 — Path canonicalisation
 
-- [ ] **Changes:** `internal/httpapi` — a middleware that folds a request path's **literal**
+- [x] **Changes:** `internal/httpapi` — a middleware that folds a request path's **literal**
   segments and rewrites them to the route's own spelling, passes path **parameters** through byte
   for byte, trims one trailing slash, and answers two or more with an empty `404`. No redirect is
   ever issued.
+- **Amended 2026-09-03, on doing it:** *"literal segments"* is one word too coarse. Five paths in
+  the table put a literal and a parameter **inside one segment** —
+  `/Audio/{itemId}/stream.{container}` and `/Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}`
+  among them — so the fold is per run within a segment, not per segment, and `/audio/AbC/STREAM.MP4`
+  answers `/Audio/AbC/stream.MP4`. `plan.md` §6.1 carries the same amendment, together with the
+  two other rules writing it settled: a literal path is looked up before a parametrised one, and a
+  parameter run must match at least one byte.
 - **Depends on:** T8
 - **Verified by:** a table test over §3.6's table: canonical, any casing, one trailing slash — same
   route and same bytes; two slashes `404`; and a parameter whose casing survives.

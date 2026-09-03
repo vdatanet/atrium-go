@@ -201,22 +201,38 @@ func assertACredentialChangesNothingOnThePublicRoute(t *testing.T, server *serve
 	}
 }
 
-// The same criterion on the installation where every account is hidden, which
-// is 002 plan 8's second fixture and the case a handler that consulted the
-// credential is most tempted by: the anonymous reading is `[]`, so a build that
-// disclosed a hidden account to a caller holding a token would answer a list
-// where an empty one is what a client gets — measured, that mutation fails here
-// as well as on the six-account fixture.
+// 002 plan 8's second fixture: the installation where every account is hidden.
 //
-// AC-6's own assertions over this fixture — the exclusion itself, and the byte
-// comparison with an authenticated reading of the same users — belong to T19.
-// What is asserted here is only AC-3's clause: the credential changes nothing.
-func TestPresentingATokenChangesNothingWhenEveryUserIsHidden(t *testing.T) {
+// # Two criteria, one installation, and that is the rule rather than economy
+//
+// T18 measured that provisioning is expensive enough to disturb
+// internal/users' timing equalisation from **this** package, and wrote the
+// rule every later conformance task inherits: criteria that do not disturb one
+// another share an installation and stay separate subtests. AC-3's clause here
+// reads and asserts; AC-6's reads and asserts; neither writes. So this
+// function holds both, and ~~TestPresentingATokenChangesNothingWhenEveryUserIsHidden~~
+// became the first of its two subtests when T19 arrived with the second.
+//
+// **AC-3's clause** is the case a handler that consulted the credential is
+// most tempted by: the anonymous reading is `[]`, so a build that disclosed a
+// hidden account to a caller holding a token would answer a list where an
+// empty one is what a client gets — measured, that mutation fails here as well
+// as on the six-account fixture.
+//
+// **AC-6's clause** is the other half of the same fixture: that `[]` is an
+// exclusion rather than an empty installation.
+func TestTheInstallationWhereEveryUserIsHidden(t *testing.T) {
 	t.Parallel()
 
 	server := newAllHiddenInstallation(t)
 	held := logIn(t, server, mechanismsDevice, hiddenAccount, fixturePassword)
-	assertACredentialChangesNothingOnThePublicRoute(t, server, held)
+
+	t.Run("AC-3: presenting a token changes nothing on the public route", func(t *testing.T) {
+		assertACredentialChangesNothingOnThePublicRoute(t, server, held)
+	})
+	t.Run("AC-6: the empty array is an exclusion and not an empty installation", func(t *testing.T) {
+		assertTheAllHiddenPublicListIsAnExclusion(t, server, held)
+	})
 }
 
 // unknownToken is a well-formed credential this server never issued: 32

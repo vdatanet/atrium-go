@@ -202,6 +202,28 @@ func (o LoginOutcome) String() string {
 // caller that has to distinguish an absence from a failure by matching an error
 // is a caller that can get it wrong in the direction of a 500.
 type UserStore interface {
+	// CreateUser writes a new account, whole.
+	//
+	// It takes the record rather than a name and a handful of options for the
+	// reason OpenSession does: what the store writes is what it was handed, so
+	// there is no second place where a default is decided. Every column comes
+	// from the value — including the identifier, which is derived from the
+	// folded username by the domain (Principle VII, 002 plan 6.9) and not
+	// invented here.
+	//
+	// A fresh account carries no credential: the password record is a row in a
+	// table of its own and is written by ReplaceCredential, so an account with
+	// no password is the state this method leaves behind and not a special
+	// case. It is also a state an operator can ask for (002 plan 6.9's
+	// --no-password), which is why the two writes are two calls.
+	//
+	// A username whose fold is already taken is refused, by the unique index
+	// on username_folded rather than by a check here. That constraint is the
+	// database's rule precisely so the login's assumption — one row per folded
+	// name — cannot be broken by a caller that forgot to look first
+	// (002 plan 4).
+	CreateUser(ctx context.Context, user User) error
+
 	// UserByFoldedName finds the account whose folded username is folded. It
 	// is the only lookup an authentication performs, and the uniqueness it
 	// assumes is the database's rule rather than a convention (002 plan 4).

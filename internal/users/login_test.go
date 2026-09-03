@@ -140,6 +140,10 @@ func (f *fakeAccounts) Users(context.Context) ([]ports.User, error) {
 	return nil, errors.New("Users is not part of the login path")
 }
 
+func (f *fakeAccounts) CreateUser(context.Context, ports.User) error {
+	return errors.New("CreateUser is not part of the login path")
+}
+
 func (f *fakeAccounts) Credential(_ context.Context, userID string) (ports.Credential, bool, error) {
 	entry, found := f.byID[userID]
 	if !found || entry.credential == nil {

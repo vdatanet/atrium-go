@@ -292,6 +292,7 @@ something needs to, it is not a judgement call.
 Clock interface { Now() units.Time }
 
 UserStore interface {
+    CreateUser(ctx, User) error                           // added by T7, below
     UserByFoldedName(ctx, folded string) (User, bool, error)
     UserByID(ctx, id string) (User, bool, error)
     Users(ctx) ([]User, error)
@@ -361,9 +362,32 @@ Three consequences of writing it that this section did not say and now does:
   device hold two live tokens against one session row. A caller resolved from the session's user
   would be whoever logged in most recently, on somebody else's account, with no error anywhere.
   That is why this method returns two values, and this is where it is written down.
-- **Neither interface creates an account, and T4 did not invent one.** Provisioning is §6.9's and
+- ~~**Neither interface creates an account, and T4 did not invent one.** Provisioning is §6.9's and
   T7's, so the port method that writes a new `users` row is T7's to add and to amend this section
-  with. Until it lands, the only thing that builds a `users` row is the test helper T1 wrote.
+  with. Until it lands, the only thing that builds a `users` row is the test helper T1 wrote.~~
+
+**Amended 2026-09-03, by T7, which wrote the provisioning command.** `CreateUser` is in the block
+above now, and the paragraph it replaces is struck rather than removed because it is the record of
+why this method arrived a task late rather than with the rest of the interface.
+
+It takes a whole `User` rather than a name and a handful of options, which is `OpenSession`'s shape
+and for `OpenSession`'s reason: **what the store writes is what it was handed, so there is no second
+place where a default is decided**. In particular the identifier is derived by the domain
+(`users.DeriveID`, §6.9) and never invented in the store, and the policy and configuration arrive as
+the bytes of their documents, which is what §5's own amendment already made the boundary's shape.
+
+Three things it deliberately does not do:
+
+- **It does not write a credential.** The password record is a row in a table of its own (§4), so an
+  account with no password is the state `CreateUser` leaves behind rather than a special case — and
+  §6.9's `--no-password` is a state an operator asks for. Two writes, two calls.
+- **It has no `ON CONFLICT` clause.** A second account whose folded username is taken is a mistake
+  and not an update: the identifier is derived from that name, so an upsert would overwrite somebody
+  else's policy, configuration and login history with a new account's defaults. The unique index
+  refuses it, which is the constraint being the database's rule exactly as §4 argues.
+- **It does not check for the duplicate first.** The command does, for the *message*; the index is
+  the check. Those are different jobs and conflating them is how a check that races becomes the only
+  guard.
 
 ```
 // internal/httpapi — the port 001 declared, filled
@@ -800,6 +824,18 @@ wrote.
 
 `spec.md` gains §3.9 for this, because it is observable and therefore WHAT. §11 records it.
 
+**Amended 2026-09-03, by T7: the idempotence has to be asserted in SQL, and this is measured rather
+than argued.** Everything above the store answers setup completion as a **boolean** —
+`ports.Installation.SetupCompleted`, because that is what `StartupWizardCompleted` carries — so no
+assertion phrased in those terms can see a second write. Mutated: with the `SetupCompleted` guard
+removed, so that every `user add` calls `MarkSetupComplete` again, the boolean assertion in
+`internal/app`, both halves of the wire assertion in `conformance/` and the whole of the rest of the
+suite stay **green**, and the only failure is the column read back directly —
+`setup_completed_at moved from 639240168074163130 to 639240168074702010`
+`[measurement: mutation of internal/app.completeSetup, Go 1.27.0, 2026-09-03]`. The recorded instant
+means *when setup was first completed*; nothing on the wire exposes it yet, and that is precisely why
+the check for it cannot be written at the wire.
+
 ### 6.9 Provisioning, and the three seats a run needs
 
 Spec §2 puts creating, editing and deleting users **over HTTP** out of scope and says v1 manages
@@ -835,6 +871,23 @@ Four things this shape buys, each of which decided it:
   `restricted` and `playback-denied`, and a run that cannot stand up the second answers twelve of
   twenty-three reads with the wrong seat. `--administrator`, the default (a plain account) and
   `--enable-media-playback=false` are those three.
+
+**Amended 2026-09-03, by T7, which wrote the command: `--hidden` is on by default, and the flag list
+above reads as though it is not.** The bracketed flags were written in two styles — `[--hidden]`
+bare, `[--enable-media-playback=false]` with its value — and the first style says *"pass this to turn
+it on"*. Measured against the reference's own account creation, that is backwards: a freshly created
+account is granted `PermissionKind.IsHidden` **true**
+`[source: Jellyfin.Data/UserEntityExtensions.cs:173 @ v10.11.11]`, which `DefaultPolicy()` already
+transcribes, so a new account is off login screens until somebody unhides it and `--hidden=false` is
+the interesting spelling.
+
+The command is written so that this cannot drift again: **every policy flag's default is that
+property's value in `DefaultPolicy()`**, read from it rather than repeated. A bare `user add`
+therefore stores exactly the policy the reference gives a fresh account, and that equality is
+asserted over the encoded document rather than field by field — so the day a default moves, one test
+says so instead of nine tests agreeing with the code. The consequence for the fixtures §8 lists: the
+*hidden* account is the bare one, and the account that has to appear in `/Users/Public` is the one
+that needs a flag.
 
 **The user identifier is derived, not random**: 32 lowercase hex from the first 16 bytes of SHA-256
 over the folded username. Principle VII, and it buys something concrete — an installation

@@ -184,7 +184,7 @@ still owe.
 
 ## T7 — `atrium user add`, and the account that completes setup
 
-- [ ] **Changes:** `internal/app` — the three subcommands of [plan §6.9](plan.md#69-provisioning-and-the-three-seats-a-run-needs),
+- [x] **Changes:** `internal/app` — the three subcommands of [plan §6.9](plan.md#69-provisioning-and-the-three-seats-a-run-needs),
   with the password read from **standard input** and never from a flag; `cmd/atrium` — one dispatch
   on the first argument and nothing else (plan §3). The user identifier is derived from the folded
   username. The first account records setup completion once, through `MarkSetupComplete` and
@@ -193,6 +193,10 @@ still owe.
   make an account, every criterion in spec §5 would be proven one layer in — which is exactly the
   shape 001's closing audit caught itself in twice. It also produces the three seats
   [request-cases.yaml](../../docs/compatibility/request-cases.yaml) names.
+- **Plan §5 had no `CreateUser` and this task adds it**, which T4 recorded as out of its scope:
+  nothing in either store interface made a `users` row, and the only thing that built one was a test
+  helper. The method is added and **plan §5 is amended in the same change**, the way T4 amended it.
+  Plan §6.8 and §6.9 gain amendments too, for the two things writing the command measured.
 - **Depends on:** T4, T5
 - **Verified by:** `user add` on an empty data directory creates the account and `Installation()`
   then reports `SetupCompleted` true; a **second** `user add` does not move the recorded instant,

@@ -108,13 +108,23 @@ The fixture library covers, deliberately, the cases that break naive scanners:
 - A series with specials (season 0), a multi-episode file, and an absolute-numbered season.
 - An album split across discs, a compilation with per-track album artists, and a track whose
   embedded tags disagree with its filename.
-- Non-ASCII names, names with brackets and dots, and a name that differs only by case.
+- Non-ASCII names, names with brackets and dots, ~~and a name that differs only by case~~.
 - A directory excluded by an **empty** `.ignore` marker, which is the only kind that excludes
   anything, and a zero-byte file that is an incomplete copy rather than an exclusion.
 - A subtitle file in a **legacy single-byte encoding**, which is the one input
   [behaviours §5.11](behaviours.md#511-a-subtitle-file-in-a-legacy-encoding-is-decoded-by-a-rule-and-not-by-a-detector)
   has, and an image carrying an **EXIF orientation** planted beside a film, which is the one input
   the resize edge 006 owes has. Both exist because no remote request reaches either.
+
+**Amended 2026-09-05, by 003's T1 and closed by its T17: the case-only-differing name is struck,
+because the tree the recorded reading was taken over does not hold one.** Over the fifty-eight items
+[reference-fixture-reading.json](reference-fixture-reading.json) names in `Movies`, `Shows` and
+`Music`, **no two differ only in capitalisation**, and a test in `internal/app` now asserts that of
+both readings at once. Planting the pair would give Atrium an item the recorded reading has no row
+for — a difference in the wrong direction, added to make a list come out — so
+[U-44](reference-target.md) stays what its own register row says it is: a claim one scan against a
+single-use reference settles, and this project leaves it unmeasured rather than manufacturing a
+difference for it.
 
 L2 tests then assert real values: that the album with two discs yields one album and N tracks with
 the right `ParentIndexNumber`, that resume position round-trips through ticks, that sort order
@@ -262,10 +272,31 @@ structure* — needs two servers to be **taken** and only one to be **checked**,
 recorded once by `tools/probe_reference_scan.py` against a single-use instance and compared against
 Atrium's own scan by `tests/library/test_reference_reading.py`, in the default job, with no Jellyfin
 anywhere. **The comparison is not an equality**: the two servers disagree over that tree in
-twenty-six places, each declared in that module with its reason, and a difference that is not
-declared fails. Re-running the probe is what moves the record; editing the table is what moves what
-is expected of the comparison, and doing the second to make the first go away is the one thing it
-is for preventing.
+~~twenty-six~~ **forty-seven** places, each declared in that module with its reason, and a difference
+that is not declared fails **and a declared one that has gone away fails too**. Re-running the probe
+is what moves the record; editing the table is what moves what is expected of the comparison, and
+doing the second to make the first go away is the one thing it is for preventing.
+
+**Amended 2026-09-05, by 003's T17 — the task that writes the declaration this paragraph describes.**
+This document stated the count **twice and disagreed with itself**: forty-seven in [§L2](#l2--semantic)
+above and twenty-six here. Forty-seven is the later number — it is [010's D-7](../../specs/010-conformance-harness/spec.md#7-open-questions),
+taken 2026-09-02, and it is what [CLAUDE.md](../../CLAUDE.md), [specs/README.md](../../specs/README.md),
+010's own specification and 003's plan all carry. The stale number is struck rather than rewritten,
+because **an implementer who took twenty-six as the target would declare twenty-one differences too
+few and fail the run for the wrong reason**, and the record of that is worth more than a tidy
+sentence. The half about a declared difference that has gone away is added in the same edit: it is
+010's amended AC-2, and the sentence predates it. **No row of [allowlist.yaml](allowlist.yaml) moves**
+— this paragraph describes the *fixture-reading* comparison and not an allowlist entry, so the
+three-way pairing with that file and 010 §3.3 sees the same rows before and after. That is 002 T22's
+argument, checked before it was relied on.
+
+**And what 003 derived, which is not forty-seven.** 003's own declaration holds **thirty-two** rows,
+over the four libraries `internal/libraryfixture` builds; a further eight are predicted over `Films`
+and `Tunes`, which are 008's media world and which no run in the default job can build. The
+remaining **seven are not derivable from the recorded reading and this project's specifications**,
+which is all 003 has — the module holding the original declaration stayed in the source repository.
+The count is asserted from the declaration's own length in `internal/app`, so the gap is a stated
+finding rather than a row somebody invented to reach a number.
 
 **The reading is a reading of the tree only because the instance is configured for it.** A library
 added with nothing but its path fetches metadata from the internet, and over this tree that supplied

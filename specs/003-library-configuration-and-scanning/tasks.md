@@ -893,7 +893,7 @@ otherwise:
 
 ## T17 — The forty-seven declared differences, which this project holds the reading of and not the reasons
 
-- [ ] **Changes:** the declaration of the forty-seven, one row each; the comparison of
+- [x] **Changes:** the declaration of the forty-seven, one row each; the comparison of
   [reference-fixture-reading.json](../../docs/compatibility/reference-fixture-reading.json) against a
   real scan of the built tree, run in the default job with no Jellyfin anywhere
   ([AGENTS.md §1.6](../../AGENTS.md)); and the correction of one count in
@@ -940,10 +940,28 @@ otherwise:
   table's own load, which is `allowlist.yaml`'s rule applied to a different file for the same reason;
   the four shapes 010's own amendment names are each present with the right owner — the zero-byte
   film (003 §3.2), the twenty-five differently-named files (004), the empty library (003 §3.1) and
-  every library's root row (003 §3.1, `CollectionFolder` against the reference's `Folder`); the
-  case-insensitive pair of files is among them ([U-44](../../docs/compatibility/reference-target.md));
-  and the **total is asserted as forty-seven, read from the declaration's own length**, so a row
+  every library's root row (003 §3.1, `CollectionFolder` against the reference's `Folder`); ~~the
+  case-insensitive pair of files is among them ([U-44](../../docs/compatibility/reference-target.md));~~
+  and the **total is asserted as ~~forty-seven~~ the declaration's own length**, so a row
   deleted to make a run go green is a failing count rather than a quieter suite.
+- **Two clauses struck 2026-09-05, by running them.** Neither is a clause the task declined; each is
+  one the measurement refused.
+  - **The case-insensitive pair cannot be among them.** T1 already found the tree holds no
+    case-only-differing name and plan §8.5 records why building one would be drift; T17 confirms it
+    over *both* readings and asserts the absence instead. Manufacturing the pair would give Atrium an
+    item the recorded reading has no row for — a difference in the wrong direction, added to make a
+    list come out. [U-44](../../docs/compatibility/reference-target.md)'s own claim that the
+    difference *"is one of the forty-seven"* is struck there too, and the row stays owed a probe.
+  - **The total is thirty-two and not forty-seven.** Forty-seven is 010's D-7, counted over the six
+    libraries the fixture composes; **two of those six are 008's media world and no run in the
+    default job can build them**. Thirty-two are declared over the four this feature builds, eight
+    more are predicted over `Films` and `Tunes`, and the remaining **seven are not derivable from
+    the recorded reading and this project's specifications** — which is all this project has, since
+    the module holding the original declaration stayed in the source repository. The mechanism the
+    clause is for is unchanged and is what the assertion keeps: the total is read from the
+    declaration's own length. **Inventing seven rows to reach a number is exactly what that
+    assertion exists to prevent, one direction round.** Plan §8.2 carries the arithmetic, and
+    conformance.md records it beside the corrected forty-seven.
 - **Spec reference:** §3.1, §3.2, §3.6, AC-1; plan §8.2; [010 AC-2](../010-conformance-harness/spec.md#5-acceptance-criteria).
 
 ## T18 — What `conformance/` can prove about a feature with no routes, and what it cannot
@@ -1143,13 +1161,21 @@ measurement or the request that owner will need.*
    at once. It is the cheapest debt in the project to discharge and the easiest to leave open,
    because every one of those values will *look* right in a body somebody eyeballs.
 
-2. **Twenty-five of T17's forty-seven declared differences are 004's, and 004's landing is supposed
-   to break them — owner: 004.** They are files the reference names differently, and 003 declares
-   them because the comparison cannot run without a reason for every difference. The rule is that a
-   **declared difference that has gone away fails too**, so the day 004's metadata resolution changes
-   an item's name, the row declaring that difference goes red. That is the mechanism working. What
-   004 owes is to edit the rows rather than to delete them, and to keep the total asserted, since a
-   row removed to make a run go green is exactly what the count assertion exists to catch.
+2. **~~Twenty-five of T17's forty-seven~~ Twenty-three of T17's thirty-two declared differences are
+   004's, and 004's landing is supposed to break them — owner: 004.** (Corrected at T17, which wrote
+   the declaration; plan §8.2 carries the arithmetic between its thirty-two and 010's forty-seven.)
+   They are every difference about *which name an item carries* — twenty files the reference names
+   differently, plus two album directories and the series the reading calls `tvshow` — and 003
+   declares them because the comparison cannot run without a reason for every difference. The rule is
+   that a **declared difference that has gone away fails too**, so the day 004's metadata resolution
+   changes an item's name, the row declaring that difference goes red. That is the mechanism working.
+   **The file is `internal/app/reference_reading_test.go` and the thing to edit is the
+   `declaredDifference` literal in `declaredDifferences`**: a row is `Library`, `Where` (the item's
+   root-relative path), `Kind`, the `Reference` and `Atrium` sides as `"Type: Name"`, a `Reason`
+   naming a specification section, an `Owner` and a `Because`. Change the `Atrium` side to the name
+   004 now produces — or change `Kind` and drop the row's two sides if the difference closes
+   entirely — and keep `declaredDifferenceTotal` equal to the table's own length, since a row removed
+   to make a run go green is exactly what the count assertion exists to catch.
 
 3. **`items.name` has one writer today and 004 adds a second — owner: 004's plan.** A refresh
    overwriting what a scan resolved, or the reverse, is out of this feature's hands and is named in

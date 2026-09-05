@@ -1006,7 +1006,7 @@ otherwise:
 
 ## T19 — The cross-document debts: which of them are this feature's
 
-- [ ] **Changes:** the cross-document debts the plan and this list recorded and did not fix, each
+- [x] **Changes:** the cross-document debts the plan and this list recorded and did not fix, each
   **decided** rather than listed.
   - **Taken at T17, and recorded here as taken:** conformance.md's stale *"twenty-six places"*. The
     argument for its being 003's is in T17; it lands there rather than here because Principle III
@@ -1048,6 +1048,68 @@ otherwise:
   *"the pairing is not disturbed"*; and each debt not taken names its owner and the measurement or
   the request that owner will need, because a debt handed on without the thing that settles it is a
   debt nobody can close.
+- **Amended 2026-09-05, on doing it. The first two are what the checks found; the rest are what this
+  line did not name.**
+  - **All four citations resolve, and what had to be checked was the shape of what they now reach.**
+    [plan §6.4](plan.md#64-change-detection) is *Change detection* and
+    [§6.5](plan.md#65-the-guard-against-a-mass-delete) is *The guard against a mass delete*, and
+    §6.5 carries **three numbered guards** — which is what behaviours §5.2's *"none of the three
+    guards"* counts, so the sentence beside that citation is true of this project's plan as well as
+    of the one it was written about. Both `003 tasks.md#what-the-gate-changed` citations reach
+    [this list's own gate record](#what-the-gate-changed). Measured with a link check over the five
+    citing documents and both of this feature's own: the only unresolved links in any of them are
+    **PROVENANCE's other dangling targets** — 006's, 008's, 009's and 011's plans, five task lists
+    that do not exist, `tools/README.md#probes` and `pyproject.toml` — and **not one of them is
+    003's**. Nothing was repointed and nothing deleted ([AGENTS.md §4](../../AGENTS.md)).
+  - **The three artefacts load and are untouched**: `allowlist.yaml` 85 entries,
+    `request-cases.yaml` 86 cases, `named-comparisons.yaml` 20 comparisons, the same counts before
+    and after `[measurement: 003 T19, 2026-09-05]`. This change edits none of the three, which is
+    the strongest form of *"the pairing is not disturbed"* available.
+  - **The three plausible-looking allowlist holes, named — because *"a reader would find three"* is
+    not a warning until it says which three.** They are `/Items/-/Name`, `/Items/-/SortName`
+    together with the order of `/Items`, and `/TotalRecordCount` over the fixture library. Each
+    looks like 003's, because 003 decides an item's name, its sort key and which items exist at all.
+    **All three are 005's, and the reason is the pointer rather than the cause**: every one of them
+    names a body on `GET /Items`, which is [surface.yaml](../../docs/compatibility/surface.yaml)'s
+    row for **005** and this project's only `L3` listing. And the first is not an allowlist entry in
+    anybody's hands: a name difference is one a server *chose*, and that file refuses a derivation
+    class as the excuse for a chosen value — it would need a `behaviours §N`, which is the hole 001
+    filled with §4.5 and 002 checked for and did not have. **003 has neither, because it has no
+    endpoint**, and the twenty-three name differences are declared in T17's table instead, where the
+    reason is a specification section and the owner is named.
+  - **The register rows name a *scan of a tree* and not a request, and that is the register being
+    right rather than a row being short.** [reference-target.md](../../docs/compatibility/reference-target.md)
+    says so in terms — U-42 to U-44 are *"the first rows about something other than a response"*,
+    and *"the run that settles them is not a request but a scan of a tree"* — and each names the
+    tree: one library holding an empty marker, a marker one directory up and a marker with one
+    pattern (U-42); two files differing by ` - a`/` - b` and two more by ` - cda`/` - cdb` (U-43);
+    two files differing only in case, on a server whose setting has not been touched (U-44). **The
+    clause of this task's own line that says *"names a request"* is the wrong noun for a feature
+    with no routes, and the register is what it should have said.**
+  - **Two of the three land on a failing test the day they are measured and the third cannot, which
+    is the finding this check was worth running for.** U-42 is asserted as a divergence by
+    `TestAMarkerAboveTheLibraryRootExcludesNothing` and `TestANonEmptyMarkerExcludesNothing`, each
+    with the control T8 wrote for it; U-43 by `TestABareTrailingLetterIsTwoFilmsAndACdLetterIsOne`,
+    whose doc comment says in terms that it is written to go red the day somebody measures it.
+    **U-44 has only its Atrium half** — `TestCapitalisationIsTheWholeOfWhatCaseSensitiveDecides`
+    asserts that two capitalisations of one name derive one identifier in the default library — and
+    there is no reference half for it to disagree with, because T1 and T17 both found the fixture
+    holds no case-only-differing pair and that building one would be drift. So a probe that settles
+    U-44 lands on a register row and a specification section and on **no failing test**, where the
+    other two land on a red build. That asymmetry is now a paragraph in the register, beside the one
+    that already says U-43 is the row to measure first.
+  - **The stale count in this list's own definition of done is struck**, which is T17's correction
+    reaching the last sentence that still carried the old number. **T17's heading is deliberately
+    left alone**: [plan.md](plan.md) cites `#t17--the-forty-seven-declared-differences-…` twice, and
+    renaming a section to correct one word inside it would break two links to fix none.
+  - **T16 left one question to this task and it is answered.** Spec §3.8's *"directory emptied"* row
+    has no acceptance criterion, and T16 asked whether that is a gap in §5 or a deferral. **It is
+    the deferral, and it is already placed**: it is [plan §8.3](plan.md#83-what-only-becomes-observable-at-005-and-what-005-must-not-accept-as-proven)'s
+    sixth row, and this list's own table says it is established here by nothing. A criterion of this
+    feature's could only assert that the container is **retained**, which is T9's and is asserted;
+    what §3.8's row is about is whether a user ever **sees** it, and this feature has no observer to
+    answer that. Writing an AC-17 for it would be a criterion about an absence with nobody to
+    notice — 001's and 002's audits' own shape, one turn worse. It stays 005's, item 9 below.
 - **Spec reference:** plan §8.2, §11; [docs/README.md §Paired files](../../docs/README.md#paired-files-edit-both-halves-or-neither).
 
 ## T20 — The closing audit
@@ -1163,8 +1225,13 @@ is still true, and OQ-9 is where the source reading belongs.
 
 ## What this feature owes the next ones
 
-*Written at T19, from what T1–T18 found. Each names what is owed, **who owns it**, and the
-measurement or the request that owner will need.*
+*Written at T19, from what T1–T18 **found** rather than from what the list predicted they would.
+Fourteen items. Each names what is owed, **who owns it**, and the measurement or the request that
+owner will need — because a debt handed on without the thing that settles it is a debt nobody can
+close. Where a task refuted a row of the draft this section replaces, the refuted words are struck
+and kept: [002's T22](../002-authentication-users-and-sessions/tasks.md#t22--the-cross-document-debts-which-of-them-are-this-features)
+found that a correction which narrows a claim instead of testing the narrower one is how a claim
+outlives its refutation, and a row rewritten silently is that failure one document earlier.*
 
 1. **The six claims of [plan §8.3](plan.md#83-what-only-becomes-observable-at-005-and-what-005-must-not-accept-as-proven)
    — owner: 005, except the fifth, which is 008's.** The table at the top of this list says which
@@ -1172,10 +1239,28 @@ measurement or the request that owner will need.*
    whoever writes 005's plan. **A green suite here is not evidence for any of the six**; each needs
    an assertion at the HTTP boundary, and 001's audit says how to check that the assertion is real —
    break the wiring, order by `name` instead of `sort_key`, write the wrong column, and watch a test
-   go red. And **the first four rows are one request**: a single `/Items` listing over the fixture
-   library, compared byte for byte, covers the identifier, the order, the parent and the four numbers
-   at once. It is the cheapest debt in the project to discharge and the easiest to leave open,
-   because every one of those values will *look* right in a body somebody eyeballs.
+   go red. **The request that discharges each is named, because "005 will cover it" is not a debt
+   anybody can close:**
+   - **Rows 1 to 4 are one request.** A single `/Items` listing over the fixture library, compared
+     byte for byte, covers the identifier, the order, the parent and the four numbers at once. It is
+     the cheapest debt in the project to discharge and the easiest to leave open, because every one
+     of those values will *look* right in a body somebody eyeballs.
+   - **Row 5 is 008's**, and its request is a `POST /Items/{itemId}/PlaybackInfo` — or any body
+     carrying `MediaSources` — for the fixture's multi-part film, asserting **two** sources whose
+     paths are the two parts and whose order is the part ordinals T12 round-trips as `1` and `2`.
+   - **Row 6 is 005's entirely**, and its request is a `/Items` listing taken after a series'
+     episodes have all been removed and a scan has run: T9 proves the container is **retained**, and
+     what nobody has established is that the listing declines to offer it. That is
+     [behaviours §5.2](../../docs/compatibility/behaviours.md#52-a-container-that-has-lost-every-file-is-not-removed)'s
+     closing half, and item 9 below is the rest of it.
+
+   **The deferral is now stated in six places** — the package comments of `identity_test.go`,
+   `sortkey_test.go`, `shows_test.go` and `music_test.go`, the header of `internal/app/
+   library_test.go`, and the header of `conformance/library_configuration_test.go` — with the
+   phrasing 005 should not soften: the process boundary is **not weaker** than the HTTP boundary at
+   catching a PascalCase field name, a `null` that should be absent, a stringified integer or a key
+   order. It is **inapplicable**, because 003 produces no wire representation at all. A weaker
+   instrument leaves a residual risk to argue about; an inapplicable one has nothing yet to apply.
 
 2. **~~Twenty-five of T17's forty-seven~~ Twenty-three of T17's thirty-two declared differences are
    004's, and 004's landing is supposed to break them — owner: 004.** (Corrected at T17, which wrote
@@ -1187,57 +1272,186 @@ measurement or the request that owner will need.*
    changes an item's name, the row declaring that difference goes red. That is the mechanism working.
    **The file is `internal/app/reference_reading_test.go` and the thing to edit is the
    `declaredDifference` literal in `declaredDifferences`**: a row is `Library`, `Where` (the item's
-   root-relative path), `Kind`, the `Reference` and `Atrium` sides as `"Type: Name"`, a `Reason`
-   naming a specification section, an `Owner` and a `Because`. Change the `Atrium` side to the name
-   004 now produces — or change `Kind` and drop the row's two sides if the difference closes
-   entirely — and keep `declaredDifferenceTotal` equal to the table's own length, since a row removed
-   to make a run go green is exactly what the count assertion exists to catch.
+   root-relative path, or `theLibrarysOwnRow`, or `"(no path) Type: Name"`), `Kind`, the `Reference`
+   and `Atrium` sides as `"Type: Name"`, a `Reason` naming a specification section, an `Owner` and a
+   `Because`. Both sides are **part of the declaration**, so a name that moves on either fails a
+   third way — reported as *"no longer reads the way the row says"* — rather than silently matching
+   the same row. Change the `Atrium` side to the name 004 now produces, or change `Kind` and drop the
+   row's two sides if the difference closes entirely, and keep `declaredDifferenceTotal` equal to the
+   table's own length: a row removed to make a run go green is exactly what the count assertion
+   exists to catch. **One of the twenty-three has no established cause** — no path-derived rule makes
+   `tvshow` out of a directory called `The Series`, the tree carries no sidecar, and planting one to
+   make the name come out would be drift. Its `Because` says so, and if 004 finds the real cause that
+   is the row whose reason to correct.
 
-3. **`items.name` has one writer today and 004 adds a second — owner: 004's plan.** A refresh
+3. **Seven of the differences 010 counted are not derivable from anything this project holds, and
+   that gap is a live question — owners: 010 for the reading, 004 for not closing it the wrong way.**
+   010's D-7 counted **forty-seven** against the *other* implementation over **six** fixture
+   libraries. T17 derives **thirty-two** over the four `internal/libraryfixture` builds; a further
+   **eight** are predicted over `Films` and `Tunes`, which are 008's ffmpeg world and which no run in
+   the default job can build; **seven are left over**. The reason they cannot be derived is
+   measurable rather than mysterious: [reference-fixture-reading.json](../../docs/compatibility/reference-fixture-reading.json)
+   records exactly four fields per item — `type`, `name`, `file` and `path` — so a difference in any
+   *other* field is invisible to the comparison however real it is. T7 already found one of that
+   shape and could not declare it: **Atrium puts a `ProductionYear` on an album where the reference
+   does not, and the reading has no year field to hold either side.**
+   - **What 010 needs to do:** re-record the reading against a single-use instance
+     ([ADR-0007](../../docs/decisions/0007-a-container-runtime-for-the-reference-instance.md)) with
+     **more per item than four fields** — production year, index numbers and sort name are the ones
+     003 can already predict a difference in — and re-derive. Rows that appear only once the reading
+     carries them are the likeliest shape of the seven. What remains after that is the experiment's
+     own answer rather than a bookkeeping error: a difference the Python implementation produced and
+     the Go one does not is exactly what diffing the two reports is for.
+   - **What 004 must not do:** invent rows to reach forty-seven. A difference 004 produces that the
+     reading cannot see is a **real** difference with nothing to declare it against, and it belongs
+     in 004's own plan and in a request to 010, not in the table. The total is asserted from the
+     declaration's own length precisely so that reaching a number is not a way to make a run go
+     green — and this is that assertion working in the direction nobody expects.
+
+4. **`items.name` has one writer today and 004 adds a second — owner: 004's plan.** A refresh
    overwriting what a scan resolved, or the reverse, is out of this feature's hands and is named in
    [plan §9](plan.md#9-risks). [behaviours §5](../../docs/compatibility/behaviours.md#5-accepted-gaps-in-v1)'s
    rename row already records the same fight from the editing side, so the argument exists and what
    is missing is the decision about which writer wins.
 
-4. **The `TagSource` seam is declared here and implemented by 004 — owner: 004.** `Resolve` consults
-   it **once per file, before grouping**, because the album artist decides which album a track
-   belongs to and grouping cannot be redone afterwards (plan §6.2). v1 ships one that answers
-   nothing, so this feature's tests exercise the path fallback only, and **spec §3.5's precedence
-   rule — the measured one, 413 tracks whose album name cannot have come from the path — is
-   exercised by nothing in 003.** 004's tests are where it becomes true.
+5. **The `TagSource` seam is declared here and implemented by 004 — owner: 004.** It is
+   `ResolveWithTags(lib, readings, TagSource)` in `internal/library/resolve.go`, and `Resolve` is
+   that function with `NoTags{}`; the source is consulted **once per file, before grouping**, because
+   the album artist decides which album a track belongs to and grouping cannot be redone afterwards
+   (plan §6.2). **There is no error return, deliberately**: a file whose tags cannot be read is
+   neither a skipped file nor an unplaceable item — spec §3.8 counts two things and no third — it is
+   an item resolved from its path, and reporting the failure belongs to the feature that owns the
+   reader. Three things 004 inherits with it. **`SortTitle` is deliberately not in `Tags`**: T4 put it
+   on `ports.ScannedItem` as the input to spec §3.7.3, which applies to all eight kinds, where
+   `TagSource` answers a music file's five, so setting one means mutating items after `Resolve`
+   returns and re-deriving `SortKeyFor`, or a second pass — neither is written. **The precedence is
+   three ranks and not two** — a tag outranks a directory, a directory outranks an inference, and
+   §3.5's *"only if"* is what makes track artists fill a hole rather than overrule; the wider reading
+   turns an ordinary album with a guest on every track into a compilation. And **spec §3.5's measured
+   precedence rule — 413 tracks whose album name cannot have come from the path — is exercised by
+   nothing in 003**: the stub source proves the grouping key and the precedence order and nothing
+   about a real reader over a real library, and both the package comment and plan §8.5 say so.
 
-5. **U-42, U-43 and U-44 each need a running reference — owner: whoever next has one.** All three are
-   source readings this feature has implemented differently or narrowly, all three are asserted here
-   **as divergences**, and the register names the request that settles each. **U-43 first**, and not
-   because it is the likeliest: it is the only one of the three whose wrong reading *loses an item*.
+6. **Two identifier collisions are unreachable today and 004 makes one of them reachable — owner:
+   004, and the store already decided what happens.** `ApplyScanBatch` refuses a batch naming one
+   item twice with `ErrRepeatedIdentifier` (T12), which is T3's finding turned into a decision: NFC
+   has singleton mappings, so `K.mkv` (Kelvin sign) and `K.mkv` (plain) are two files on disk and one
+   key even in a case-sensitive library, and nothing in `internal/library` can notice because the
+   derivation is a pure function of the key. **The second collision is 004's own**: the compilation
+   rule runs after the grouping and never regroups, so an album attributed `Various Artists` from its
+   track artists and one whose directory already said `Various Artists`, sharing an album name, are
+   one identifier — unreachable under `NoTags` and reachable the day a real reader lands. Do not
+   close either by deduplicating a batch: the pair is two things in the library and the operator has
+   to see it. *(A related fact worth having before somebody writes the wrong test: a library's
+   identifier is 16 bytes of `crypto/rand`, so **nothing about item identifiers is reproducible
+   across two installations** and any assertion of the shape 002 has for accounts — "two data
+   directories provisioned the same way hold the same identifiers" — is false for libraries and
+   always will be. Its absence is not a gap.)*
 
-6. **007 inherits AC-11's middle clause, and it is currently held up by a test.** *"User data
-   outlives items"* is a property of ADR-0003's split rather than of this feature's removal pass —
-   no precious row references a derived row id, so a removed item's user data keeps naming a string
-   that will exist again. There is **no retention rule and no orphan sweep to write**, and the risk
-   is the opposite of the obvious one: a later feature that tidies user data whose item is gone
-   breaks AC-11 and nothing else. Until 007 exists the precious row in that test is written by the
-   test itself; 007 should replace it with a real favourite rather than delete it.
+7. **U-42, U-43 and U-44 each need a running reference — owner: whoever next has one.** All three are
+   source readings this feature implemented differently or narrowly; the register names the tree that
+   settles each, and **the run is a scan and not a request**, which the register says in terms. **U-43
+   first**, and not because it is the likeliest: it is the only one of the three whose wrong reading
+   *loses an item*. **Checked at T19, and the check found an asymmetry the register now carries:**
+   U-42 and U-43 are asserted here **as divergences**, each with a control, so a probe that
+   contradicts either arrives as a red build; **U-44 has only its Atrium half**, because the fixture
+   holds no case-only-differing pair and T1, T17 and conformance.md's L2 list all record that
+   building one would be drift. So U-44's measurement lands on a register row and on no failing test,
+   and the run that settles it needs a tree of its own.
 
-7. **005 owns the observable half of [behaviours §5.2](../../docs/compatibility/behaviours.md#52-a-container-that-has-lost-every-file-is-not-removed),
-   and 003 proves only that the container is still there.** A series whose episodes all vanished
-   keeps its row deliberately; what makes that invisible to a user is `/Items` declining to offer a
-   container with nothing under it. The two servers agree about the row
+8. **007 inherits AC-11's middle clause, and the table it needs already exists — owner: 007.** *"User
+   data outlives items"* is a property of [ADR-0003](../../docs/decisions/0003-sqlite-as-the-store.md)'s
+   split rather than of this feature's removal pass: no precious row references a derived row id, so a
+   removed item's user data keeps naming a string that will exist again. **`item_user_data` is
+   `0004_item_user_data.sql` in the precious lineage** ([plan §4.1](plan.md#41-the-precious-half--migration-0003_librariessql))
+   — `user_id` a real foreign key, `item_id` a **string** and deliberately not one, `is_favourite`
+   and `playback_position_ticks`, keyed `(user_id, item_id)`. **Extend it; do not replace it**, or
+   AC-11's assertion is left watching rows nobody writes. The two store methods are
+   `sqlite.Store.SetItemUserData` and `ItemUserData` and are deliberately **not** on a `ports`
+   interface, because 003 declares no domain that reads or writes user data; declaring the port is
+   007's. **And there must never be an `ON DELETE CASCADE` from `items`, nor an orphan sweep**: that
+   absence is measured rather than argued — adding *"delete every `item_user_data` row naming a
+   removed identifier"* to `RemoveItems` fails **one** test in the repository and no other
+   `[measurement: 003 T16, 7 mutations, 2026-09-05]`. Note also that `atrium library remove` is a
+   second producer of removals and takes every item of a library at once; whatever notices a sweep
+   appearing should notice that too.
+
+9. **005 owns the observable half of [behaviours §5.2](../../docs/compatibility/behaviours.md#52-a-container-that-has-lost-every-file-is-not-removed),
+   and 003 proves only that the container is still there — owner: 005.** A series whose episodes all
+   vanished keeps its row deliberately; what makes that invisible to a user is `/Items` declining to
+   offer a container with nothing under it. The two servers agree about the row
    `[probe: tools/differential.py --named container-that-lost-every-file, Jellyfin 10.11.11,
-   2026-09-02]`; nobody has measured the offering.
+   2026-09-02]`; nobody has measured the offering. **T19's decision on the question T16 raised: spec
+   §3.8's *"directory emptied"* row having no acceptance criterion is the deferral and not a gap in
+   §5.** A criterion of this feature's could only assert the retention, which T9 asserts already; the
+   row is about whether a user sees the container, and this feature has no observer.
 
-8. **The three sort-name lists and the pad width are constants, and the day one becomes editable is a
-   derived-generation bump — owner: whichever feature makes them editable.** Changing an article, a
-   removed character or the width invalidates **every stored sort key in the database**
-   (plan §4.3). A build that let an operator edit one without bumping the generation would reorder
-   half a library and leave the other half in the old order, permanently, with nothing failing.
+10. **The three sort-name lists and the pad width are part of the contract, and the day one becomes
+    editable is a derived-generation bump nothing will remind anybody of — owner: whichever feature
+    makes them editable.** `sortArticles`, `sortRemovedCharacters`, `sortReplacedCharacters` and
+    `sortPadWidth = 10` are constants in `internal/library/sortkey.go`, and changing any of them
+    invalidates **every stored sort key in the database** ([plan §4.3](plan.md#43-which-of-these-is-derived-and-the-two-that-are-not-obvious)).
+    **The pair that protects the derived schema does not protect the derivation**, and this is the
+    trap: `derivedSchemaDigest` is a hash of `derived/library.sql`, so
+    `TestTheDerivedSchemaAndItsGenerationMoveTogether` fails on any edit to *that file* — and the
+    sort-name constants are not in it. Change an article, update the byte-exact tables that go red in
+    `internal/library`, and **nothing anywhere requires `derivedGeneration` to be bumped**: half a
+    library keeps keys derived under the old rule, every item written afterwards uses the new one,
+    the two orders interleave permanently and no test fails. Measured rather than reasoned —
+    `sortPadWidth` moved from 10 to 11 fails **three tests, all of them `internal/library`'s byte
+    tables**, and not one assertion in `internal/store/sqlite` or `internal/app` and nothing naming
+    the generation `[measurement: 003 T19, 1 mutation, 2026-09-05]`. Whoever makes one editable owes the bump
+    ([plan §6.8](plan.md#68-the-derived-halfs-generation-and-the-rescan-that-replaces-002s-refusal))
+    and a check that notices it was not made.
 
-9. **`atrium library scan` is the only way to ask this server for a scan, and that is a measured
-   consequence rather than an omission.** `POST /Library/Refresh` is the reference's route and is not
-   in [surface.yaml](../../docs/compatibility/surface.yaml) because Principle VI keeps an endpoint out
-   until a client is measured calling it. behaviours §5.2 already records what it costs — *"Atrium
-   cannot be asked for a second scan over the wire at all"* — so 010's report names that comparison
-   outstanding on every run, and the feature that adds a measured consumer is the one that closes it.
+11. **The L0 check has a third blind spot, and it is not 003's to fix — owner: the argument is 001's,
+    the maintenance is 004's and 005's.** [001 plan §8.5](../001-server-identity-and-discovery/plan.md#85-routes-against-surfaceyaml)
+    designs the check as two views covering each other's blind spots, and
+    [conformance.md's L0 section](../../docs/compatibility/conformance.md#l0--routed) says the same.
+    **Both views derive what they expect from `surface.yaml`, so a route registered together with a
+    row in that document satisfies both by construction** — measured, not argued: registering a
+    `POST /Library/Refresh` and declaring it in both copies of the surface document leaves
+    `TestTheServerIsReachableOnExactlyTheImplementedRowsOfTheSurfaceDocument` and
+    `TestTheRouterServesExactlyTheImplementedRowsOfTheSurfaceDocument` **green**
+    `[measurement: 003 T18, 18 mutations, 2026-09-05]`. Neither view's blind-spot column names that
+    case, and 003's own definition-of-done line *"proven by both halves staying green"* would have
+    been a claim about nothing. What T18 put in its place is a **literal** of the eleven rows 001 and
+    002 registered, in `conformance/library_configuration_test.go` and
+    `internal/httpapi/registration_test.go`, with a comparison beside each that reports both
+    directions. **004 and 005 add their rows to both literals as they land**, and a reviewer who means
+    to add a route edits them deliberately. Whether the check itself should gain a third view is 001's
+    document to answer, and this feature does not answer it in someone else's plan.
+
+12. **`atrium library scan` is the only way to ask this server for a scan, and that is a measured
+    consequence rather than an omission — owner: the feature that measures a client calling the
+    reference's route.** `POST /Library/Refresh` is not in [surface.yaml](../../docs/compatibility/surface.yaml)
+    because Principle VI keeps an endpoint out until a client is measured calling it. behaviours §5.2
+    already records what it costs — *"Atrium cannot be asked for a second scan over the wire at
+    all"* — so 010's report names that comparison outstanding on every run.
+
+13. **The fixture is a declaration, and the rule for adding to it is narrower than it looks — owner:
+    anyone extending `internal/libraryfixture`, which is 004, 008 and 010 in turn.** **A file added
+    must be one *both* servers drop, with the citation of the rule that drops it beside it in `Why`**
+    ([plan §8.5](plan.md#85-the-fixture-and-why-it-is-generated-rather-than-checked-in)). A file only
+    Atrium drops is a difference [reference-fixture-reading.json](../../docs/compatibility/reference-fixture-reading.json)
+    has no row for; a file neither drops is an item it has no row for. Either moves T17's count, and
+    **neither is visible in a green run**. `libraryfixture.NotBuiltHere` names `Films` and `Tunes`
+    with the reason and is the list to extend rather than duplicate; a library appearing in the
+    reading that is in neither it nor `Libraries()` already fails a test. **008 owns `Films` and
+    `Tunes`**, and the eight predicted differences of item 3 are theirs to confirm or refute.
+
+14. **A server scans on its own now, so a test that asserts what a store holds over a long-running
+    server must say `--scan-interval 0` — owner: anyone writing a `conformance/` test over an
+    installation that holds a library, which is 004 and 005 next.** T14 wired the schedule and the
+    start-time rescan that plan §3, §6.8 and §6.9 specified and no task owned; the default interval
+    is twelve hours and `startServer` in `conformance/` passes none, so nothing is affected in
+    practice today. A test that provisions a library, starts a server and then asserts *"the store
+    still holds exactly what I put there"* is one small interval away from being flaky for a reason
+    that looks like anything but a schedule. **The ownership shape is the finding rather than the
+    schedule**: the task list was written from spec §3 and §5, and the schedule appears in the
+    specification only in §2's scope note — so anything stated outside §3 and §5 is invisible to a
+    list derived from them. AC-16 was the same shape. It is worth one pass over the rest of §2 and §4
+    before the next list is written from §3 and §5 alone.
 
 ---
 
@@ -1267,8 +1481,15 @@ The feature is done when **all** of these hold:
   being a literal `0` **deliberately** (T11), which is what 002's handover asked for by name, and
   ADR-0003's *"a derived-version mismatch at startup is a rescan rather than an error"* is
   implemented rather than refused.
-- [ ] The forty-seven differences are declared, the count is asserted from the declaration's own
-  length, and both failure directions are shown to fail (T17).
+- [ ] The ~~forty-seven~~ **thirty-two** differences are declared, the count is asserted from the
+  declaration's own length, and both failure directions are shown to fail (T17). **Struck
+  2026-09-05 at T19**, which found this the last sentence in the feature still carrying the old
+  number: T17 derived thirty-two over the four libraries `internal/libraryfixture` builds, eight
+  more are predicted over the two 008 builds, and seven are not derivable from the recorded reading
+  and this project's specifications at all — a gap this line must not be read as closing, since
+  inventing seven rows to reach forty-seven is precisely what asserting the count from the
+  declaration's own length exists to prevent. T17's *heading* keeps the old number on purpose:
+  [plan.md](plan.md) cites its anchor twice.
 - [ ] `spec.md`, `plan.md` and `tasks.md` are all marked `Implemented`.
 
 **One line of this list cannot hold as written, and saying so is the job rather than a failure of

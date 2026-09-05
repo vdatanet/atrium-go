@@ -135,7 +135,7 @@ otherwise:
 
 ## T3 — Path normalisation and `DeriveID`, which the whole feature rests on
 
-- [ ] **Changes:** `internal/library` — `Normalise(path, caseSensitive)` and
+- [x] **Changes:** `internal/library` — `Normalise(path, caseSensitive)` and
   `DeriveID(libraryID, kind, key)` of [plan §6.3](plan.md#63-identity-and-the-normalisation-the-whole-feature-rests-on):
   the first 16 bytes of SHA-256 over the library identifier, a NUL, the item kind, a NUL, and the
   normalised key, rendered as 32 lowercase hexadecimal characters.

@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part; 2026-09-05 at T6, sections 6.2 and 8.5, with the seven decisions writing the series, season and episode resolver took that section 6.2 constrained and did not take - where each of the three levels comes from and what a candidate under a bare root does for a series name, the season number's three sources in order, a series directory never also being a season directory, a season being named from its number rather than from its directory and taking a path only from a directory whose number is its own, the numbering family being the specification's with the reference's remaining expressions declared absent, the two cases a multi-episode range needs and the guard on its ending number, and Specials being season zero where the reference's own parser accepts Extras as well; and section 8.5 records that the fixture's 24 cannot assert that the filename is matched before the directory, because the season directory agrees with the filename and the flat shape has no season directory at all
 ---
 
 # 003 — Implementation plan
@@ -636,6 +636,68 @@ constrains and does not take, each forced by writing the code and each recorded 
   differ exactly when the library is case-insensitive, and a stored path that had been folded cannot
   be opened on a case-sensitive filesystem. `ports.ScannedItem.Path`'s own comment said the wrong
   one of the two and is corrected in the same change.
+
+**Amended 2026-09-05 at T6, which wrote the series, season and episode resolver.** Seven decisions
+the specification constrains and does not take, every one of them a *how* and therefore recorded
+here:
+
+- **The three levels come from three different places, and only the middle one is negotiable.** A
+  series is the **first path component** and is named by that directory, as a film in its own folder
+  is (§3.3); an episode is a candidate file; and a season is whichever of three sources answers
+  first. A candidate directly under a library root has no series directory, so its series name is
+  the reference's own `seriesname` capture — everything in the stem before the numbering, trimmed of
+  whitespace, `_`, `.` and `-`
+  `[source: Emby.Naming/Common/NamingOptions.cs:324, Emby.Naming/TV/EpisodePathParser.cs:85-88 @ v10.11.11]`.
+  Where even that is empty the item is **unplaceable** and hangs from the library's own row.
+- **The season number's three sources, in order**, which is spec §3.4's *"resolved by position, not
+  by preference"* made concrete: the filename's own numbering; failing that the containing
+  directory's name, but only a directory **below** the series; failing both, season 1 when the name
+  gave an episode number or a date and there was no season directory to ask
+  `[source: Emby.Server.Implementations/Library/Resolvers/TV/EpisodeResolver.cs:78-82 @ v10.11.11]`.
+  Failing all three there is no season and the episode's parent is its series.
+- **A series directory is never also a season directory**, and this is where §3.4's `24` really
+  bites. `24` cleans to a name that is nothing but digits, which is exactly the shape the reference
+  reads as a numeric season folder
+  `[source: Emby.Naming/TV/SeasonPathParser.cs:88-92 @ v10.11.11]`; the reference never asks,
+  because its season parser only runs on a directory whose parent is a `Series`
+  `[…/SeasonResolver.cs:45 @ v10.11.11]`, and neither does this.
+- **A season's name comes from its number and never from its directory**: `Season 01` on disk is an
+  item called `Season 1`, and zero is called `Specials`
+  `[source: Emby.Server.Implementations/Library/Resolvers/TV/SeasonResolver.cs:85-91 @ v10.11.11]`.
+  That is what lets an inferred season and a directory-backed one read identically in a client. A
+  season's **path** is filled only by a directory whose parsed number is the number the season
+  ended up with — a `Season 05` folder holding a file that says `S01E01` gives season 1 nothing.
+- **The numbering family is the specification's and not the reference's whole list**, and the
+  shortfall is declared rather than discovered: `S01E02` and its separators, `1x02`, `E02`/`EP02`
+  and date-based naming are implemented; the reference's optimistic bare-number expressions,
+  `Episode 16` standing alone and the part and chapter forms are not, and an episode carries no
+  production year where the reference takes one out of the filename. Every one of them places
+  **fewer** episodes here than there, and §3.8 counts an unplaceable item apart from a skipped file
+  precisely so an operator can see which. None is exercised by the fixture tree.
+- **A multi-episode range needs the reference's two cases and not "a hyphen or a letter".** A bare
+  hyphen may stand alone; a spaced ` - ` requires the letter
+  `[source: Emby.Naming/Common/NamingOptions.cs:754-765 @ v10.11.11]`. The loose reading makes
+  `24 - S01E01 - 12-00 AM` **episodes 1 to 12** — one item still, season 1 still, episode 1 still.
+  And the ending number is refused when a digit, a `p` or an `i` follows it, which is the
+  reference's own guard against reading `s09e14-1080p` as a hundred episodes
+  `[source: Emby.Naming/TV/EpisodePathParser.cs:154-165 @ v10.11.11]`.
+- **`Specials` is season zero and `Extras` is not**, where the reference's season parser accepts
+  both `[source: Emby.Naming/TV/SeasonPathParser.cs:81-86 @ v10.11.11]`. Under §3.2 an `Extras`
+  directory yields no candidate, so nothing is ever placed in a season made of one, and a season
+  nothing is placed in is never created — the same rule that leaves the fixture's empty
+  `The Series/Season 03` with no item. Implementing the second alias could therefore change exactly
+  one thing: it could let an `Extras` directory beside a `Specials` one supply season zero's
+  **path**. So the alias implemented is the one §3.4 states.
+
+**And the finding, which is T5's for the third time in this feature.** The task list says the
+fixture's `24/Season 01/24 - S01E01 - 12-00 AM.mkv` is *"built to catch exactly that"* — a resolver
+matching the directory before the filename. **It is not**, and two rules repair the mutation: the
+directory is `Season 01` and says 1 as loudly as the filename does, and in the `24` tree that has no
+season directory there is no directory below the series to match first at all. Only a tree where the
+two sources **disagree** catches the order, so the assertion is made over a `Season 05` directory
+holding a file whose name says `S01E01`. What the fixture path does catch is the other half of
+§3.4's sentence — that a series' own title is not read as a number — which is a different mutation
+with a different killing test. §8.5 records it beside T5's own.
 
 **And one thing `Resolve` refuses rather than answers.** A collection type whose resolver is not
 written yet is an **error**, never an empty plan. An empty plan is the answer *"this library holds
@@ -1320,6 +1382,24 @@ thing a build reaching for the first file can say. **The general shape is 001's,
 again — when a document says an assertion exists to catch a particular failure, produce that failure
 and check the assertion actually moves** — and it is the third time in this feature that the answer
 was *"it does not, and something else was quietly repairing it"*.
+
+**Amended 2026-09-05, at T6: the fixture's `24` cannot assert that the filename is matched before
+the directory, and the task list asked it to.**
+[T6](tasks.md#t6--resolve-for-series-seasons-and-episodes)'s Verified-by line makes
+`24/Season 01/24 - S01E01 - 12-00 AM.mkv` the file *"built to catch exactly that"*. Over that path
+the two orders agree: the containing directory is `Season 01` and says season 1 as loudly as the
+filename does. And in the other `24` shape — a flat `24/24 - S01E01 - …` with no season directory —
+there is no directory *below the series* to match first at all, because a series directory is never
+also a season directory. Two independent rules, again, and the swapped order passes everything.
+
+So the order is asserted over a tree where the two sources **disagree**: a `Season 05` directory
+holding a file whose name says `S01E01`. Position decides, the filename wins, and season 1
+consequently has **no path**, which kills a second mutation — a season taking a directory whose
+number is not its own. What the fixture path does catch is §3.4's other half, that a series' own
+title is not read as a number, and that has its own test and its own mutation. Recorded here beside
+T5's because it is the same shape a third time and the pattern is now the feature's most reliable
+source of findings: **a fixture built to demonstrate a rule is not the same thing as a tree that can
+refute it.**
 
 ## 9. Risks
 

@@ -5,7 +5,7 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-05
 accepted: 2026-08-26
-amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements
+amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements. 2026-09-05 again, by the change that wrote tasks.md, in two places that are one finding - section 3.8 states the second guard against a mass delete (a root that reads as holding no candidate file where the last scan saw one is unavailable, not emptied, and an operator can say they meant it) and section 5 gains AC-16 for it in both halves. What forced it: writing a task per criterion made visible that the guard which catches the way an unmounted share actually arrives - readable, and empty - was in the plan and in no criterion, so a list written from section 5 alone would have tested the destructive case that is easy to construct and not the one that happens
 implemented: 2026-08-27
 depends_on: []
 ---
@@ -445,6 +445,20 @@ position. This is why user data is keyed by identity and retained after the item
 that library fails loudly and changes nothing. Treating an unmounted share as "every item was
 deleted" is the single most destructive thing a scanner can do.
 
+**Amended 2026-09-05, while the task list was written: that rule guards the failure it names and not
+the form the failure usually arrives in.** A share that fails to mount is very often perfectly
+*readable* — the mount point is an ordinary empty directory — so *"cannot be read at all"* is a
+condition an unmounted share does not meet, the walk finds nothing, and the scan computes the
+deletion of everything the library holds. So: **a library root that reads as holding no candidate
+file, where the previous scan of that library recorded at least one, is treated as unavailable
+rather than as emptied.** The scan refuses, names the root, and changes nothing. Zero is the
+threshold because it needs no number — it is the mount failure's signature, where *"fewer than
+before"* is a judgement nobody could defend — and a root an operator really emptied is a deliberate
+act, so **an operator can say explicitly that they meant it** and the scan then proceeds and removes.
+What forced the amendment: writing the task list found that this rule had **no acceptance
+criterion**, so a list written from §5 alone would have tested the destructive case that is easy to
+construct and not the one that happens. §5 gains AC-16.
+
 **A container that has lost every one of its files keeps its own record**, and this is a change from
 what this section first said. A series whose episodes are all deleted still has a series; what it
 does not have is anything to show. Removing the container instead would mean deciding, at scan
@@ -502,6 +516,13 @@ looking for something that is not missing.
 15. An explicit sort title from metadata replaces the §3.7 derivation entirely, for every type —
     the overriding three included — and is lowercased and digit-padded but not article-stripped
     (§3.7.3). *(Added at the same audit — M32.)*
+16. A library root that reads as holding **no candidate file**, where the previous scan of that
+    library recorded at least one, refuses the scan and removes nothing — **and** the same scan, with
+    the operator's explicit permission to proceed over an empty root, removes every item that was
+    under it (§3.8). *(Added 2026-09-05, while the task list was written. §3.8's unavailable-root
+    rule guards a root that **cannot be read**, and a share that mounts as an empty directory can be
+    read perfectly well; the rule that catches that form had no criterion at all. Both halves are
+    named because a test asserting only the refusal passes on a build whose override does nothing.)*
 
 ## 6. Conformance
 

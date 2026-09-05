@@ -226,6 +226,13 @@ func TestTheBatchIsOrderedSoThatAnAncestorIsWrittenBeforeWhatHangsFromIt(t *test
 //
 // It varies the size and **nothing else**, because a build reading only the
 // modification time passes every case that varies both.
+//
+// It is also where spec §3.2's last exclusion lands — *"files being written,
+// detected by size change between two passes"*. v1 does not refuse such a file:
+// the size that moved is an **update** carrying the new number, and the
+// assertions below say so by naming what is *not* in the answer as well as what
+// is. A build that implemented the row as an exclusion would remove the item
+// while the copy ran.
 func TestOnlyTheSizeMovingIsAnUpdateThatKeepsTheIdentifier(t *testing.T) {
 	lib := aMoviesLibrary()
 	const path = "The Matrix (1999).mkv"
@@ -257,6 +264,12 @@ func TestOnlyTheSizeMovingIsAnUpdateThatKeepsTheIdentifier(t *testing.T) {
 	if got := fileOf(t, result.Write, path).Size; got != 900 {
 		t.Errorf("the batch carries size %d, want the new 900 — a media source's Size travels (behaviours §2.17)", got)
 	}
+	// Spec §3.2's row, as what v1 does with it: the file is not refused and the
+	// item is not withdrawn while it is being written.
+	if len(result.Unchanged) != len(after)-1 {
+		t.Errorf("unchanged: got %d identifiers, want the %d rows that are not the film", len(result.Unchanged), len(after)-1)
+	}
+	assertIDs(t, "retained", result.Retained, nil)
 }
 
 // TestOnlyTheModificationTimeMovingIsAnUpdateThatKeepsTheIdentifier is the

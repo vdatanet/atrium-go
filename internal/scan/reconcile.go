@@ -128,6 +128,18 @@ func (e *IdentifierMismatchError) Error() string {
 // *sibling* album's record while every byte of its own files stands still.
 // Both halves of the comparison are therefore made — the record, and the files.
 //
+// **Spec §3.2's last exclusion lands here, and it lands as an update.** *"Files
+// being written, detected by size change between two passes"* reads as a
+// property of a file and is a property of a pair of scans, so it is decided
+// where both readings exist — which is here, and nowhere else in this feature.
+// What v1 does is narrower than the row suggests and narrower in the direction
+// that costs an operator nothing: a file whose size moved is re-read and its
+// item carries the **new** size (a media source's `Size` travels, behaviours
+// §2.17), and nothing skips it. A half-copied film is briefly an item with the
+// wrong length; the next scan corrects it. The alternative is an item that
+// appears and vanishes again while a copy runs, and a scanner that walks every
+// tree twice to notice.
+//
 // **The comparison excludes `ports.ScannedItem.SortTitle`**, which is the one
 // field with no column behind it (003 plan §5). A row read back from a store
 // carries the empty string there whatever was resolved, so comparing it would

@@ -428,10 +428,20 @@ otherwise:
   does not spend the afternoon reproducing it. The two mutations that *did* survive the first pass
   were both the multi-part film: nothing varied a **part's path** or the **number of parts**, and
   both are changes to an item that neither half of the signal can see.
+- **And T8's row lands here, in the shows-more direction, with one correction on the way.** Spec
+  §3.2's *"files being written, detected by size change between two passes"* is a property of a pair
+  of scans, and this is the only place in the feature that holds both. **It lands as an update and
+  never as a refusal**: the item carries the new size and nothing withdraws it while the copy runs,
+  which is [plan §6.1](plan.md#61-the-walk-and-what-it-refuses-to-look-at)'s *"narrower in the
+  direction that costs an operator nothing"* stated as what the code does. The correction: §6.1 said
+  a file whose size **and** modification time both moved is re-read, where spec §3.8's table and plan
+  §6.4's both say **or** — and under a conjunction neither of this task's two named failures is
+  visible at all, so the clause requiring the two be varied independently is unsatisfiable. §6.1 is
+  amended; nothing was built on the wrong reading.
 - **What this does not prove:** that a container with nothing under it is not offered to a client.
   Nothing here can — §8.3's sixth row is 005's entirely, and this task establishes only the half
   that makes it 005's problem: the row is still there.
-- **Spec reference:** §3.8, AC-14; plan §6.4, §6.5.
+- **Spec reference:** §3.2, §3.8, AC-14; plan §6.1, §6.4, §6.5.
 
 ## T10 — The two ports, and the precious migration this feature owns
 

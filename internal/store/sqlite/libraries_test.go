@@ -57,6 +57,12 @@ func TestTheLibrariesMigrationIsFiledUnderThePreciousLineage(t *testing.T) {
 
 // TestAFirstStartCreatesTheTwoLibraryTables is the same clause seen from a
 // start rather than from the runner.
+//
+// Amended 2026-09-05 by 003 T11, which is the task that gave the derived half a
+// schema. This test asserted the derived half was at a literal 0 — "this task
+// files nothing there" — and T10's handover named it as a fifth affected
+// assertion the task list had missed. It is the same rule and it is now spelled
+// once, in theDerivedHalfIsAtItsGeneration.
 func TestAFirstStartCreatesTheTwoLibraryTables(t *testing.T) {
 	store := openForTest(t)
 
@@ -69,13 +75,7 @@ func TestAFirstStartCreatesTheTwoLibraryTables(t *testing.T) {
 		}
 	}
 
-	derived, err := store.SchemaVersion(context.Background(), Derived)
-	if err != nil {
-		t.Fatalf("SchemaVersion(derived) returned %v", err)
-	}
-	if derived != 0 {
-		t.Errorf("the derived half is at version %d, want 0: this task files nothing there", derived)
-	}
+	theDerivedHalfIsAtItsGeneration(t, store, "a first start")
 }
 
 // TestALibraryRoundTripsWholeWithItsRootsAndItsFrozenColumns is the base every

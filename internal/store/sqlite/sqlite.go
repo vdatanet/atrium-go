@@ -40,10 +40,11 @@ import (
 // 30,000 rows, worst read latency 393 microseconds
 // [measurement: modernc.org/sqlite v1.58.0, Go 1.27.0, 2026-09-02].
 type Store struct {
-	path    string
-	writer  *sql.DB
-	reader  *sql.DB
-	applied map[Half][]int
+	path           string
+	writer         *sql.DB
+	reader         *sql.DB
+	applied        map[Half][]int
+	derivedRebuilt bool
 }
 
 // Store satisfies what the domain asked for. The assertion is here rather than
@@ -76,8 +77,16 @@ const DatabaseFile = "atrium.db"
 // measurement is a number nobody could defend later.
 const maxIdleReaders = 8
 
-// Open opens the database in dataDirectory, applies every pending migration of
-// both halves, and returns the store.
+// Open opens the database in dataDirectory, brings both halves to the shape
+// this build declares, and returns the store.
+//
+// The two halves are brought there differently, which is ADR-0003 rather than a
+// convenience: the precious half has every pending migration of its lineage
+// applied, and the derived half is dropped and recreated whenever its recorded
+// generation is not this build's — in either direction, because there is
+// nothing in it a rescan cannot compute again (003 plan §6.8). A first start
+// takes the second branch too: an empty database records generation 0 and this
+// build declares 1.
 //
 // The migrations run here rather than behind a separate call because a store
 // handed to a caller before its schema exists has exactly one correct use, and
@@ -122,18 +131,32 @@ func Open(ctx context.Context, dataDirectory string) (*Store, error) {
 		writer.Close()
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	for _, half := range halves {
-		lineage, err := loadLineage(migrationFiles, half)
-		if err != nil {
-			writer.Close()
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-		applied, err := migrate(ctx, writer, half, lineage)
-		store.applied[half] = applied
-		if err != nil {
-			writer.Close()
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
+	// The precious lineage, and only it. The derived half is not a lineage
+	// (Half says why), so the two halves are brought up to date by two
+	// different mechanisms and in this order: a derived object may name a
+	// precious identifier by value, so the half that is kept is correct before
+	// the half that is rebuilt is written.
+	lineage, err := loadLineage(migrationFiles, Precious)
+	if err != nil {
+		writer.Close()
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	applied, err := migrate(ctx, writer, Precious, lineage)
+	store.applied[Precious] = applied
+	if err != nil {
+		writer.Close()
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+
+	// And the derived half, which is a generation and a drop rather than a
+	// lineage and a tail. On a first start the recorded generation is 0 and
+	// this is what creates the schema; afterwards it is what answers a
+	// difference in either direction (ADR-0003, 003 plan §6.8).
+	rebuilt, err := ensureDerivedGeneration(ctx, writer)
+	store.derivedRebuilt = rebuilt
+	if err != nil {
+		writer.Close()
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 
 	// After the migrations, so that the file the readers open is one with a

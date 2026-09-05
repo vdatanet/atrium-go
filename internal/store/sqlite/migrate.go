@@ -22,31 +22,47 @@ import (
 // user did, so every change to it is a forward-only migration that never
 // destroys anything.
 //
-// A Half is therefore a migration lineage and a policy at once, and the two
-// carry separate schema versions — which is what makes rebuilding the derived
-// half possible without touching the precious one.
+// **A Half is a policy, and only one of the two is also a migration lineage.**
+// 001 shipped both as lineages, which was the shape a feature that scanned
+// nothing could not tell apart from this one; 003 needed the difference and
+// changed it (003 plan §6.8). A forward-only lineage can only apply the steps
+// after the one it recorded, so it cannot express *drop and rebuild*: a schema
+// edited in place is invisible to it, and a database written by a newer build
+// has nowhere to go but a refusal — where ADR-0003 says a derived-version
+// mismatch is a rescan.
+//
+// What both halves still share is the version: two numbers in one table, which
+// is what makes rebuilding the derived half possible without touching the
+// precious one. The precious number counts migrations applied; the derived one
+// is derivedGeneration, a schema this build declares whole.
 type Half string
 
 const (
 	// Precious holds users, credentials, tokens, favourites, played state,
-	// resume positions, playlists and library configuration. Migrated.
+	// resume positions, playlists and library configuration. Migrated, from
+	// the lineage under migrations/precious.
 	Precious Half = "precious"
 
 	// Derived holds the scanned library: items, media streams, images and the
 	// by-name aggregates. Dropped and rescanned.
 	//
-	// 001 owns nothing here — it scans nothing (plan 4) — so this lineage is
-	// empty and its version is 0. It exists now because the runner takes a
-	// half: a runner that hardcoded the precious lineage would have to be
-	// rewritten by whoever adds the first derived table, and the version
-	// recorded separately is what a rescan will compare against.
+	// **It has no lineage and there is no migrations/derived directory.** Its
+	// whole schema is derived/library.sql and its version is the generation
+	// that file was declared at, so a file written into a derived migrations
+	// directory would be applied by nothing — which is why a test asserts the
+	// directory does not exist rather than that it is empty.
 	Derived Half = "derived"
 )
 
-// halves is every half, in the order a start applies them. Precious first: a
-// derived table may reference a precious identifier by value, never the other
-// way round (architecture 6), so this order is the one that stays valid when
-// the derived lineage stops being empty.
+// halves is both halves, in the order a start brings them up to date. Precious
+// first: a derived object may name a precious identifier by value, never the
+// other way round (architecture 6), so the half that is kept is correct before
+// the half that is rebuilt is written.
+//
+// It is no longer a loop over one mechanism — the two are migrated and rebuilt
+// respectively, in Open — but it is still every half there is, which is what
+// the schema-version table holds a row for and what a caller iterating the
+// store's versions means.
 var halves = []Half{Precious, Derived}
 
 // migrationDirectory is where a half's lineage lives inside migrationFiles.
@@ -113,15 +129,16 @@ func migrate(ctx context.Context, db *sql.DB, half Half, lineage []migration) ([
 	}
 	if current > len(lineage) {
 		// The database was written by a newer build. Refusing is the only
-		// answer this feature can give: a rollback would need the down
+		// answer a *migrated* half can give: a rollback would need the down
 		// migration this project does not write, and carrying on would run
 		// queries against columns that may have moved.
 		//
 		// ADR-0003 says a *derived*-version mismatch is a rescan rather than
-		// an error. That branch needs a scanner to rescan with, which is
-		// 003's, and until then the derived half is empty and cannot reach
-		// this line from anything but a downgrade. The refusal is owed a
-		// replacement there, not here.
+		// an error, and that is now what happens — in ensureDerivedGeneration,
+		// which is reached instead of this runner and not through it. The
+		// derived half can afford it because nothing in it is the only copy of
+		// anything; this half cannot, which is why the two answers differ and
+		// why the derived half stopped being a lineage to get its own.
 		return nil, fmt.Errorf("the %s half is at schema version %d and this build knows %d: it was written by a newer Atrium",
 			half, current, len(lineage))
 	}
@@ -166,9 +183,13 @@ func applyMigration(ctx context.Context, db *sql.DB, half Half, m migration) err
 // loadLineage reads one half's migrations out of fsys and returns them in the
 // order they are applied.
 //
-// A half with no directory has an empty lineage rather than an error: 001 owns
-// no derived table, and a runner that could not represent that would need the
-// first derived feature to also change the runner.
+// A half with no directory has an empty lineage rather than an error. That
+// branch was written for the derived half, which no longer reaches it: nothing
+// calls this with Derived any more, because the derived half is not a lineage
+// (see Half). It is kept because it is the honest answer for any fs.FS that
+// does not carry a directory — including the synthetic ones the tests build —
+// and because a loader that errored on an absent directory would make the
+// runner's behaviour depend on what happens to be embedded.
 func loadLineage(fsys fs.FS, half Half) ([]migration, error) {
 	directory := path.Join(migrationDirectory, string(half))
 

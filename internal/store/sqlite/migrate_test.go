@@ -3,6 +3,8 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -115,15 +117,22 @@ func TestASecondStartAppliesNothing(t *testing.T) {
 // without touching the precious one, which is only possible if the two versions
 // are two numbers.
 //
-// Neither 001 nor 002 owns a derived table, so the derived half is at 0 while
-// the precious half is at the end of its lineage — which is exactly the state
-// that could not be represented by a single lineage.
+// The two numbers count different things, and that is the point rather than an
+// untidiness: the precious half is at the end of its lineage, and the derived
+// half is at the generation this build declares its whole schema at. A single
+// number could not hold both, and a single *lineage* could not hold the second
+// one at all.
 //
 // Amended 2026-09-03 by 002 T1. The precious half was asserted as 1; it is now
 // asserted as the length of the lineage this build ships, for the reason above
-// TestOpenAppliesThePreciousLineageAndSeedsTheInstallation. The derived half
-// stays a literal 0, because that one is a claim about what these two features
-// own rather than about how many migrations they wrote.
+// TestOpenAppliesThePreciousLineageAndSeedsTheInstallation.
+//
+// Amended 2026-09-05 by 003 T11, which gives the derived half a schema and
+// makes it stop being a lineage. The derived half was a literal 0 with the note
+// "neither 001 nor 002 scans anything" — a claim about what those two features
+// owned, which was the right claim to make and the wrong way to spell it. It is
+// derivedGeneration now, through theDerivedHalfIsAtItsGeneration, which is the
+// helper the four assertions that meant this share.
 func TestTheHalvesCarrySeparateSchemaVersions(t *testing.T) {
 	store := openForTest(t)
 	ctx := context.Background()
@@ -137,17 +146,11 @@ func TestTheHalvesCarrySeparateSchemaVersions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SchemaVersion(precious) returned %v", err)
 	}
-	derived, err := store.SchemaVersion(ctx, Derived)
-	if err != nil {
-		t.Fatalf("SchemaVersion(derived) returned %v", err)
-	}
 
 	if precious != len(lineage) {
 		t.Errorf("the precious half is at version %d, want %d — the whole lineage", precious, len(lineage))
 	}
-	if derived != 0 {
-		t.Errorf("the derived half is at version %d, want 0 — neither 001 nor 002 scans anything", derived)
-	}
+	theDerivedHalfIsAtItsGeneration(t, store, "a first start")
 
 	// And they are separate rows rather than one number read twice.
 	var rows int
@@ -159,11 +162,22 @@ func TestTheHalvesCarrySeparateSchemaVersions(t *testing.T) {
 	}
 }
 
-// TestTheRunnerAppliesOnlyWhatIsPending drives the runner over a half of its
-// own, growing the lineage between runs the way a release does.
+// TestTheRunnerAppliesOnlyWhatIsPending drives the runner over a lineage of its
+// own, growing it between runs the way a release does.
 //
-// The runner takes a half rather than assuming one, which is what this asserts
-// by migrating the derived half — the one this feature ships nothing for.
+// The runner still takes a half rather than assuming one, and the two-run shape
+// is what proves it applies the *pending* steps rather than all of them: a
+// single-step lineage cannot tell the two apart, and re-running the first step
+// would fail on the table it already created — so "applied only 2" is asserted
+// by the second run succeeding as much as by the versions it reports.
+//
+// Amended 2026-09-05 by 003 T11. This drove the runner over the **derived**
+// half, because that was the half this repository shipped no migration for and
+// so the one a synthetic lineage could not collide with. After T11 the derived
+// half is not a lineage at all and migrate is never called with it, so the test
+// was proving the runner did something nothing asks it to do. It runs against
+// the precious half over a synthetic lineage, on a database no shipped
+// migration has been applied to, and proves the same thing.
 func TestTheRunnerAppliesOnlyWhatIsPending(t *testing.T) {
 	db := newDatabase(t)
 	ctx := context.Background()
@@ -171,7 +185,7 @@ func TestTheRunnerAppliesOnlyWhatIsPending(t *testing.T) {
 	first := []migration{
 		{version: 1, name: "0001_first.sql", sql: `CREATE TABLE first (id INTEGER PRIMARY KEY) STRICT;`},
 	}
-	applied, err := migrate(ctx, db, Derived, first)
+	applied, err := migrate(ctx, db, Precious, first)
 	if err != nil {
 		t.Fatalf("the first migrate returned %v", err)
 	}
@@ -179,13 +193,11 @@ func TestTheRunnerAppliesOnlyWhatIsPending(t *testing.T) {
 		t.Errorf("the first migrate applied %v, want [1]", applied)
 	}
 
-	// The release that adds a second step. Re-running the first would fail on
-	// the table it already created, so "applied only 2" is asserted by the run
-	// succeeding as much as by the versions it reports.
+	// The release that adds a second step.
 	grown := append(slices.Clone(first), migration{
 		version: 2, name: "0002_second.sql", sql: `CREATE TABLE second (id INTEGER PRIMARY KEY) STRICT;`,
 	})
-	applied, err = migrate(ctx, db, Derived, grown)
+	applied, err = migrate(ctx, db, Precious, grown)
 	if err != nil {
 		t.Fatalf("the second migrate returned %v", err)
 	}
@@ -193,13 +205,15 @@ func TestTheRunnerAppliesOnlyWhatIsPending(t *testing.T) {
 		t.Errorf("the second migrate applied %v, want [2]", applied)
 	}
 
-	if version, err := schemaVersion(ctx, db, Derived); err != nil || version != 2 {
-		t.Errorf("the derived half is at %d (err %v), want 2", version, err)
+	if version, err := schemaVersion(ctx, db, Precious); err != nil || version != 2 {
+		t.Errorf("the precious half is at %d (err %v), want 2", version, err)
 	}
 	// The other half is untouched by either run, which is the whole point of
-	// the runner taking one.
-	if version, err := schemaVersion(ctx, db, Precious); err != nil || version != 0 {
-		t.Errorf("the precious half is at %d (err %v), want 0 — nothing migrated it", version, err)
+	// the runner taking one. It is 0 here and not derivedGeneration, because
+	// this database was bootstrapped by the runner's own test helper and never
+	// went through Open — nothing has created a derived schema in it.
+	if version, err := schemaVersion(ctx, db, Derived); err != nil || version != 0 {
+		t.Errorf("the derived half is at %d (err %v), want 0 — nothing migrated or rebuilt it", version, err)
 	}
 }
 
@@ -298,16 +312,34 @@ func TestLoadLineageRefusesAnUnnumberedFile(t *testing.T) {
 	}
 }
 
-// TestLoadLineageReadsAHalfWithNothingInIt is the state 001 ships the derived
-// half in. It is an empty lineage and not an error, so that the first feature
-// with a derived table adds a file rather than also changing the runner.
+// TestLoadLineageReadsAHalfWithNothingInIt is the branch a half with no
+// directory takes: an empty lineage and not an error.
+//
+// Amended 2026-09-05 by 003 T11, and this one is the interesting amendment of
+// the five that task made. The test read `loadLineage(migrationFiles, Derived)`
+// and asserted it was empty, which was 001's way of saying *no derived table
+// has been written yet*. After T11 the assertion **stays true for ever and
+// stops meaning anything**: nothing loads the derived lineage, so a migration
+// filed under migrations/derived would be applied by nothing and this test
+// would still be green. A test that cannot fail is worse than one that fails
+// for the wrong reason, because nobody is going to look at it again.
+//
+// The claim about the directory moved to TestNoDerivedMigrationsDirectoryExists
+// and into filedUnderThePreciousLineage. What is left here is the loader's own
+// behaviour, over a filesystem that is not this build's — which is the thing
+// this test could always see and the only thing it can still prove.
 func TestLoadLineageReadsAHalfWithNothingInIt(t *testing.T) {
-	lineage, err := loadLineage(migrationFiles, Derived)
+	fsys := fstest.MapFS{
+		"migrations/precious/0001_first.sql": {Data: []byte(`SELECT 1;`)},
+	}
+
+	lineage, err := loadLineage(fsys, Derived)
 	if err != nil {
-		t.Fatalf("loadLineage(derived) returned %v, want an empty lineage", err)
+		t.Fatalf("loadLineage over a filesystem with no derived directory returned %v, "+
+			"want an empty lineage", err)
 	}
 	if len(lineage) != 0 {
-		t.Errorf("the derived lineage holds %d migrations, want none — 001 scans nothing", len(lineage))
+		t.Errorf("a half with no directory loaded %d migrations, want none", len(lineage))
 	}
 }
 
@@ -375,13 +407,20 @@ func filedUnderThePreciousLineage(t *testing.T, filename string) {
 			"to drop them", filename, shipped)
 	}
 
-	derived, err := loadLineage(migrationFiles, Derived)
-	if err != nil {
-		t.Fatalf("loading the derived lineage returned %v", err)
-	}
-	if len(derived) != 0 {
-		t.Fatalf("the derived lineage holds %d migrations, want none: nothing before 003 T11 "+
-			"files one, and this assertion is what would notice", len(derived))
+	// And the other half of "filed in the right place": there is nowhere else
+	// to file it.
+	//
+	// Amended 2026-09-05 by 003 T11. This read the derived lineage and required
+	// it to be empty, which was the assertion that would have noticed a
+	// migration filed there — right up until T11 made the derived half stop
+	// being a lineage, at which point an empty answer became the only answer
+	// and the check became a sentence that cannot fail. The directory not
+	// existing is what carries the claim now: a file under migrations/derived
+	// is applied by nothing at all, which is worse than a missing migration
+	// rather than better.
+	if entries, err := migrationFiles.ReadDir("migrations/" + string(Derived)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("migrations/%s exists and holds %d entries (err %v): the derived half is not a "+
+			"lineage and nothing applies a file filed there", Derived, len(entries), err)
 	}
 
 	// The state the release before this migration left behind.

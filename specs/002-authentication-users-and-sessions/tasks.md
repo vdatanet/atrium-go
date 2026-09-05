@@ -1317,6 +1317,13 @@ that settles it is a debt nobody can close.*
    to be empty as a literal `0`. The first derived migration has to change that line **deliberately**,
    which is the whole point of writing it as a literal rather than as a count.
 
+   *(Discharged 2026-09-05 by 003 T11, and not as a migration: there is no first derived migration
+   and there never will be one. The derived half stopped being a lineage — one embedded schema file
+   and a generation the build declares — so the literal became `derivedGeneration`. It was one of
+   **five** such literals across 001, 002 and 003, and they are now one shared assertion rather than
+   five numbers, for the reason 003 T10 recorded one task earlier: a correction that restates a
+   literal is not a correction.)*
+
 9. **The friendly name is still 001's datum, and this feature deliberately did not take it.** 001's
    `/System/Ping` discrimination carries a caveat that used to read *"when the rename endpoint
    lands"*; no such endpoint is in this surface — the reference renames at an operation v1 does not

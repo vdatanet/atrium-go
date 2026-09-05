@@ -95,7 +95,7 @@ func versions(t *testing.T, db *sql.DB) halfVersions {
 // TestOpenAppliesTheUsersAndSessionsMigration is the same clause seen from a
 // start rather than from the runner: an empty data directory comes up with the
 // four tables, the migration that creates them among the ones a first start
-// applied, and the derived half still at 0.
+// applied, and the derived half at the generation this build declares.
 //
 // Amended 2026-09-05 by 003 T10, for the reason above
 // TestTheMigrationIsFiledUnderThePreciousLineage. "want [1 2]" and "want 2"
@@ -103,6 +103,12 @@ func versions(t *testing.T, db *sql.DB) halfVersions {
 // feature's, and 0003_libraries.sql turned both red. What this test is for is
 // the four tables and the version this migration carries, so it now names that
 // version and lets the lineage be as long as it is.
+//
+// Amended again 2026-09-05 by 003 T11, which gives the derived half a schema.
+// The last literal here was "the derived half is at version 0", which meant
+// *this feature owns no derived table* and spelled it as the number that
+// produced. It is theDerivedHalfIsAtItsGeneration now — the same rule, and the
+// same helper the other three callers use.
 func TestOpenAppliesTheUsersAndSessionsMigration(t *testing.T) {
 	ctx := context.Background()
 	store := openForTest(t)
@@ -134,13 +140,7 @@ func TestOpenAppliesTheUsersAndSessionsMigration(t *testing.T) {
 		t.Errorf("the precious half is at version %d after a first start, want at least %d — "+
 			"the version this migration carries", precious, version)
 	}
-	derived, err := store.SchemaVersion(ctx, Derived)
-	if err != nil {
-		t.Fatalf("SchemaVersion(derived) returned %v", err)
-	}
-	if derived != 0 {
-		t.Errorf("the derived half is at version %d, want 0: this feature owns no derived table", derived)
-	}
+	theDerivedHalfIsAtItsGeneration(t, store, "a first start")
 
 	for _, table := range []string{"users", "user_credentials", "sessions", "access_tokens"} {
 		var name string

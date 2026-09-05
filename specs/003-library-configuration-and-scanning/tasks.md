@@ -966,7 +966,7 @@ otherwise:
 
 ## T18 — What `conformance/` can prove about a feature with no routes, and what it cannot
 
-- [ ] **Changes:** `conformance/` — the four assertions of plan §8.1's table, over the built binary
+- [x] **Changes:** `conformance/` — the four assertions of plan §8.1's table, over the built binary
   and a tree written by `go run ./tools/build_library_fixture -into <dir>` as a **subprocess**: a
   subprocess is not an import, and `tools/check_conformance_imports` reads `go list -deps` rather
   than a process tree (plan §3).
@@ -986,6 +986,22 @@ otherwise:
   is inapplicable, because the things Principle VIII exists to catch do not yet exist.** What it is
   weaker at is everything §8.3 lists, and this task's own comment says so, so that a green
   `conformance/` package is not read here as evidence for anything on that list.
+- **Two things running the assertions found, 2026-09-05** `[measurement: 003 T18, 18 mutations,
+  2026-09-05]`. Neither is a clause this task declined; each is one the measurement corrected.
+  - **"Staying green" was not an assertion, and plan §8.1's own word for both halves —
+    *unchanged* — is struck there.** Both halves of the L0 check derive what they expect from
+    `surface.yaml`, so a route registered **together with a row in that document** satisfies both by
+    construction: measured, the two derived checks stay green on a build that registers a
+    `POST /Library/Refresh` and declares it. So each half gains a **literal** of the eleven rows,
+    which is the thing a reviewer who means to add a route has to edit. Three other checks fail on
+    that build for reasons of their own, and not one of them is a statement about this feature having
+    added a route.
+  - **The second scan's control was relative where it had to be absolute.** Comparing the second
+    scan's file counts against the **first scan's** is satisfied by a build reporting nothing
+    examined for every scan — both readings zero, both equal — and it was the only survivor of the
+    first mutation run. The comparison is now against the fixture's declared counts. Fourth time in
+    this feature that an assertion about an absence needed a control, and second time that a control
+    named in prose turned out to have nothing to fail.
 - **Spec reference:** §6; plan §8.1, §8.3, §10.
 
 ## T19 — The cross-document debts: which of them are this feature's

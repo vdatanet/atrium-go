@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has
 ---
 
 # 003 — Implementation plan
@@ -448,6 +448,39 @@ candidate file. Spec §3.2's exclusions, and where each is decided:
 | Trailer, sample and extra suffixes, and the extras folder names | The walk, per file and per directory | §3.4: v1 **ignores** them rather than attaching them |
 | Zero-byte files | The walk, per file | And **the reference does not do this** — see below |
 | A file whose size changed between two passes | §6.4, not here | It needs two readings, and the walk has one |
+
+**Amended 2026-09-05 at T2: the extras row said *"per file and per directory"* and that is two
+decisions, not one.** Writing the predicates forced both, and each is the reference's own shape read
+at the pinned tag rather than a choice this project had:
+
+- **The folder name is matched against the *immediate* containing directory and no ancestor.** The
+  reference compares its token against `Path.GetFileName(Path.GetDirectoryName(path))`
+  `[source: Emby.Naming/Video/ExtraRuleResolver.cs:35,51 @ v10.11.11]`, so a file one level below an
+  extras folder — `Extras/Making Of/clip.mkv` — is an item there. Walking every component instead
+  would be an item this server lacks and the reference has, over a shape no measurement covers and
+  no allowlist declares. The reference also refuses the rule when the directory *is* the library
+  root `[source: Emby.Naming/Video/ExtraRuleResolver.cs:52 @ v10.11.11]`; here that costs no code,
+  because a root-relative path for a file directly under the root has no containing component. The
+  walk therefore **descends into an extras directory** and refuses its files, rather than pruning
+  the subtree — which is the one place the row's *"per directory"* would have been read the other
+  way.
+- **The rules apply under `movies` and `tvshows` and not under `music`, and that is a media-type
+  gate rather than a preference.** Every rule v1 implements is declared `MediaType.Video`, and the
+  reference skips a rule whose media type the file does not have
+  `[source: Emby.Naming/Video/ExtraRuleResolver.cs:40-44 @ v10.11.11]`. Every extension `movies` and
+  `tvshows` admit is in the reference's `VideoFileExtensions`; every extension `music` admits is in
+  its `AudioFileExtensions` and in neither the other
+  `[source: Emby.Naming/Common/NamingOptions.cs:24-80,213-295 @ v10.11.11]`. So the collection type
+  decides exactly what the media type decides, and the one term this feature has expresses the whole
+  gate. The consequence is that the reference's two `MediaType.Audio` tokens — `theme` as a whole
+  filename and `theme-music` as a directory name — are **not** implemented: under `movies` and
+  `tvshows` they would change nothing, because §3.2's lists admit no audio extension and refuse such
+  a file first; under `music` implementing them would be behaviour this project owns outright on a
+  source reading with no measurement behind it. It is an accepted shortfall in the direction that
+  shows more rather than less, and the fixture carries no file it can reach.
+
+All of that is a **source reading and not a measurement** — no probe in this project has sent a file
+named for an extra — so what the tests assert about extras is what the reference is written to do.
 
 **The last row is the one that moves.** Spec §3.2 lists *"files being written, detected by size
 change between two passes"* among the ignore rules, which reads as a property of a file. It is a

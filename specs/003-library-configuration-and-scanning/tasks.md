@@ -165,7 +165,7 @@ otherwise:
 
 ## T4 — The two sort-name derivations, and the single entry point that makes the wrong one unreachable
 
-- [ ] **Changes:** `internal/library` — `SortKeyBase(string)` over spec §3.7.1's six ordered steps
+- [x] **Changes:** `internal/library` — `SortKeyBase(string)` over spec §3.7.1's six ordered steps
   with the measured defaults, and `SortKeyFor(*ports.ScannedItem)` which switches on the type and
   applies §3.7.2 to `Audio`, `Episode` and `Season` and §3.7.3 to anything carrying an explicit sort
   title ([plan §6.6](plan.md#66-sort-keys)). The implementation walks runes and appends;
@@ -183,7 +183,13 @@ otherwise:
   rather than as some other string, because a run of zeros is what the obvious implementation
   produces and it sorts everything unnumbered ahead of everything numbered; `2 Fast 2 Furious`
   sorting before `10 Things` **by bytes**, with the pad width moved to 9 and to 11 in a mutation that
-  must reverse it — the width is part of the contract and a comment saying so is not a check; and
+  must turn it red — the width is part of the contract and a comment saying so is not a check.
+  *(Amended when the test was written: the ordering **does not reverse** at 9 or at 11, because
+  padding to any width of at least two already makes the shorter run compare low, so the ordering
+  assertion this line asks for is satisfied by three different contracts. The bytes are what pin the
+  width. The test asserts the ordering at all three widths, the bytes at all three, and the reversal
+  at width one — no padding — which is the only mutation of the width the ordering alone can see;
+  plan §6.6 records it.)* And
   `SortKeyFor` over an `Audio` producing a key that ends in the **raw** `The Song`, asserted as the
   raw name and not as the absence of an article, because [behaviours §2.6](../../docs/compatibility/behaviours.md#26-sortname-has-two-derivations-and-three-types-use-the-second)'s
   named temptation is a codebase with *one* sort-name function and its symptom is every album in the

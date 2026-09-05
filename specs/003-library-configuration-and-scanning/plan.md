@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike
 ---
 
 # 003 — Implementation plan
@@ -347,6 +347,7 @@ LibraryStore interface {
 ScannedItem struct {             // the derived record, and the unit both halves speak
     ID, LibraryID, ParentID string
     Type, Name, SortKey     string
+    SortTitle               string   // §6.6's input, and the only field that is not a column
     Path                    string
     RootOrdinal             int
     IndexNumber, ParentIndexNumber, IndexNumberEnd *int
@@ -378,6 +379,13 @@ retaken**: a port method returning `library.Item` would make the bottom of archi
 import a domain package. The cost that decision carried there — the policy crossing as bytes — has
 no analogue here, because a `ScannedItem` is already flat values and a `units.Time`.
 
+**`SortTitle` is the one field with no column behind it, and T4 added it rather than found it.**
+§8.4's row for AC-15 says the explicit sort title *"is supplied through the same seam 004 will
+fill"*, and this listing had no seam to supply it through: `sort_key` is what §4.2 stores, and the
+title is the **input** to the derivation that produces it (spec §3.7.3). A derivation with no way of
+being reached is not a derivation, so the field is declared here, beside the record it belongs to,
+rather than at 004 — and it is empty for everything 003 produces on its own.
+
 **`ClaimScan` returns a boolean rather than an error for a library already being scanned.** Two
 scanners over one store is a state this feature creates on purpose (§6.7: an operator may run
 `atrium library scan` against a data directory a server is serving from), and *"somebody else is
@@ -385,7 +393,9 @@ scanning"* is an outcome the caller reports, not a fault. `staleAfter` is what b
 by a process that died; §6.9 argues the value.
 
 ```
-// internal/library — no os, no net/http, no ports in any signature
+// internal/library — no os and no net/http. It imports internal/ports for the
+// four record types above and for nothing else: the direction is downwards, and
+// this package declares no interface of its own.
 
 CollectionType string                      // Movies | Shows | Music, from the three spec §3.1 names
 func (CollectionType) Admits(ext string) bool
@@ -400,7 +410,7 @@ Resolve(lib Library, readings []Reading) (Plan, error)        // §6.2; pure
 Plan   struct { Items []ports.ScannedItem; Unplaceable, Skipped []Note }
 
 SortKeyBase(name string) string                               // §6.6, spec §3.7.1
-SortKeyFor(item *ports.ScannedItem)                           // §6.6, spec §3.7.2 and §3.7.3
+SortKeyFor(item *ports.ScannedItem) string                    // §6.6, spec §3.7.2 and §3.7.3
 ```
 
 **`Resolve` takes every root's reading at once and returns the whole library's items**, rather than
@@ -764,7 +774,20 @@ way to lose that by accident, so the implementation walks runes and appends.
 **The three types that replace it** — `Audio`, `Episode`, `Season` — build a zero-padded numeric
 prefix and append the **raw** name, and the asymmetry is real: an episode's season pads to three and
 its episode number to four `[source: MediaBrowser.Controller/Entities/Audio/Audio.cs:94-98, MediaBrowser.Controller/Entities/TV/Episode.cs:238-242, MediaBrowser.Controller/Entities/TV/Season.cs:149-152 @ v10.11.11]`.
-A missing number contributes **no segment at all** rather than a run of zeros.
+A missing number contributes **no segment at all** rather than a run of zeros — which falls out of
+the construction rather than needing a case, because the separator belongs to the segment: the
+reference formats the number and its `" - "` with one format string. **Season's missing-number case
+is the one that does not fall out**, since its whole key is the prefix; the source answers it with
+the raw name `[source: MediaBrowser.Controller/Entities/TV/Season.cs:151 @ v10.11.11]`, spec §3.7.2
+is amended to say so, and T4 implements it. It is not hypothetical: §3.4 infers seasons, and the
+reference's recorded reading of this project's fixture tree contains a `Season Unknown`.
+
+**§3.7.3 applies two of the six steps and not four**, which the specification's sentence implies and
+the source settles: a forced sort name is digit-padded and diacritic-folded and then lowercased, and
+is not trimmed, not article-stripped, and has neither character list applied to it
+`[source: MediaBrowser.Controller/Entities/BaseItem.cs:535-536 @ v10.11.11]`. §3.7.3 is amended with
+it. That is why the two derivations are written as two functions over shared steps rather than as
+one function with a flag: the difference between them is not one clause.
 
 **There is one exported entry point and it takes the item, not the name.** `SortKeyFor(*ScannedItem)`
 switches on the type; `SortKeyBase(string)` is exported only because 004 needs it for an explicit
@@ -779,6 +802,15 @@ ordering here is lexical comparison over zero-padded digit runs, so a different 
 different ordering between names whose runs differ in length. The width is a named constant with the
 measured value and a test that asserts the ordering of `2 Fast 2 Furious` against `10 Things`, which
 is the pair the width exists for.
+
+**T4 wrote that test and found it does not pin the width.** `2 Fast` sorts before `10 Things` at pad
+width 9, at 10 and at 11 alike — padding to any width of at least two already makes the shorter run
+compare low — so the ordering assertion the paragraph above asks for is satisfied by three different
+contracts. What pins the width is the byte-exact table, and the test now carries the demonstration
+rather than the claim: it asserts the ordering at all three widths, asserts that the **bytes** differ
+at all three, and asserts that at width one — no padding — the pair reverses, which is the only
+mutation of the width the ordering alone can see. Same shape as 002 T22: a check that names the
+right contract can still be about something weaker than its name.
 
 **OQ-7's tail is implemented as the spec writes it**: fold, then a short table of the obvious Latin
 readings, then drop what remains. Dropping is stable; a partial guess is not. The row stays open

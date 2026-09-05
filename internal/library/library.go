@@ -14,7 +14,10 @@
 // an extras folder name and an extras suffix (003 plan §6.1). Normalisation and
 // identity are in identity.go — [Normalise] and [DeriveID], of §3.6 and plan
 // §6.3, which every item this feature produces derives its identifier through.
-// The resolvers and the sort-name derivations arrive with their own tasks.
+// The two sort-name derivations of §3.7 are in sortkey.go — [SortKeyFor], which
+// every item is keyed with, and [SortKeyBase], which a caller holding a bare
+// name uses; that split is the whole of what keeps the wrong one of the two out
+// of reach. The resolvers arrive with their own tasks.
 package library
 
 import (

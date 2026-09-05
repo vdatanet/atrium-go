@@ -27,6 +27,8 @@ package library
 import (
 	"path"
 	"strings"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // CollectionType is a library's collection type.
@@ -320,4 +322,31 @@ func foldASCIICase(s string) string {
 // It is here rather than beside the subcommand that needs it because the rule
 // is the domain's: a second lowercaser somewhere else is a second answer to
 // which names collide, and the unique index in the store is enforcing this one.
-func FoldName(name string) string { return strings.ToLower(name) }
+//
+// # The Unicode form is normalised first, and that was an open decision
+//
+// *(Taken at T14, which is the task that declares a library. T10 wrote
+// `RenameLibrary(ctx, id, name, folded string)` taking the fold as a parameter
+// precisely because nothing had decided this, and recorded that the store's
+// uniqueness is over the **stored bytes** — SQLite compares TEXT ordinally — so
+// the column refuses exactly the pairs this function folds together and no
+// others.)*
+//
+// `Amélie` written precomposed and written as `Amelie` plus U+0301 COMBINING
+// ACUTE ACCENT are one name to every operator who can read them and two byte
+// strings to that column. A fold that only lowercased would let both be
+// declared, and then `--name Amélie` would address whichever of the two the
+// operator's keyboard happened to produce — a library an operator can see and
+// cannot name.
+//
+// So the steps are [Normalise]'s last two, in [Normalise]'s order and for its
+// reasons: NFC and then [strings.ToLower]. 003 §3.6 says *"normalised means the
+// same thing for a path and for a name"*, and the order is load-bearing there
+// because case folding is not closed over normalisation forms. What is left out
+// is the separator step, which a name is not a path and does not have.
+//
+// It is deliberately not `foldASCIICase` (that fold exists because the
+// reference compares *extensions* ordinally, and it would make `AMÉLIE` and
+// `amélie` two libraries) and not a full case fold (which maps `ß` to `ss`, so
+// a `Straße` library and a `Strasse` library would be one).
+func FoldName(name string) string { return strings.ToLower(norm.NFC.String(name)) }

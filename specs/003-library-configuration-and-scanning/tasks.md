@@ -718,7 +718,7 @@ otherwise:
 
 ## T14 — `atrium library`, which is the operator's only interface and therefore a contract
 
-- [ ] **Changes:** `internal/app` — `RunLibrary` and the six verbs of
+- [x] **Changes:** `internal/app` — `RunLibrary` and the six verbs of
   [plan §6.7](plan.md#67-configuring-a-library-given-there-is-no-route-to-do-it-with), with
   `--format json` on `list` and `scan`; `cmd/atrium` — one more arm on the dispatch it already has,
   and nothing else.
@@ -738,7 +738,56 @@ otherwise:
   constraining prose; and `atrium --data-dir …` with no subcommand still serves while `atrium user
   add` still works — the regression a second arm on a first-argument dispatch is most likely to
   introduce, which 002 T7 paid for once and which gets cheaper to re-assert than to rediscover.
-- **Spec reference:** §3.6, §3.8; plan §6.7, §7.
+- **Amended at T14, in five places. The first is a debt this list left, and it is the largest.**
+  *(1) The scheduled scan and the start-time rescan are this task's, and they were nobody's.*
+  [plan §3](plan.md#3-modules) gives `internal/app` *"the `library` subcommand (§6.7), **the
+  scheduled scan**, and the **start-time rebuild-and-rescan of §6.8**"*; §6.9 specifies
+  `--scan-interval` and §6.8 says a generation bump *"enqueues a full scan of every library"*, which
+  `store.DerivedRebuilt()` exists to signal and which T13 found is **logged and acted on by
+  nobody**. No task in this list owned either, and the reason is worth more than the correction:
+  **this list was written from spec §3 and §5, and the schedule appears in the specification only in
+  §2's scope note** — beside filesystem watching, in the sentence that puts filesystem watching out
+  of scope — while the rescan appears only in ADR-0003. A behaviour named in a scope note is a
+  behaviour no task list derives. They are taken here rather than deferred because T14 is the last
+  task in this feature that adds production code (T15–T18 are tests, T19–T20 documents), so a
+  deferral would have been the second time nobody owned them. **Verified by:** two installations
+  started from the same tree at the same moment, one with a schedule and one with
+  `--scan-interval 0`, where the scheduled one having scanned is what times the assertion that the
+  other has not — a *"the items turn up eventually"* assertion passes on any build where something
+  else scanned; and, for the rescan, a film deleted from the tree between a scan and a start whose
+  generation was moved, so that a build ignoring the rebuild holds no items, a build that never
+  rebuilt holds the departed one, and only the owed **full** scan produces the three that are there.
+  `--scan-interval` is 12 hours by default, which is the reference's own interval for the same task
+  `[source: Emby.Server.Implementations/ScheduledTasks/Tasks/RefreshMediaLibraryTask.cs:47-54 @ v10.11.11]`.
+  *(2) `library.NewID` allocates a library's identity, and `internal/scan` gains one context check.*
+  §3.6 requires the identity to be allocated and nothing said what allocates it: it is 16 bytes of
+  `crypto/rand`, the installation identity's shape. The context check is one per root in
+  `Scanner.read`, because a scheduled scan is cancelled by the server's shutdown and `Walk` takes an
+  `fs.FS`, which carries no context — so a stop bounds the *next* root rather than the current one.
+  *(3) The fold T10 could not decide is decided.* `library.FoldName` normalises to NFC **before** it
+  lowercases, which is `Normalise`'s own order, because §3.6 says normalised means the same thing for
+  a path and for a name. Without it `Amélie` is declarable twice and one of the two is unaddressable.
+  *(4) `remove` removes the items before the library.* Nothing in the schema does —
+  `items.library_id` is a string and not a foreign key — so the obvious implementation leaks every
+  row the library ever scanned. The `scan_state` row does outlive it, and plan §6.7 now says so
+  rather than leaving it to be found.
+  *(5) The dispatch regression is asserted in `conformance/`, which is where `cmd/atrium` is
+  observable at all.* One test runs `library add`, then `library list`, then `user add` on the same
+  installation, then starts the server with no subcommand — the three arms in the order that makes a
+  build whose new arm consumed the argument vector fail on the line after. Nothing else in this task
+  touches `conformance/`; 003 T18 still owns that package's own question.
+- **Seventeen mutations were run; sixteen fail a named test and the one survivor is a measurement.**
+  Removing the wait [Run] performs for the scanning goroutine before its deferred close survives
+  every test in the package: no test stops a server while a scan of its own is still in flight, and
+  building one would need a tree large enough that a walk outlasts a cancellation, which is a race
+  dressed as a fixture. What the ordering prevents is a `database is closed` at the end of a scan on
+  a real installation; it is recorded in `scheduledScans.wait`'s doc comment, in the shape T12 and
+  T13 both used.
+- **What this does not prove:** that a client is ever told a library exists. 003 registers no route,
+  so `list` reading a library back is a store round trip and the `CollectionFolder` a client would
+  receive is [plan §8.3](plan.md#83-what-only-becomes-observable-at-005-and-what-005-must-not-accept-as-proven)'s
+  first row, still 005's.
+- **Spec reference:** §3.6, §3.8; plan §6.7, §6.8, §6.9, §7.
 
 ## T15 — AC-2, AC-3 and AC-10: the three criteria that are about scanning more than once
 

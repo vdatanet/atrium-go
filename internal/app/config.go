@@ -36,6 +36,11 @@ type Config struct {
 	// LogLevel is the lowest level the process logs.
 	LogLevel slog.Level
 
+	// ScanInterval is how often the server rescans every library on its own,
+	// and 0 disables the schedule (003 plan §6.9). Every scheduled scan is
+	// incremental; a full re-examination is something an operator asks for.
+	ScanInterval time.Duration
+
 	// ShutdownTimeout bounds the drain: how long a stop waits for requests
 	// that are already in flight before it gives up on them. It is not a flag
 	// because no operator has needed to change it; it is a field so that a
@@ -54,6 +59,18 @@ const (
 	DefaultShutdownTimeout = 15 * time.Second
 )
 
+// DefaultScanInterval is how often an unconfigured server rescans its
+// libraries.
+//
+// **Twelve hours is the reference's own default for the same task**, and it is
+// taken rather than invented because an operator who has run the reference has
+// already decided what a library scan costs them
+// `[source: Emby.Server.Implementations/ScheduledTasks/Tasks/RefreshMediaLibraryTask.cs:47-54 @ v10.11.11]`.
+// It is a process setting and not a compatibility surface — nothing observable
+// on the wire carries it — so the citation is here as the reason for the number
+// rather than as a claim about a response.
+const DefaultScanInterval = 12 * time.Hour
+
 // The environment variables each flag falls back to. The name of each is its
 // flag's name, upper-cased with ATRIUM_ in front, so that neither has to be
 // looked up once the other is known.
@@ -61,12 +78,14 @@ const (
 	EnvBindAddress   = "ATRIUM_BIND_ADDRESS"
 	EnvDataDirectory = "ATRIUM_DATA_DIR"
 	EnvLogLevel      = "ATRIUM_LOG_LEVEL"
+	EnvScanInterval  = "ATRIUM_SCAN_INTERVAL"
 )
 
 const (
 	flagBindAddress   = "bind-address"
 	flagDataDirectory = "data-dir"
 	flagLogLevel      = "log-level"
+	flagScanInterval  = "scan-interval"
 )
 
 // ParseConfig reads the configuration from args, which excludes the program
@@ -91,6 +110,8 @@ func ParseConfig(args []string, getenv func(string) string, output io.Writer) (C
 		"directory this installation's data lives in; required (env "+EnvDataDirectory+")")
 	logLevel := fs.String(flagLogLevel, levelName(DefaultLogLevel),
 		"lowest level to log: "+strings.Join(levelNames(), ", ")+" (env "+EnvLogLevel+")")
+	scanInterval := fs.String(flagScanInterval, DefaultScanInterval.String(),
+		"how often to rescan every library, as a duration; 0 never does (env "+EnvScanInterval+")")
 
 	fs.Usage = func() {
 		fmt.Fprint(output, "atrium — an independent implementation of the Jellyfin API.\n\n")
@@ -113,6 +134,7 @@ func ParseConfig(args []string, getenv func(string) string, output io.Writer) (C
 	fallBackToEnv(bindAddress, given[flagBindAddress], getenv(EnvBindAddress))
 	fallBackToEnv(dataDirectory, given[flagDataDirectory], getenv(EnvDataDirectory))
 	fallBackToEnv(logLevel, given[flagLogLevel], getenv(EnvLogLevel))
+	fallBackToEnv(scanInterval, given[flagScanInterval], getenv(EnvScanInterval))
 
 	cfg := Config{ShutdownTimeout: DefaultShutdownTimeout}
 
@@ -124,6 +146,9 @@ func ParseConfig(args []string, getenv func(string) string, output io.Writer) (C
 		return Config{}, err
 	}
 	if cfg.LogLevel, err = parseLevel(*logLevel); err != nil {
+		return Config{}, err
+	}
+	if cfg.ScanInterval, err = checkScanInterval(*scanInterval); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -167,6 +192,26 @@ func checkDataDirectory(directory string) (string, error) {
 		return "", fmt.Errorf("--%s %q: %w", flagDataDirectory, directory, err)
 	}
 	return absolute, nil
+}
+
+// checkScanInterval reads the schedule, and refuses a negative one.
+//
+// **0 is a setting and not an absence**: it says this server never scans on its
+// own, which is what an operator running scans from a cron entry or from a
+// deployment pipeline means. A negative duration is neither that nor a schedule
+// — a ticker cannot be built from one — so it is refused where it was typed
+// rather than turned into one of the two silently.
+func checkScanInterval(given string) (time.Duration, error) {
+	interval, err := time.ParseDuration(strings.TrimSpace(given))
+	if err != nil {
+		return 0, fmt.Errorf("--%s %q is not a duration such as %q or 0 (env %s): %w",
+			flagScanInterval, given, DefaultScanInterval.String(), EnvScanInterval, err)
+	}
+	if interval < 0 {
+		return 0, fmt.Errorf("--%s %q is negative (env %s): pass 0 to never rescan",
+			flagScanInterval, given, EnvScanInterval)
+	}
+	return interval, nil
 }
 
 // levels is the whole vocabulary of --log-level, in the order the usage text

@@ -1,6 +1,7 @@
 package library
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -307,4 +308,44 @@ func DeriveID(libraryID string, kind Kind, key string) string {
 	digest.Write([]byte{separator})
 	digest.Write([]byte(key))
 	return hex.EncodeToString(digest.Sum(nil)[:identifierBytes])
+}
+
+// NewID allocates a library's own identity: 16 cryptographically random bytes,
+// rendered as 32 lowercase hexadecimal characters.
+//
+// # Why this one is allocated when every other identifier here is derived
+//
+// 003 §3.6 requires it in terms — a library's identity is *"allocated when it
+// is declared and kept, rather than derived from its name or its roots"* — and
+// the consequence is the sharpest thing in that section: *deleting* a library
+// and declaring another with the same name and the same roots is **not** the
+// same library, and every item under it gets a new identifier. A library
+// identifier derived from the name would make `remove` followed by `add` a
+// no-op, which is a rule an operator could not have discovered and a rewrite of
+// every identifier under a library they could not have undone.
+//
+// # Principle VII, which this looks like a breach of and is not
+//
+// *"Identifiers derive from stable inputs, never insertion order, timestamps or
+// randomness"* is a rule about a value that is **computed again**: an item's
+// identifier is recomputed by every scan, so randomness there would invalidate
+// a client's caches, favourites and resume positions on every rescan. This
+// value is computed **once**, kept in the precious half — which is what
+// `0003_libraries.sql` is filed as, and says so — and read back by every scan
+// after it. Nothing recomputes it, so there is nothing for it to disagree with.
+// What Principle VII protects is exactly what makes it allocated:
+// [DeriveID] takes this as its first input, so the library's identity is what
+// keeps every item under it stable while the library's *name* and its *roots*
+// move freely.
+//
+// crypto/rand and not math/rand, for the installation identity's reason one
+// package along: two installations imaged from the same machine, or two
+// libraries declared in the same second, must not share an identity, and a
+// seeded generator is exactly how they would.
+func NewID() (string, error) {
+	var bytes [identifierBytes]byte
+	if _, err := rand.Read(bytes[:]); err != nil {
+		return "", fmt.Errorf("library: allocating a library identity: %w", err)
+	}
+	return hex.EncodeToString(bytes[:]), nil
 }

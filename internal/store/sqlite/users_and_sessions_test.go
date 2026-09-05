@@ -62,56 +62,17 @@ func insertSession(t *testing.T, db *sql.DB, id, userID, client, deviceID string
 // the schema: applying the lineage this build ships to a database already at
 // the precious version 001 left it at moves the precious half by exactly one
 // and does not move the derived half at all.
+//
+// Amended 2026-09-05 by 003 T10, which files the third precious migration. The
+// body was three literals — "the precious lineage has 3 migrations, want 2" is
+// what this test said the morning 0003_libraries.sql landed — and it is the
+// same mistake this test's own 2026-09-03 amendment corrected in 001's: a
+// number that every later migration invalidates, standing in for a rule that
+// never mentioned one. The body is now filedUnderThePreciousLineage in
+// migrate_test.go, given this migration's file name, and 003's test calls the
+// same helper. Nothing about what is asserted changed.
 func TestTheMigrationIsFiledUnderThePreciousLineage(t *testing.T) {
-	ctx := context.Background()
-	db := newDatabase(t)
-
-	precious, err := loadLineage(migrationFiles, Precious)
-	if err != nil {
-		t.Fatalf("loading the precious lineage returned %v", err)
-	}
-	if len(precious) != 2 {
-		t.Fatalf("the precious lineage has %d migrations, want 2", len(precious))
-	}
-	if precious[1].name != "0002_users_and_sessions.sql" {
-		t.Errorf("the second precious migration is %s, want 0002_users_and_sessions.sql", precious[1].name)
-	}
-
-	derived, err := loadLineage(migrationFiles, Derived)
-	if err != nil {
-		t.Fatalf("loading the derived lineage returned %v", err)
-	}
-	if len(derived) != 0 {
-		t.Fatalf("the derived lineage has %d migrations, want none: 002 scans nothing", len(derived))
-	}
-
-	// The state 001 left behind: the precious half at 1, the derived half at 0.
-	if _, err := migrate(ctx, db, Precious, precious[:1]); err != nil {
-		t.Fatalf("applying 001's lineage returned %v", err)
-	}
-	before := versions(t, db)
-	if before != (halfVersions{precious: 1, derived: 0}) {
-		t.Fatalf("after 001's lineage the versions are %+v, want precious 1 and derived 0", before)
-	}
-
-	applied, err := migrate(ctx, db, Precious, precious)
-	if err != nil {
-		t.Fatalf("applying this feature's lineage returned %v", err)
-	}
-	if !slices.Equal(applied, []int{2}) {
-		t.Errorf("applying the lineage applied %v, want exactly [2]", applied)
-	}
-
-	after := versions(t, db)
-	if after.precious != before.precious+1 {
-		t.Errorf("the precious half moved from %d to %d, want an advance of exactly one",
-			before.precious, after.precious)
-	}
-	if after.derived != before.derived {
-		t.Errorf("the derived half moved from %d to %d: this migration is filed under the wrong lineage, "+
-			"and a rescan would drop the accounts it creates",
-			before.derived, after.derived)
-	}
+	filedUnderThePreciousLineage(t, "0002_users_and_sessions.sql")
 }
 
 type halfVersions struct{ precious, derived int }
@@ -133,14 +94,33 @@ func versions(t *testing.T, db *sql.DB) halfVersions {
 
 // TestOpenAppliesTheUsersAndSessionsMigration is the same clause seen from a
 // start rather than from the runner: an empty data directory comes up with the
-// four tables and with the precious half at 2 while the derived half stays at
-// 0.
+// four tables, the migration that creates them among the ones a first start
+// applied, and the derived half still at 0.
+//
+// Amended 2026-09-05 by 003 T10, for the reason above
+// TestTheMigrationIsFiledUnderThePreciousLineage. "want [1 2]" and "want 2"
+// were literals about how many migrations existed rather than about this
+// feature's, and 0003_libraries.sql turned both red. What this test is for is
+// the four tables and the version this migration carries, so it now names that
+// version and lets the lineage be as long as it is.
 func TestOpenAppliesTheUsersAndSessionsMigration(t *testing.T) {
 	ctx := context.Background()
 	store := openForTest(t)
 
-	if applied := store.AppliedMigrations(Precious); !slices.Equal(applied, []int{1, 2}) {
-		t.Errorf("a first start applied %v precious migrations, want [1 2]", applied)
+	lineage, err := loadLineage(migrationFiles, Precious)
+	if err != nil {
+		t.Fatalf("loading the precious lineage returned %v", err)
+	}
+	version := 1 + slices.IndexFunc(lineage, func(m migration) bool {
+		return m.name == "0002_users_and_sessions.sql"
+	})
+	if version == 0 {
+		t.Fatalf("0002_users_and_sessions.sql is not in the precious lineage")
+	}
+
+	if applied := store.AppliedMigrations(Precious); !slices.Contains(applied, version) {
+		t.Errorf("a first start applied %v precious migrations, want %d among them",
+			applied, version)
 	}
 	if applied := store.AppliedMigrations(Derived); len(applied) != 0 {
 		t.Errorf("a first start applied %v to the derived half, want nothing", applied)
@@ -150,8 +130,9 @@ func TestOpenAppliesTheUsersAndSessionsMigration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SchemaVersion(precious) returned %v", err)
 	}
-	if precious != 2 {
-		t.Errorf("the precious half is at version %d after a first start, want 2", precious)
+	if precious < version {
+		t.Errorf("the precious half is at version %d after a first start, want at least %d — "+
+			"the version this migration carries", precious, version)
 	}
 	derived, err := store.SchemaVersion(ctx, Derived)
 	if err != nil {

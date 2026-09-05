@@ -445,7 +445,7 @@ otherwise:
 
 ## T10 — The two ports, and the precious migration this feature owns
 
-- [ ] **Changes:** `internal/ports` — `LibraryStore`, `ItemStore`, and the four record types, which
+- [x] **Changes:** `internal/ports` — `LibraryStore`, `ItemStore`, and the four record types, which
   live here rather than in the domain for the reason 002 T4 decided once already: a port method
   returning a domain type inverts [architecture §2](../../docs/architecture.md#2-layers-and-the-direction-of-dependency)'s
   arrow. `internal/store/sqlite` — `0003_libraries.sql` in the **precious** lineage, creating
@@ -462,6 +462,40 @@ otherwise:
   over the interface rather than over the SQL — spec §3.6 refuses the change, and the way it is
   refused is that there is nothing to call. A test that asserted an error would be asserting a
   refusal this design does not implement.
+- **Amended at T10, in three places, and the third is 002's own amendment repeated one number
+  along.**
+  *(1) Two things `plan §4.1`'s table did not state and a schema cannot leave open.*
+  `library_roots.library_id` gets **`ON DELETE CASCADE`** — foreign keys are on (ADR-0003's writer
+  DSN), so without it `RemoveLibrary` is *refused* outright and the verb never works; making it the
+  database's rule rather than the method's discipline is `name_folded`'s own argument one row above
+  it. And `case_sensitive` deliberately carries **no `DEFAULT`**: a default is a second place the
+  value is decided, where spec §3.6 makes it a property an operator states when the library is
+  declared.
+  *(2) `ScanBatch` was named in a signature and never declared*, so the task that owes *the four
+  record types* had to say what is in one. `{LibraryID, Items, ClaimedBy, At}`, and `ClaimedBy` is
+  the field that is a decision: §6.9 renews the claim inside the batch's transaction, and a renewal
+  that did not name the claimant lets a scanner whose claim has gone stale and been taken renew one
+  it no longer holds — two scanners writing one library, each believing it is alone. `ItemStore` is
+  declared and nothing implements it yet; T12 is where `var _ ports.ItemStore` appears.
+  *(3) `0003_libraries.sql` turned three of 002 T1's own literals red, and they are the literals
+  002 T1 wrote while correcting 001's.* Its amendment note reads *"the assertion read want [1] and
+  was a literal that every later migration invalidates"*, and the body it replaced them with was
+  `len(precious) != 2`, `[]int{2}` and `want 2`. The rule never mentioned a total: it is *this
+  file, in this half, advancing this half by one*. It is now `filedUnderThePreciousLineage(t,
+  filename)` in `migrate_test.go`, given a migration's file name, and both features' tests call it.
+  **The general shape, and it is the third feature to meet it: a correction that restates a literal
+  is not a correction.**
+- **Twenty-four mutations were run; twenty-three fail a named test and the survivor is a limit the
+  code predicted before it was measured.** Removing `ORDER BY ordinal` from the *single-library*
+  roots read leaves the whole suite green: the filter is on `library_id`, which SQLite answers
+  through the primary-key index on `(library_id, ordinal)`, so the rows arrive in ordinal order
+  whether or not anything asked. That is why `Libraries` reads the **whole** roots table in one
+  query — a full-table read is a row-order scan, so the ordinal clause is observable there — and
+  `TestLibraryRootsAreOrderedByTheirOrdinalAndNotByWhereTheRowsSit` rewrites the rows into an order
+  that disagrees with their ordinals and asserts the scramble took *before* it asserts the answer.
+- **What this does not prove:** that the precious half survives the derived half being dropped.
+  Nothing here can drop anything — `RebuildDerived` is declared and unimplemented — so this task
+  establishes only that a library outlives a restart. ADR-0003's central claim is T11's.
 - **Spec reference:** §3.6, §4; plan §4.1, §5.
 
 ## T11 — The derived half stops being a lineage, and 001's runner changes after all

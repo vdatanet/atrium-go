@@ -111,7 +111,7 @@ otherwise:
 
 ## T2 — `internal/library`: the collection types, the extension lists, and the promotion that must not happen
 
-- [ ] **Changes:** `internal/library` — `CollectionType` over spec §3.1's three names, `Admits` over
+- [x] **Changes:** `internal/library` — `CollectionType` over spec §3.1's three names, `Admits` over
   §3.2's measured lists, and the path-shaped exclusions that can be decided from one path: a
   component beginning with `.`, the trailer/sample/extra suffixes, and the extras folder names
   ([plan §6.1](plan.md#61-the-walk-and-what-it-refuses-to-look-at)). The lists are constants per

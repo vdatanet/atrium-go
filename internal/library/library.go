@@ -17,7 +17,11 @@
 // The two sort-name derivations of §3.7 are in sortkey.go — [SortKeyFor], which
 // every item is keyed with, and [SortKeyBase], which a caller holding a bare
 // name uses; that split is the whole of what keeps the wrong one of the two out
-// of reach. The resolvers arrive with their own tasks.
+// of reach. [Resolve] is in resolve.go and turns every root's reading of one
+// library into the items it holds — films are resolved in movies.go and the
+// name rules they share with the other two types are in names.go. The series
+// and music resolvers arrive with their own tasks, and until then a library of
+// either type is an error rather than an empty answer; [Resolve] says why.
 package library
 
 import (

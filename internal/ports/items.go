@@ -65,9 +65,21 @@ type ScannedItem struct {
 	// there is no case in which an item wants to sort under the empty string.
 	SortTitle string
 
-	// Path is relative to the root, in the normalised form the identifier was
-	// derived from. It is empty for an inferred container that has no
-	// directory of its own.
+	// Path is relative to the root, **exactly as the walk read it**. It is
+	// empty for an inferred container that has no directory of its own.
+	//
+	// It is not the normalised key the identifier was derived from, and the
+	// difference is the whole point of the field: `library.Normalise` folds
+	// case in a case-insensitive library, and a path stored lower-cased cannot
+	// be opened on a case-sensitive filesystem at all. The key is an input to
+	// `library.DeriveID` and is stored nowhere; this is what something will
+	// eventually open and what an operator will read in a log line.
+	//
+	// *(Corrected at 003 T5, which is the first task to write the field. The
+	// first wording said "in the normalised form the identifier was derived
+	// from", which is true of the key and wrong of the path, and no test in
+	// the packages that had been written could tell the two apart because
+	// every tree in them is already lower case.)*
 	Path string
 
 	// RootOrdinal says which of the library's roots Path is relative to.

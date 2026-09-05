@@ -346,6 +346,21 @@ marker merges two films into one and makes the second disappear, where U-42 and 
 user *more* than the reference does. A difference that hides a work is worse than one that reveals a
 theme tune.
 
+**Two of the three land on a failing test the day they are measured, and U-44 does not — checked at
+003's T19, 2026-09-05.** 003 asserts U-42's and U-43's divergences *as divergences*, so a probe that
+contradicts either arrives as a red build rather than as a rediscovery: U-42 in
+`TestAMarkerAboveTheLibraryRootExcludesNothing` and `TestANonEmptyMarkerExcludesNothing`, each with
+a control that fails if markers are doing nothing at all; U-43 in
+`TestABareTrailingLetterIsTwoFilmsAndACdLetterIsOne`, whose comment says it is written to go red on
+exactly that day. **U-44 has only its Atrium half asserted** — two capitalisations of one name
+deriving one identifier in a default library — because the fixture the recorded reading was taken
+over holds no case-only-differing pair, and the strike above says why manufacturing one would be
+drift. So whoever measures U-44 must expect the answer to land on this row and on
+[003 §3.6](../../specs/003-library-configuration-and-scanning/spec.md#36-identity)
+and on **no test at all**, and the run that settles it needs a tree of its own rather than the
+fixture: two files differing only in case, scanned by both servers, with the resulting difference
+declared before it is compared.
+
 ### Obtaining the reference documents
 
 The OpenAPI document is **not vendored** into this repository — it is generated from GPL-licensed

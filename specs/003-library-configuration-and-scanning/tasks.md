@@ -291,7 +291,7 @@ otherwise:
 
 ## T7 — `Resolve` for music, and the seam 004 fills
 
-- [ ] **Changes:** `internal/library` — album and artist grouping for `music`, the `TagSource`
+- [x] **Changes:** `internal/library` — album and artist grouping for `music`, the `TagSource`
   interface consulted **once per file before grouping** (plan §6.2), and the null implementation v1
   ships. The path fallback for the title, the track number and the disc number, with the tie-break
   spec §3.5 states.
@@ -310,6 +310,28 @@ otherwise:
   from a filename ([behaviours §2.16](../../docs/compatibility/behaviours.md#216-a-music-tracks-number-comes-from-tags-never-from-its-filename),
   spec's OQ-8) — so the day OQ-8 is answered, a failing test is the notification and not a
   rediscovery.
+- **Amended at T7, and one of the two is a change to a specification rather than to a plan.**
+  *(1) The fixture's `Various Artists/A Compilation (1999)` cannot fail the failure AC-9 is named
+  for, and no tree in this feature can.* Under the null tag source there is no track artist to
+  differ, so three files in one directory answer one album under **every** grouping rule a build
+  could have — by directory, by album name, by album artist — and there is no mutation of the
+  resolver that makes that tree answer three. This is not T5's and T6's finding a fourth time: those
+  two were repaired by a better tree, and this one cannot be, because the distinction AC-9 is about
+  does not exist until something says the artists differ. The assertion is made through the
+  `TagSource` seam with a stub, which proves the resolver's grouping key and **nothing** about a real
+  tagged library, and the fixture's own test says so in terms.
+  *(2) Spec §3.6's identity table contradicted §3.5 about an album, and writing the code had to pick
+  one.* The table put `MusicAlbum` under *"the library root plus the normalised name"*, which makes
+  two artists' `Greatest Hits` **one item** — one row, one parent, half an album's tracks under an
+  artist that did not record them. §3.5 already says *"an album's identity comes from its album
+  artist"*, so the row is amended to read as the `Season` row above it does. The fixture's five album
+  names are distinct, so the merge would have shipped green.
+  [Plan §5, §6.2 and §8.5](plan.md#62-resolution-and-the-three-shapes-that-need-siblings) record the
+  six decisions writing the resolver took, and the refusal deleted along with the last unwritten
+  resolver.
+- **What this does not prove:** that a client asking for an album's tracks gets them, or that a
+  track's numbers reach one as integers. §8.3 rows 3 and 4; T12 stores the columns and 005 answers
+  them.
 - **Spec reference:** §3.5, AC-8, AC-9, OQ-8; plan §6.2.
 
 ## T8 — The walk: what it refuses to look at, and the ancestor search that stops at the root

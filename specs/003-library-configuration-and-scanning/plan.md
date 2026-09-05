@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part; 2026-09-05 at T6, sections 6.2 and 8.5, with the seven decisions writing the series, season and episode resolver took that section 6.2 constrained and did not take - where each of the three levels comes from and what a candidate under a bare root does for a series name, the season number's three sources in order, a series directory never also being a season directory, a season being named from its number rather than from its directory and taking a path only from a directory whose number is its own, the numbering family being the specification's with the reference's remaining expressions declared absent, the two cases a multi-episode range needs and the guard on its ending number, and Specials being season zero where the reference's own parser accepts Extras as well; and section 8.5 records that the fixture's 24 cannot assert that the filename is matched before the directory, because the season directory agrees with the filename and the flat shape has no season directory at all
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part; 2026-09-05 at T6, sections 6.2 and 8.5, with the seven decisions writing the series, season and episode resolver took that section 6.2 constrained and did not take - where each of the three levels comes from and what a candidate under a bare root does for a series name, the season number's three sources in order, a series directory never also being a season directory, a season being named from its number rather than from its directory and taking a path only from a directory whose number is its own, the numbering family being the specification's with the reference's remaining expressions declared absent, the two cases a multi-episode range needs and the guard on its ending number, and Specials being season zero where the reference's own parser accepts Extras as well; and section 8.5 records that the fixture's 24 cannot assert that the filename is matched before the directory, because the season directory agrees with the filename and the flat shape has no season directory at all; 2026-09-05 at T7, sections 5, 6.2 and 8.5 - section 5 gains the TagSource seam and stops claiming the library package declares no interface, section 6.2 gains the six decisions writing the music resolver took (the three levels and a disc directory not being one of them, the disc vocabulary being the reference's album-stacking list and not the film one, the reference's further multi-disc conditions declared absent, an album's name losing its year and nothing else, the compilation rule implemented as its "only if", and a track no directory places not being unplaceable) and records that the refusal a collection type with no resolver answered is itself a stub now that all three are written, and section 8.5 records that the fixture's compilation cannot fail AC-9's own failure and that no tree in this feature can, because the distinction does not exist until something says the artists differ
 ---
 
 # 003 — Implementation plan
@@ -394,8 +394,9 @@ by a process that died; §6.9 argues the value.
 
 ```
 // internal/library — no os and no net/http. It imports internal/ports for the
-// four record types above and for nothing else: the direction is downwards, and
-// this package declares no interface of its own.
+// four record types above and for nothing else: the direction is downwards. It
+// declares exactly one interface of its own, TagSource, which 004 implements
+// and §6.2 argues.
 
 CollectionType string                      // Movies | Shows | Music, from the three spec §3.1 names
 func (CollectionType) Admits(ext string) bool
@@ -406,12 +407,30 @@ DeriveID(libraryID string, kind Kind, key string) string      // §6.3
 Reading struct { Root int; Entries []Entry }   // what a walk saw, sorted
 Entry  struct { Path string; Size int64; ModifiedAt units.Time }
 
-Resolve(lib Library, readings []Reading) (Plan, error)        // §6.2; pure
+Tags struct { AlbumArtist, Artist, Album, Title string; Track, Disc *int }
+TagSource interface { TagsFor(root int, path string) Tags }   // §6.2; 004 implements it
+NoTags struct{}                                               // the one v1 ships; answers nothing
+
+Resolve(lib Library, readings []Reading) (Plan, error)        // §6.2; pure, and NoTags
+ResolveWithTags(lib Library, readings []Reading, TagSource) (Plan, error)
 Plan   struct { Items []ports.ScannedItem; Unplaceable, Skipped []Note }
 
 SortKeyBase(name string) string                               // §6.6, spec §3.7.1
 SortKeyFor(item *ports.ScannedItem) string                    // §6.6, spec §3.7.2 and §3.7.3
 ```
+
+**`TagSource` is the one interface this package declares, and it is declared here rather than at 004
+for the reason `SortTitle` is.** §6.2 requires the source to be consulted once per file *before*
+grouping, because the album artist decides which album a track belongs to; a seam that 004 has to
+reach past would mean 004 rewriting the grouping rather than supplying it. `Resolve` is
+`ResolveWithTags` with the `NoTags` source, so the fallback path and the tag-driven path are the
+**same code with one different collaborator** rather than two behaviours with one of them tested.
+It is asked only for a `music` library: §3.3's and §3.4's names come from the path, and what 004
+replaces on those it replaces through `ScannedItem.SortTitle` and its own metadata pass.
+
+*(Added at T7, which wrote the music resolver. The listing above had no seam at all, and the comment
+heading it said the package declared no interface — a claim the block would have contradicted the
+moment §6.2's requirement was implemented. Same shape as T4's addition of `SortTitle`.)*
 
 **`Resolve` takes every root's reading at once and returns the whole library's items**, rather than
 resolving a path at a time. That is not convenience: three of spec §3's rules cannot be decided from
@@ -699,12 +718,84 @@ holding a file whose name says `S01E01`. What the fixture path does catch is the
 §3.4's sentence — that a series' own title is not read as a number — which is a different mutation
 with a different killing test. §8.5 records it beside T5's own.
 
-**And one thing `Resolve` refuses rather than answers.** A collection type whose resolver is not
-written yet is an **error**, never an empty plan. An empty plan is the answer *"this library holds
-nothing"*, and §6.5's guards run on the reading rather than on the plan, so a caller would reconcile
-it against what the library holds now and take every item away — Principle VI's *"no
-plausible-looking stub"*, at the one place in this feature where the stub would be silent and
-destructive.
+**And one thing `Resolve` refused rather than answered, until T7.** ~~A collection type whose
+resolver is not written yet is an **error**, never an empty plan.~~ The reasoning stands and the
+branch is gone: an empty plan is the answer *"this library holds nothing"*, and §6.5's guards run on
+the reading rather than on the plan, so a caller would reconcile it against what the library holds
+now and take every item away — Principle VI's *"no plausible-looking stub"*, at the one place in
+this feature where the stub would be silent and destructive. **All three resolvers are written now,
+so the refusal is a branch nobody can reach, which is the same stub one layer up**, and T7 deleted
+it along with `ErrCollectionTypeNotResolved`. What replaces it is an assertion that can fail: every
+type `AllCollectionTypes` names resolves a file of its own admitted extension into an item beyond
+the library's own row, so a fourth type added with no arm in the switch fails a test rather than
+quietly emptying a library.
+
+**Amended 2026-09-05 at T7, which wrote the music resolver.** Six decisions the specification
+constrains and does not take, plus one it contradicted itself about, every one of them a *how* and
+therefore recorded here:
+
+- **The three levels come from the directories, and a disc directory is not one of them.** The album
+  is the file's containing directory, or the one **above** it where the containing directory names a
+  disc; the artist is the directory above the album; and a candidate directly under a library root
+  has neither. A folder holding audio directly under a music root is therefore an **album** and not
+  an artist, which is the reference's own shape — its album resolver checks for audio files before it
+  descends into anything
+  `[source: Emby.Server.Implementations/Library/Resolvers/Audio/MusicAlbumResolver.cs:128-139 @ v10.11.11]`.
+- **The disc vocabulary is the reference's `AlbumStackingPrefixes` and is not the film-stacking one**
+  `[source: Emby.Naming/Common/NamingOptions.cs:183-193, Emby.Naming/Audio/AlbumParser.cs:34-68 @ v10.11.11]`.
+  The two differ in **both** directions: `dvd` and `pt` stack a film and name no disc, and
+  `digital media`, `vol`, `volume` and `act` name a disc and stack no film. One shared list would be
+  wrong for both. The rule around the vocabulary is transcribed as the rule it states — separators
+  collapsed to one space, then a prefix, then a number — and every prefix is tried, because
+  `Volume 3` matches `vol` first and the `ume 3` left behind is not a number.
+  What the reference does with the answer and what Atrium does with it are **different things**:
+  there it decides only whether a folder is a disc folder of a multi-disc album, and the number
+  itself comes from the tag or the container `[…/AudioFileProber.cs:182,312 @ v10.11.11]`. Here it is
+  both, and that second half is the declared divergence below.
+- **The reference's further conditions on a multi-disc album are not implemented, and the shortfall
+  shows fewer items.** There, a parent is a multi-disc album only when it holds no audio of its own
+  and **every** music-holding subfolder is a disc folder; a stray file beside two disc folders makes
+  the disc folders plain `Folder` items with the tracks under them. Here the disc rule is a property
+  of the directory's own name, so that tree stays one album. Fewer items here than there, which is
+  the direction §6.1's and §6.2's other narrowings already run in, and nothing in the fixture
+  exercises it.
+- **An album's name loses its year and loses nothing else.** Spec §3.5's table has a row for
+  `Album (2001)` resolving to *"Album with a year"*, so the year comes out and becomes
+  `ProductionYear`. The **release-tag vocabulary does not apply**: it is `names.go`'s, read out of
+  the reference's *video* cleaner, and the reference takes nothing at all out of an album folder's
+  name — its reading of this repository's fixture calls the album `First Album (2001)`
+  `[probe: tools/probe_reference_scan.py, Jellyfin 10.11.11, 2026-09-02]`. Running an album's name
+  through the film cleaner would widen a difference §3.5 asks for into one it does not. An artist's
+  name is not cleaned at all; both are trimmed, which is §3.5's own word.
+- **§3.5's compilation rule is implemented as its *"only if"* and not as its sentence.** *"Where no
+  album artist is present, the album is attributed to `Various Artists` only if the track artists
+  actually differ."* The track artists therefore **fill a hole and never overrule**: a tag outranks a
+  directory (§3.5), a directory outranks an inference, and only an album that neither attributed
+  consults them. The wider reading turns an ordinary album with a guest on every track into a
+  compilation. Under the `NoTags` source there are no track artists at all, so the rule cannot fire
+  and `Various Artists` is attributed only where a directory names it — which is what the fixture's
+  `Various Artists/A Compilation (1999)` gives.
+- **A track that no directory places is not unplaceable.** A candidate directly under a music root
+  has no album and no artist and hangs from the library's own row, and it is **not** counted with
+  §3.8's unplaceable items. The distinction is the one §3.8 is written for: an episode with no
+  episode number is a file whose *name* failed to say something it had to say, where a track's name
+  never had that job. So `music`, like `movies`, produces no `Plan.Unplaceable` note at all.
+- **And the one the specification contradicted itself about: an album's identity.** §3.6's table put
+  `MusicAlbum` with `Series` and `MusicArtist` under *"the library root plus the normalised name"*,
+  which makes two artists' `Greatest Hits` **one item** — one row, one parent, half an album's tracks
+  under an artist that did not record them. §3.5 settles it in terms — *"an album's identity comes
+  from its album artist"* — so the table is amended and the album's key is its artist's identity plus
+  its normalised name, exactly as the `Season` row above it already reads. This is a change to a
+  **WHAT**, so it is in `spec.md` with its own `amended:` line and not only here.
+
+And one consequence of the compilation rule running *after* the grouping, recorded rather than
+engineered around: an album it attributes was grouped under the **empty** artist, so two groups can
+derive one album identifier — one attributed `Various Artists` from its track artists and one whose
+directory already said `Various Artists`, sharing an album name. That is the same shape §6.3 records
+for two canonically equal filenames: a repeated identifier inside one batch, which `ApplyScanBatch`
+has to decide the meaning of (T10) and which nothing in `internal/library` can see. Under `NoTags`
+it cannot happen at all, because the track artists are what fill the hole and there are none, so it
+is 004's to watch rather than this feature's to guard.
 
 ### 6.3 Identity, and the normalisation the whole feature rests on
 
@@ -1400,6 +1491,20 @@ title is not read as a number, and that has its own test and its own mutation. R
 T5's because it is the same shape a third time and the pattern is now the feature's most reliable
 source of findings: **a fixture built to demonstrate a rule is not the same thing as a tree that can
 refute it.**
+
+**Amended 2026-09-05, at T7: the fixture's compilation cannot fail AC-9's own failure, and this one
+is not a fixable tree.** AC-9 is *"a compilation with a different artist per track resolves to one
+album"* and the failure it guards against is one album **per track**. Under the `NoTags` source
+there is no track artist to differ, so `Various Artists/A Compilation (1999)` is three files in one
+directory and *every* grouping rule a build could have — by directory, by album name, by album
+artist — answers one album. There is no mutation of the resolver that makes that tree answer three.
+Unlike T5's and T6's findings this cannot be repaired by choosing a better tree: **the distinction
+AC-9 is about does not exist until something says the artists differ, and nothing in this feature
+reads a tag.** So the criterion's own assertion is made through the `TagSource` seam with a stub —
+which proves the resolver's grouping key and proves nothing about a real tagged library — and the
+fixture's own test says in terms that a green run over that tree is evidence of the tree. Both
+statements are on the tests rather than in a comment somewhere, because §3.5's precedence half is
+**004's** and a green suite here must not be read as evidence for it.
 
 ## 9. Risks
 

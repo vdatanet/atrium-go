@@ -654,21 +654,41 @@ func TestAPathThatIsNotACandidateIsANoteAndNotAnItem(t *testing.T) {
 	}
 }
 
-// TestACollectionTypeWithNoResolverIsAnErrorAndNotAnEmptyPlan is Principle VI's
-// *"no plausible-looking stub"* at the one place in this feature where a stub
-// would be silent and destructive: an empty plan is the answer *"this library
-// holds nothing"*, and the caller that believes it removes every item under it.
-func TestACollectionTypeWithNoResolverIsAnErrorAndNotAnEmptyPlan(t *testing.T) {
-	for _, collection := range []CollectionType{Music} {
+// TestEveryCollectionTypeResolvesAFileOfItsOwn replaces the refusal that stood
+// here while `music` had no resolver, and it is a **reachable** assertion where
+// that one was an unreachable branch.
+//
+// The refusal existed for Principle VI's *"no plausible-looking stub"* at the
+// one place in this feature where a stub would be silent and destructive: an
+// empty plan is the answer *"this library holds nothing"*, and the caller that
+// believes it removes every item under it. All three resolvers are written
+// now, so the error nobody can reach is itself the stub — one layer up — and
+// it is gone.
+//
+// What is left is the property it was protecting, asserted where a fourth
+// collection type would actually meet it: every type
+// [AllCollectionTypes] names resolves a file of its own admitted extension
+// into an item beyond the library's own row. A type added to that list with no
+// arm in [Resolve]'s switch fails here rather than quietly emptying a library.
+func TestEveryCollectionTypeResolvesAFileOfItsOwn(t *testing.T) {
+	for _, collection := range AllCollectionTypes() {
+		extensions := collection.Extensions()
+		if len(extensions) == 0 {
+			t.Fatalf("%s admits no extension, so this test cannot hand it a file", collection)
+		}
+
 		lib := aMoviesLibrary()
 		lib.CollectionType = string(collection)
 
-		plan, err := Resolve(lib, []Reading{aReading(0, "anything.mkv")})
-		if !errors.Is(err, ErrCollectionTypeNotResolved) {
-			t.Errorf("%s: error = %v, want %v", collection, err, ErrCollectionTypeNotResolved)
+		plan, err := Resolve(lib, []Reading{aReading(0, "A Name/Another Name/A File"+extensions[0])})
+		if err != nil {
+			t.Errorf("%s: Resolve: %v", collection, err)
+			continue
 		}
-		if len(plan.Items) != 0 {
-			t.Errorf("%s: returned %d items beside the error", collection, len(plan.Items))
+		if len(plan.Items) < 2 {
+			t.Errorf("%s: resolved %d items — the library's own row and nothing else, which is the answer "+
+				"\"this library holds nothing\" and the caller that believes it removes everything",
+				collection, len(plan.Items))
 		}
 	}
 }

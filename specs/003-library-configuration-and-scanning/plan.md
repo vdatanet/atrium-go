@@ -1,10 +1,11 @@
 ---
 feature: 003-library-configuration-and-scanning
 title: Library configuration and scanning — implementation plan
-status: In review
+status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16
 ---
 
 # 003 — Implementation plan
@@ -19,9 +20,13 @@ second. It is taken again here, with 002's addition: **writing this plan amended
 three places, and that does not reopen the gate. The loop in [specs/README.md](../README.md) closes
 deliberately, and §11 lists the three with what forced each.
 
-This plan is `In review`. It becomes `Accepted` when that review returns and a task list is asked
-for, which is what `tasks.md`'s own `plan_status_required` gates. Both earlier plans recorded the
-same transition in the same place.
+~~This plan is `In review`. It becomes `Accepted` when that review returns and a task list is asked
+for, which is what `tasks.md`'s own `plan_status_required` gates.~~ **Taken 2026-09-05**: a task
+list was asked for, so this plan is `Accepted` and [tasks.md](tasks.md) is `In review` behind it.
+Both earlier plans recorded the same transition in the same place. **Writing the task list amended
+this plan in four places and the specification in two more**, and
+[tasks.md's own gate record](tasks.md#what-the-gate-changed) says what forced each; the loop closing
+is again why that does not reopen the gate behind it.
 
 **On three anchors this file has to honour.** Three sentences in
 [behaviours.md](../../docs/compatibility/behaviours.md) already cite sections of a `plan.md` at this
@@ -643,14 +648,19 @@ they run on the **reading**, before `Reconcile` is called.
 1. **A root that cannot be read is a failed scan, not an empty one.** The root must resolve to a
    readable directory before the walk starts, and **any** error during the walk — a permission
    refused deep in the tree, an I/O error, a path that will not normalise — fails the scan for that
-   library and writes nothing. This is spec §3.8's rule and it is the only one of the three the
-   specification states.
+   library and writes nothing. This is spec §3.8's rule and it is ~~the only one of the three~~
+   **one of the two** the specification states.
 2. **A root that reads as holding no candidate file, where the previous scan recorded at least one,
    is treated as unavailable.** This is the guard the first one misses: a share that mounts as an
    empty directory is perfectly readable. Zero is the threshold *because* it needs no number — it is
    the mount failure's signature, where "fewer than before" is a judgement nobody could defend and
    a library an operator really emptied is a deliberate act. The scan refuses and says which root;
    `atrium library scan --allow-empty-root` is how an operator says they meant it.
+   **Amended 2026-09-05, while the task list was written: this guard is spec §3.8's rule now, and
+   AC-16 is its criterion.** It was a plan invention, which is what the corrected count above records
+   — writing a task per criterion made visible that the guard catching the way an unmounted share
+   actually arrives had no criterion at all, and a behaviour an operator can see is WHAT rather than
+   HOW. Only the flag stays here.
 3. **A removal is computed from a complete reading of every root of a library and applied in one
    transaction with the additions.** So a scan that was cancelled, that hit a failed batch, or whose
    second root failed while the first succeeded removes nothing at all. This is why `Reconcile` takes
@@ -802,6 +812,29 @@ on purpose: it is the one thing in the schema that notices"* — applied to a co
 `internal/store/sqlite/migrate_test.go` asserts the derived half is at `0` *"neither 001 nor 002
 scans anything"*. It becomes an assertion that the derived half is at `derivedGeneration`, and the
 task that writes the schema is the task that changes that line.
+
+**Amended 2026-09-05, while the task list was written: that line is one of *four* assertions this
+change costs, not one.** Reading the runner in order to write [T11](tasks.md#t11--the-derived-half-stops-being-a-lineage-and-001s-runner-changes-after-all)
+found the other three, and naming one leaves the other three to be met as a red build by somebody who
+will assume they caused it:
+
+- `TestLoadLineageReadsAHalfWithNothingInIt` asserts that `loadLineage(migrationFiles, Derived)` is
+  empty. It **stays true and stops meaning anything**, which is worse than failing: it is replaced by
+  an assertion that no `migrations/derived` directory exists at all, so that a migration filed there
+  — applied by nothing after this change — is a failing build rather than a file nobody reads.
+- `TestTheRunnerAppliesOnlyWhatIsPending` proves the runner takes a half **by migrating the derived
+  one**. That is not a call anything makes afterwards, so the test moves to a synthetic lineage and
+  keeps proving the same thing about the runner.
+- `migrate`'s newer-than-known refusal, and the doc comments on `Half` and `Derived`, each state that
+  the derived lineage is empty and that the refusal *"is owed a replacement there, not here"*. All
+  three become false in this change and all three are rewritten in it.
+
+**And [ADR-0003](../../docs/decisions/0003-sqlite-as-the-store.md) is not edited, deliberately.** Its
+*"a derived-version mismatch at startup is a rescan rather than an error"* stops being an open gap
+here, and [AGENTS.md §4](../../AGENTS.md) makes an accepted record immutable — a wrong one is
+superseded, never edited. This one is not wrong: it is a decision as taken, including what it owed at
+the time, and it already names the scanner as what the branch was waiting for. Say so in the commit,
+which is how 002 T6 handled ADR-0006's own *"asserted nowhere"* line.
 
 **The rescan itself is at start and the scan is not.** Dropping is synchronous, inside `Open`, and it
 must be: a store handed to a caller with a schema from another generation has exactly one correct
@@ -959,6 +992,26 @@ Four shapes are already named by 010's own amendment and account for most of the
 | An empty library that is nothing at all to the reference | **003** | A library with no items has no root row there and one here |
 | Every library's own root row | **003** | The reference's is a `Folder`; spec §3.1 makes each library a `CollectionFolder` |
 
+**Amended 2026-09-05, while the task list was written, in two places this section sized and did not
+place.**
+
+**Where the declaration lives.** It is a Go table beside the comparison in `internal/app`, and
+**not** a seventh machine-readable file under `docs/compatibility/`. A new artefact there owes a
+prose twin and a row-for-row test ([docs/README.md](../../docs/README.md#paired-files-edit-both-halves-or-neither)),
+and this one has no twin to pair with: the prose that explains a row is *this project's own
+specification section*, which the row cites. [conformance.md](../../docs/compatibility/conformance.md#l3--differential)
+already describes the declaration as living *"in that module with its reason"*, so this is the
+recorded shape rather than a new one. [T17](tasks.md#t17--the-forty-seven-declared-differences-which-this-project-holds-the-reading-of-and-not-the-reasons)
+takes it.
+
+**And twenty-five of the forty-seven are 004's, while 004 does not exist.** They are declared now
+because the comparison cannot run without a reason for every difference — and the consequence is
+worth meeting here rather than in CI: *a declared difference that has gone away fails too*, so **the
+day 004's metadata resolution renames one of those items, the row declaring that difference goes
+red.** That is the rule working rather than a defect. What 004 owes is to edit those rows rather than
+delete them, and to keep the total asserted from the declaration's own length, since a row removed to
+make a run go green is exactly what the count assertion exists to catch.
+
 **Two rules for the comparison, and the second is the one that is easy to get wrong.** First: it
 compares type, name and path — not identifiers, because behaviours §1.4 already establishes those
 differ by design and comparing them would declare 74 differences that say nothing. Second: **a
@@ -1003,8 +1056,10 @@ a client's view, and become wrong answers on somebody else's route:
 
 ### 8.4 Each criterion, and the level its assertion sits at
 
-Spec §5's fifteen. `library` and `scan` mean a Go test beside that package; `app` means through the
-subcommand over a real data directory; `conformance` means through the binary.
+Spec §5's ~~fifteen~~ **sixteen**. `library` and `scan` mean a Go test beside that package; `app`
+means through the subcommand over a real data directory; `conformance` means through the binary.
+*(AC-16 was added on 2026-09-05, while the task list was written; §6.5's amendment says what forced
+it.)*
 
 | AC | Where | How |
 |---|---|---|
@@ -1023,6 +1078,7 @@ subcommand over a real data directory; `conformance` means through the binary.
 | 13 | `library` | Spec §3.7's fourteen-row table, verbatim, including `rock  roll`'s two spaces and `s w a t `'s trailing one; plus §3.7.2's three types; plus the `2 Fast` versus `10 Things` ordering the pad width exists for |
 | 14 | `app` | The four rows of §3.8's change table that AC-14 names, each as its own mutation of the fixture between two scans: a modified file keeps its identity, an appearing file is added, a renamed file is a delete plus an add. **Size and modification time are varied independently**, because a build reading only one of the two passes a test that varies both |
 | 15 | `library` | An explicit sort title replaces the derivation for **every** type including the three that override, and is lowercased and digit-padded but not article-stripped. The value is supplied through the same seam 004 will fill |
+| 16 | `app` | §6.5's second guard, in **both** halves: a root that reads as holding no candidate file where the last scan saw at least one refuses the scan and names the root, and the same scan with `--allow-empty-root` proceeds and removes. A test asserting only the refusal passes on a build whose override does nothing |
 
 **Two criteria are asserted at a level below the one they are written at, and both say so here rather
 than being discovered.** AC-1's *"exactly the expected set of items"* and AC-13's *"sort ordering"*

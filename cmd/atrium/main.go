@@ -1,5 +1,5 @@
 // Command atrium serves the Jellyfin API, and manages this installation's
-// accounts.
+// accounts and libraries.
 //
 // It is wiring and nothing else (architecture 3): everything it does is in
 // internal/app, because "if something there is worth testing, it is in the
@@ -7,6 +7,7 @@
 //
 //	atrium --data-dir /var/lib/atrium
 //	atrium user add --data-dir /var/lib/atrium --name Ada
+//	atrium library add --data-dir /var/lib/atrium --name Films --type movies --root /mnt/films
 //	atrium --help
 package main
 
@@ -26,20 +27,28 @@ func main() {
 
 	args := os.Args[1:]
 
-	// The whole dispatch, and deliberately the whole of it: one branch on the
+	// The whole dispatch, and deliberately the whole of it: a switch on the
 	// first argument (002 plan 3). Anything richer here — a subcommand table, a
 	// usage line, a second word to look at — would be a branch a test wants to
-	// reach in the one package no test can reach into.
+	// reach in the one package no test can reach into. Each arm hands the rest
+	// of the argument vector to internal/app, which is where every decision
+	// about it is made and where a test can reach one.
 	//
 	// A first argument that is not a subcommand falls through to the server,
 	// where ParseConfig refuses it by name ("unexpected argument"). That is the
-	// regression this shape is most likely to introduce and the reason it is
-	// written as a single equality rather than as "does it start with a dash":
-	// `atrium --data-dir …` has to keep serving.
+	// regression this shape is most likely to introduce and the reason each arm
+	// is a single equality rather than "does it start with a dash":
+	// `atrium --data-dir …` has to keep serving, and adding the library arm
+	// must not take that or `atrium user add` with it. Both are asserted
+	// against the built binary in conformance/, which is the only place this
+	// file is observable at all.
 	var err error
-	if len(args) > 0 && args[0] == app.UserCommand {
+	switch {
+	case len(args) > 0 && args[0] == app.UserCommand:
 		err = app.RunUser(ctx, args[1:], os.Getenv, os.Stdin, os.Stdout, os.Stderr)
-	} else {
+	case len(args) > 0 && args[0] == app.LibraryCommand:
+		err = app.RunLibrary(ctx, args[1:], os.Getenv, os.Stdout, os.Stderr)
+	default:
 		err = app.Run(ctx, args, os.Getenv, os.Stderr)
 	}
 

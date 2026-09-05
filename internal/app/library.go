@@ -11,7 +11,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/vdatanet/atrium-go/internal/library"
 	"github.com/vdatanet/atrium-go/internal/ports"
 	"github.com/vdatanet/atrium-go/internal/scan"
 	"github.com/vdatanet/atrium-go/internal/store/sqlite"
@@ -24,17 +23,58 @@ import (
 // is a word that can be spelled two ways.
 const LibraryCommand = "library"
 
-// libraryScan is the one verb this task ships.
+// The six verbs of 003 plan §6.7.
 //
-// 003 plan §6.7 declares six — `add`, `list`, `rename`, `roots`, `remove` and
-// `scan` — and the other five arrive with 003 T14, together with the arm on
-// cmd/atrium's dispatch that makes any of them reachable from a shell. `scan`
-// is here because 003 T13's criteria are asserted *through the subcommand*
-// rather than through the function: AC-12 and AC-16 are about what the store
-// ends up holding after an operator ran a scan, and the seams 003 plan §8.1
-// names — between `Resolve` and what is written, and between `Reconcile` and
-// what is removed — are only wiring when something has wired them.
-const libraryScan = "scan"
+// `scan` shipped first, at T13, because that task's criteria are asserted
+// *through the subcommand* rather than through the function: AC-12 and AC-16
+// are about what the store ends up holding after an operator ran a scan. The
+// other five arrive here, with the arm on cmd/atrium's dispatch that makes any
+// of them reachable from a shell.
+const (
+	libraryAdd    = "add"
+	libraryList   = "list"
+	libraryRename = "rename"
+	libraryRoots  = "roots"
+	libraryRemove = "remove"
+	libraryScan   = "scan"
+)
+
+// libraryVerbSet is every verb and the flag set it parses, unparsed, in the
+// order the usage text lists them.
+//
+// **It is one table read by the dispatch and by the tests**, and that is the
+// whole reason it exists. 003 T14's definition of done asserts that no verb but
+// `add` offers a way to write a library's collection type or its case
+// sensitivity, *"over the parsed flag sets rather than by reading the source"* —
+// so a verb whose flags this table did not carry would be a verb that assertion
+// never looked at, and a sixth arm added to [RunLibrary] without a row here is
+// caught by `TestEveryVerbTheDispatchAcceptsHasARowInTheFlagTable`.
+//
+// The options each constructor returns are dropped: a caller that wants to
+// *run* a verb calls its constructor directly. What a caller of this wants is
+// the shape of the flags, and nothing else.
+func libraryVerbSet(output io.Writer) []struct {
+	Verb  string
+	Flags *flag.FlagSet
+} {
+	add, _ := newLibraryAddFlags(output)
+	list, _ := newLibraryListFlags(output)
+	rename, _ := newLibraryRenameFlags(output)
+	roots, _ := newLibraryRootsFlags(output)
+	remove, _ := newLibraryRemoveFlags(output)
+	scan, _ := newLibraryScanFlags(output)
+	return []struct {
+		Verb  string
+		Flags *flag.FlagSet
+	}{
+		{libraryAdd, add},
+		{libraryList, list},
+		{libraryRename, rename},
+		{libraryRoots, roots},
+		{libraryRemove, remove},
+		{libraryScan, scan},
+	}
+}
 
 // RunLibrary runs `atrium library <subcommand>`.
 //
@@ -56,6 +96,16 @@ func RunLibrary(ctx context.Context, args []string, getenv func(string) string,
 	}
 
 	switch args[0] {
+	case libraryAdd:
+		return runLibraryAdd(ctx, args[1:], getenv, stdout, stderr)
+	case libraryList:
+		return runLibraryList(ctx, args[1:], getenv, stdout, stderr)
+	case libraryRename:
+		return runLibraryRename(ctx, args[1:], getenv, stdout, stderr)
+	case libraryRoots:
+		return runLibraryRoots(ctx, args[1:], getenv, stdout, stderr)
+	case libraryRemove:
+		return runLibraryRemove(ctx, args[1:], getenv, stdout, stderr)
 	case libraryScan:
 		return runLibraryScan(ctx, args[1:], getenv, stdout, stderr)
 	default:
@@ -67,14 +117,37 @@ func RunLibrary(ctx context.Context, args []string, getenv func(string) string,
 func writeLibraryUsage(output io.Writer) {
 	fmt.Fprint(output, "atrium "+LibraryCommand+" — configure and scan this installation's libraries.\n\n"+
 		"Usage:\n"+
-		"  atrium "+LibraryCommand+" "+libraryScan+" --"+flagDataDirectory+" <directory> [flags]\n")
+		"  atrium "+LibraryCommand+" "+libraryAdd+"    --"+flagDataDirectory+" <directory> --"+flagName+" <name> --"+
+		flagCollectionType+" "+strings.Join(collectionTypeNames(), "|")+" --"+flagRoot+" <path> [--"+flagRoot+" <path> …] [--"+flagCaseSensitive+"]\n"+
+		"  atrium "+LibraryCommand+" "+libraryList+"   --"+flagDataDirectory+" <directory> [--"+flagFormat+" "+formatTable+"|"+formatJSON+"]\n"+
+		"  atrium "+LibraryCommand+" "+libraryRename+" --"+flagDataDirectory+" <directory> --"+flagName+" <name> --"+flagTo+" <name>\n"+
+		"  atrium "+LibraryCommand+" "+libraryRoots+"  --"+flagDataDirectory+" <directory> --"+flagName+" <name> --"+flagRoot+" <path> [--"+flagRoot+" <path> …]\n"+
+		"  atrium "+LibraryCommand+" "+libraryRemove+" --"+flagDataDirectory+" <directory> --"+flagName+" <name>\n"+
+		"  atrium "+LibraryCommand+" "+libraryScan+"   --"+flagDataDirectory+" <directory> [flags]\n\n"+
+		"A library's collection type and its case sensitivity are settled when it is\n"+
+		"declared and there is no verb that changes either: they decide every identifier\n"+
+		"under the library, and nothing stores the old ones to undo with (003 §3.6).\n")
 }
 
-// The flags `library scan` takes. Every one of them is a name spelled once.
+// The flags the six verbs take. Every one of them is a name spelled once.
+//
+// `--type` and `--case-sensitive` are declared by exactly one verb, and the
+// declaration is 003 §3.6's refusal rather than a convenience: *"an attempt to
+// change it afterwards is refused, not accepted with a warning"*, and the way
+// this design refuses it is that **there is nothing to type**. The assertion
+// that no other verb offers either lives over these flag sets — see
+// `TestNoVerbButAddCanWriteAFrozenColumn`, which is this refusal's operator-
+// facing half; the store-facing half is `internal/ports`'
+// `TestNoMethodOfTheLibraryStoreCanCarryAFrozenColumn`, and neither implies the
+// other.
 const (
 	flagFull           = "full"
 	flagAllowEmptyRoot = "allow-empty-root"
 	flagFormat         = "format"
+	flagCollectionType = "type"
+	flagCaseSensitive  = "case-sensitive"
+	flagRoot           = "root"
+	flagTo             = "to"
 )
 
 // The two spellings of --format.
@@ -150,8 +223,8 @@ func runLibraryScan(ctx context.Context, args []string, getenv func(string) stri
 	if err != nil {
 		return err
 	}
-	if options.format != formatTable && options.format != formatJSON {
-		return fmt.Errorf("--%s %q is not %s or %s", flagFormat, options.format, formatTable, formatJSON)
+	if err := checkFormat(libraryScan, options.format); err != nil {
+		return err
 	}
 
 	store, err := openStoreAt(ctx, directory)
@@ -208,13 +281,9 @@ func selectedLibraries(ctx context.Context, store ports.LibraryStore, name strin
 		return store.Libraries(ctx)
 	}
 
-	folded := library.FoldName(name)
-	lib, found, err := store.LibraryByFoldedName(ctx, folded)
+	lib, err := libraryNamed(ctx, store, libraryScan, name)
 	if err != nil {
 		return nil, err
-	}
-	if !found {
-		return nil, fmt.Errorf("%s %s: there is no library named %q", LibraryCommand, libraryScan, name)
 	}
 	return []ports.Library{lib}, nil
 }

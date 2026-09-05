@@ -379,7 +379,7 @@ func (s *Scanner) Scan(ctx context.Context, lib ports.Library, options Options) 
 		return Changes{}, err
 	}
 
-	readings, examined, skipped, err := s.read(lib, collection)
+	readings, examined, skipped, err := s.read(ctx, lib, collection)
 	if err != nil {
 		return Changes{}, err
 	}
@@ -464,11 +464,23 @@ func (s *Scanner) Scan(ctx context.Context, lib ports.Library, options Options) 
 // **Nothing partial ever comes back.** The first root that fails ends this, and
 // the caller has no reading to be tempted into reconciling against, which is
 // the same shape [Walk] already gives one root.
-func (s *Scanner) read(lib ports.Library, collection library.CollectionType) ([]library.Reading, int, int, error) {
+func (s *Scanner) read(ctx context.Context, lib ports.Library,
+	collection library.CollectionType) ([]library.Reading, int, int, error) {
 	readings := make([]library.Reading, 0, len(lib.Roots))
 	examined, skipped := 0, 0
 
 	for ordinal, root := range lib.Roots {
+		// The one place a walk consults the context, added at T14 when the
+		// entry layer gained a scheduled scan the server's own shutdown
+		// cancels. [Walk] takes an `fs.FS` and no context — io/fs offers none —
+		// so what a cancellation can bound is the *next* root rather than the
+		// current one, and a stop therefore waits out one root's walk and no
+		// more. Nothing is written either way: every failure here is guard 1's,
+		// and guard 3 is the ordering that keeps a removal behind it.
+		if err := ctx.Err(); err != nil {
+			return nil, 0, 0, err
+		}
+
 		unavailable := func(err error) error {
 			return &UnavailableRootError{
 				LibraryID: lib.ID, LibraryName: lib.Name, Root: ordinal, Path: root, Err: err,

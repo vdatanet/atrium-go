@@ -215,6 +215,15 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	// interesting fact here is the state change rather than where it happened.
 	logger.Info("ready")
 
+	// After the gate opens, and never inside the start: a full scan of every
+	// library would hold the gate shut for minutes on the one start that most
+	// needs to come up (003 plan §6.8, and sqlite's own ensureDerivedGeneration
+	// says it is leaving this here). The deferred wait is registered *after*
+	// the store's deferred close, so it runs before it — a scan still writing
+	// must not meet a closed database.
+	scans := startScheduledScans(ctx, store, logger, cfg.ScanInterval, store.DerivedRebuilt())
+	defer scans.wait()
+
 	return server.Serve(ctx)
 }
 

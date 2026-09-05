@@ -577,7 +577,7 @@ otherwise:
 
 ## T12 — The SQLite half of the two derived ports
 
-- [ ] **Changes:** `internal/store/sqlite` — the readers and writers behind `ItemStore`:
+- [x] **Changes:** `internal/store/sqlite` — the readers and writers behind `ItemStore`:
   `ItemsForLibrary`, `ApplyScanBatch` as one transaction that also renews the claim, `RemoveItems`,
   `ClaimScan` and `ReleaseScan` ([plan §5](plan.md#5-contracts), [§6.9](plan.md#69-two-scanners-batching-and-what-a-scan-does-while-the-server-serves)).
 - **These methods have no caller but a test until T13**, which is the cost of the ordering decision
@@ -597,9 +597,38 @@ otherwise:
   where Principle VII is usually enforced; and `sort_key` compares as **bytes** under `BINARY`,
   asserted with two names that `NOCASE` orders differently from a byte comparison — ADR-0003 names
   that collation mistake and nothing else in this feature can see it.
+- **Amended at T12, in three places, and the first is what the clause about the previous claimant
+  forced.**
+  *(1) `ClaimScan` returns the claimant it displaced or lost to.* ~~`(bool, error)`~~ became
+  `(bool, string, error)`. Plan §7 asks for two messages naming a claimant — *"the second reports
+  'already being scanned'"* and *"broken and taken, with a log line naming the previous claimant"* —
+  and the declaration had no way to produce either: after the call the row names the winner, and a
+  caller that read it first would be naming a claimant it had not necessarily displaced. Same shape
+  as T9's amendment of `Reconcile` and T4's addition of `SortTitle`.
+  *(2) §6.9's "one conditional statement" became one transaction*, for the same reason: an upsert's
+  `RETURNING` answers the row as it now stands. The transaction takes the write lock at `BEGIN`
+  (`_txlock=immediate`) on the handle capped at one connection, so the atomicity is the statement's
+  and the only thing that changed is that the old value survives long enough to be returned.
+  *(3) Two rows were added to plan §7*, both of them refusals this task had to decide rather than
+  transcribe: a batch naming one item twice, which is **T3's finding turned into a decision** —
+  NFC's singleton mappings put two files under one identifier, and the alternative to failing the
+  library's scan is a last write winning silently — and a removal naming an identifier no row holds,
+  which is 001's rows-affected rule where a `DELETE` that quietly matched fewer rows leaves the next
+  scan computing the same removal for ever.
+- **Twenty-five mutations were run; twenty-three fail a named test and both survivors are declared.**
+  Removing `ORDER BY item_id, ordinal` from the **file** read survives, because the primary key on
+  `(item_id, ordinal)` answers that shape whichever way the rows sit — T10's finding one table along,
+  and the reason the *item* read is ordered on `sort_key` rather than on the primary key, where the
+  same mutation fails. And moving the claim's renewal from the first statement of the batch to the
+  last survives: both orders are inside one transaction and no failure this store can reach tells
+  them apart, so the renewal being first is a property of the test rather than of the behaviour and
+  says so in the code. Two mutations plan §8.3 names by name were run deliberately: `ORDER BY name`
+  instead of `sort_key` (which needed `The Abyss` in the corpus, because the article this project
+  strips is the only thing making the two orders differ) and `COLLATE NOCASE`.
 - **What this does not prove:** that `ORDER BY` in any query a client reaches uses this column, or
-  that the four numeric columns travel as integers. §8.3 rows 2 and 4, both 005's.
-- **Spec reference:** §4; plan §4.2, §5, §6.9; ADR-0003.
+  that the four numeric columns travel as integers. §8.3 rows 2 and 4, both 005's. Both rows now say
+  what T12 added underneath them, so that neither reads as discharged.
+- **Spec reference:** §4; plan §4.2, §5, §6.9, §7, §8.3; ADR-0003.
 
 ## T13 — The scan: the three guards, the batches, and the summary that counts two things apart
 

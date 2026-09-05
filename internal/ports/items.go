@@ -206,7 +206,8 @@ type ItemStore interface {
 	RemoveItems(ctx context.Context, ids []string) error
 
 	// ClaimScan takes the scanning claim on a library at at, breaking one
-	// older than staleAfter, and reports whether it won.
+	// older than staleAfter, and reports whether it won and which claimant it
+	// displaced or lost to.
 	//
 	// It returns a boolean rather than an error for a library already being
 	// scanned, because two scanners over one store is a state this feature
@@ -214,7 +215,19 @@ type ItemStore interface {
 	// data directory a server is serving from (003 plan §6.7) — and
 	// *"somebody else is scanning"* is an outcome the caller reports, not a
 	// fault.
-	ClaimScan(ctx context.Context, libraryID, by string, at units.Time, staleAfter units.Ticks) (bool, error)
+	//
+	// The claimant travels beside the boolean because 003 plan §7 asks for two
+	// messages this call is the only place that can supply: a refusal saying
+	// who holds the claim, and a log line naming the process whose claim was
+	// broken on age. Neither is recoverable afterwards — the row now names the
+	// winner — and a caller that read the row first would be naming a claimant
+	// it had not necessarily displaced. It is empty when there was none, which
+	// is the first scan of a library and every scan after a rebuild.
+	//
+	// *(Amended at 003 T12, which wrote the implementation. The declaration
+	// returned `(bool, error)` and had no way to answer the two rows of plan
+	// §7 that name a claimant.)*
+	ClaimScan(ctx context.Context, libraryID, by string, at units.Time, staleAfter units.Ticks) (bool, string, error)
 
 	// ReleaseScan drops the claim and records what the scan did: when it
 	// finished, whether it was a full re-examination, and 003 §3.8's summary

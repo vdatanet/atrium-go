@@ -75,7 +75,7 @@ otherwise:
 
 ## T1 — The fixture tree: one declaration, two ways to reach it, and the reading it is checked against
 
-- [ ] **Changes:** `internal/libraryfixture` — the declaration of
+- [x] **Changes:** `internal/libraryfixture` — the declaration of
   [conformance §L2](../../docs/compatibility/conformance.md#l2--semantic)'s scanning world as a Go
   value, and a builder that writes it into a directory. `tools/build_library_fixture` — the same
   declaration as a program, so `conformance/` can have the tree without importing anything of ours

@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them
 ---
 
 # 003 — Implementation plan
@@ -1120,6 +1120,44 @@ rule since architecture §8 wrote it.
 computed from the same declaration. Two of spec §5's criteria are counts, and a count derived from
 the builder is a test of nothing. The expected set is written out as a literal — the way §8.2's
 comparison is — so that a change to the tree is a change to two files and a reviewer sees both.
+
+**Amended 2026-09-05, at T1, in the one place building the tree forced a decision this section did
+not take: what the declaration may hold *beyond* the paths the reading names.**
+
+The check above runs one way — every path the reading names exists in the tree — and says nothing
+about the other direction, which is exactly where drift gets in. **The rule T1 takes: a file the
+declaration adds beyond the reading must be one that *both* servers drop, and it carries the
+citation of the rule that drops it there.** Nine files are added on those terms — the second part of
+the multi-part film, which both fold into the one item the reading names; an `.mp3` under a `movies`
+root and an `.mka` under a `tvshows` one
+`[probe: tools/probe_library_extensions.py, Jellyfin 10.11.11, 2026-08-27]`; a hidden directory and
+a hidden file, which are §3.2's dot rule here and `**/.*` there
+`[source: Emby.Server.Implementations/Library/IgnorePatterns.cs:89 @ v10.11.11]`; an empty `.ignore`
+marker and the film beneath it
+`[source: Emby.Server.Implementations/Library/DotIgnoreIgnoreRule.cs:41-68 @ v10.11.11]`; and the
+legacy-encoded subtitle and the EXIF-carrying image
+[conformance §L2](../../docs/compatibility/conformance.md#l2--semantic) keeps in this world for
+behaviours §5.11 and 006, which no collection type admits. The reason the rule is that narrow: **a
+file only Atrium drops is a difference the reading has no row for, and a file neither drops is an
+item it has no row for.** Either one moves a count this project asserts at forty-seven, and neither
+is visible in a green run.
+
+**Which settles one case against [conformance §L2](../../docs/compatibility/conformance.md#l2--semantic)'s
+own list, and the reason is worth more than the file.** That list includes *"a name that differs
+only by case"*, and the recorded reading holds no such pair: over the fifty-eight items it names in
+`Movies`, `Shows` and `Music`, no two differ only in capitalisation. So either the tree the reading
+was taken over did not carry the pair, or the reference folded it into one item — and
+[U-44](../../docs/compatibility/reference-target.md) predicts the opposite of the second, unmeasured.
+**T1 therefore does not build one.** Adding it would give Atrium an item the reading has no row for,
+which is a forty-eighth difference against a number five documents carry as forty-seven, and it
+would buy an assertion about a rule no measurement covers. U-44 stays what its own register row says
+it is: a claim one scan against a single-use reference settles.
+
+**And one thing found while reading the reading, which is [T17](tasks.md#t17--the-forty-seven-declared-differences-which-this-project-holds-the-reading-of-and-not-the-reasons)'s
+rather than this section's.** The reference's reading names the series item backed by
+`Shows/The Series` **`tvshow`** — a name no path-derived rule produces from that directory, and one
+this feature will not reproduce. The tree carries no `.nfo` sidecar to explain it, and inventing one
+to make the name come out would be the drift this amendment exists to refuse.
 
 ## 9. Risks
 

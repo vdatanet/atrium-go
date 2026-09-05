@@ -305,3 +305,19 @@ func foldASCIICase(s string) string {
 	}
 	return b.String()
 }
+
+// FoldName is how two library names are compared for uniqueness: 003 §3.6's
+// rule that two libraries whose names differ only in case are one name, and
+// what `ports.Library.NameFolded` holds.
+//
+// It is [strings.ToLower] and deliberately not [foldASCIICase], which is T3's
+// finding applied to a name rather than to an extension: the ASCII fold exists
+// because the reference compares *extensions* ordinally, and folding a name
+// that way would make `AMÉLIE` and `amélie` two libraries. It is not a full
+// case fold either — full folding maps `ß` to `ss`, and a `Straße` library and
+// a `Strasse` library are two libraries.
+//
+// It is here rather than beside the subcommand that needs it because the rule
+// is the domain's: a second lowercaser somewhere else is a second answer to
+// which names collide, and the unique index in the store is enforcing this one.
+func FoldName(name string) string { return strings.ToLower(name) }

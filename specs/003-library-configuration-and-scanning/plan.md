@@ -1271,6 +1271,56 @@ superseded, never edited. This one is not wrong: it is a decision as taken, incl
 the time, and it already names the scanner as what the branch was waiting for. Say so in the commit,
 which is how 002 T6 handled ADR-0006's own *"asserted nowhere"* line.
 
+**Discharged at T11 (2026-09-05).** `internal/store/sqlite/derived/library.sql` holds the whole
+schema, `derivedGeneration = 1` is paired with its SHA-256, `Open` compares the recorded generation
+against the constant after the precious lineage is applied and rebuilds on any difference in either
+direction, and `ports.ItemStore.RebuildDerived` is the same act as something a caller can perform.
+ADR-0003 keeps its wording and gains nothing: the record was never wrong, and what it owed is now
+paid.
+
+*(Amended at T11, in five places, and four of them are corrections to what the paragraphs above
+predicted.)*
+
+**(1) It cost *five* of 001's and 002's assertions, not four.** The four named above were found by
+reading the runner; the fifth — `TestAFirstStartCreatesTheTwoLibraryTables`, asserting
+`SchemaVersion(Derived) == 0` — was written by **T10 itself**, one task before this one, and was
+named only in T10's handover. It is the same shape as the other two version literals and it is worth
+one sentence of its own: *a list of what a change will break is written against the tree as it was
+when the list was written*, and T10 landed between.
+
+**(2) The five became one helper and not five spellings of `derivedGeneration`.** T10's own finding
+was that *a correction that restates a literal is not a correction* — 002 T1 rewrote 001's `want [1]`
+as `want 2`, which 003's third migration turned red on the day it landed — so the four call sites
+that meant *"a start leaves the derived half where this build's schema puts it"* now call
+`theDerivedHalfIsAtItsGeneration`, and a sixth caller costs one line rather than one more number.
+
+**(3) The drop list is read out of the schema file, and that is what the "every object is dropped"
+clause needed.** A list typed beside the schema is the failure the clause names — a table added to
+`library.sql` and forgotten in the list survives a rebuild carrying its old columns — so
+`derivedObjects` parses the `CREATE` statements and the drop runs in reverse of them. The test
+refuses to compute the object set the same way: it reads `sqlite_master` and subtracts what the
+precious lineage creates, so a parse that missed a table would not also miss it in the assertion.
+
+**(4) `foreign_keys(1)` across the drop does not fail the way this section assumed, and the
+assertion had to be built rather than found.** Measured: a derived table declaring
+`REFERENCES libraries(id)`, holding rows, in a database whose `libraries` holds rows, with
+`PRAGMA foreign_keys` reading 1, **drops without complaint** — `DROP TABLE` performs an implicit
+`DELETE` of the *child* rows, and deleting a child violates nothing
+`[measurement: modernc.org/sqlite v1.58.0, Go 1.27.1, 2026-09-05]`. So *"the rebuild refuses"* is not a
+thing that happens, and a test that only rebuilt and expected an error would have been a green
+proving the rule unbreakable when it is not. What bites is reading the constraint: every foreign key
+the derived schema declares is listed by the engine, and every target of one must itself be a derived
+object. Two clauses beside it keep that honest — foreign keys are still **on** after a rebuild, and
+still **enforcing** over the freshly created tables — so a rebuild reaching for
+`PRAGMA foreign_keys = OFF` around its drop fails, which is the shape that would have made the check
+meaningless.
+
+**(5) The derived schema declares no index, and the drop already handles one.** §4.2 names three
+tables and no index; adding one speculatively would be a query-shape decision taken a task before the
+queries (T12) exist. `derivedObjects` recognises `CREATE INDEX`, `VIEW` and `TRIGGER` all the same,
+tested over a synthetic schema, so the first index added is dropped without anyone remembering to
+arrange it.
+
 **The rescan itself is at start and the scan is not.** Dropping is synchronous, inside `Open`, and it
 must be: a store handed to a caller with a schema from another generation has exactly one correct
 use and nothing enforces it. The **scan** that refills it is not, because a synchronous full scan of

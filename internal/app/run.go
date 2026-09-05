@@ -75,12 +75,19 @@ func Run(ctx context.Context, args []string, getenv func(string) string, stderr 
 	defer store.Close()
 
 	// What a start did to the schema, at debug because on every start after
-	// the first it did nothing. The versions are per half, because a rescan
-	// rebuilds one of them without touching the other (ADR-0003).
+	// the first it did nothing. The two halves are reported differently
+	// because 003 made them different things: the precious half applied a
+	// tail of migrations, and the derived half was either at this build's
+	// generation or was dropped and recreated whole (ADR-0003, 003 plan 6.8).
+	//
+	// derived-rebuilt is the one line here that is not only an observation. A
+	// rebuild leaves every library with no items, so a true here is a full
+	// scan of every library owed — enqueued after the server begins serving,
+	// never inside the start.
 	logger.Debug("store opened",
 		"path", store.Path(),
 		"precious-migrations-applied", store.AppliedMigrations(sqlite.Precious),
-		"derived-migrations-applied", store.AppliedMigrations(sqlite.Derived),
+		"derived-rebuilt", store.DerivedRebuilt(),
 	)
 
 	// listeningPort is what /System/Info reports as WebSocketPortNumber, and

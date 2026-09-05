@@ -196,10 +196,21 @@ two rows is a bug that reads as a mystery.
   a `schema_version` table with **one row per half**, so the derived half sits at `0` here while the
   precious half is at `1` — the state a single lineage could not represent.
 - **The runner takes a half.** Both lineages are loaded and applied at every start, and the derived
-  one is empty rather than absent. The first feature with a derived table adds a file; it does not
-  also change the runner. ADR-0003's *"a derived-version mismatch at startup is a rescan rather than
+  one is empty rather than absent. ~~The first feature with a derived table adds a file; it does not
+  also change the runner.~~ ADR-0003's *"a derived-version mismatch at startup is a rescan rather than
   an error"* is **not** implemented: rescanning needs a scanner, which is 003's, so today both
   halves refuse a version higher than the build knows. That refusal is owed a replacement in 003.
+
+  *(Amended 2026-09-05 by [003 T11](../003-library-configuration-and-scanning/tasks.md#t11--the-derived-half-stops-being-a-lineage-and-001s-runner-changes-after-all),
+  which discharged both halves of this bullet at once and disproved the struck-through sentence. The
+  derived half is **not** a lineage: it has no migrations directory, its whole schema is one embedded
+  file, and a recorded generation that is not the build's is answered by dropping and recreating it —
+  in either direction. So the first feature with a derived table did also change the runner, and had
+  to: a forward-only lineage cannot express *drop and rebuild*, which is what made the refusal above
+  the only answer 001 could give. The expectation was reasonable when written and was wrong;
+  recording that is cheaper than quietly making it true.
+  [003 plan §6.8](../003-library-configuration-and-scanning/plan.md#68-the-derived-halfs-generation-and-the-rescan-that-replaces-002s-refusal)
+  carries the argument and the five assertions it cost.)*
 - **The entry layer creates the data directory**, and creates its **final component only**. T2 left
   this open and it could not stay open: the store cannot create the directory it lives in, because
   the identity file is read first and would fail before the store was reached. `os.MkdirAll` was

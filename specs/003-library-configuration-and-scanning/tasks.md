@@ -500,7 +500,7 @@ otherwise:
 
 ## T11 — The derived half stops being a lineage, and 001's runner changes after all
 
-- [ ] **Changes:** `internal/store/sqlite` — `derived/library.sql` holding the whole current derived
+- [x] **Changes:** `internal/store/sqlite` — `derived/library.sql` holding the whole current derived
   schema (`items`, `item_files`, `scan_state` of [plan §4.2](plan.md#42-the-derived-half--schema-generation-1-derivedlibrarysql)),
   the constant `derivedGeneration = 1` paired with the schema file's SHA-256, `RebuildDerived`, and
   `Open` comparing the recorded derived version against the constant after the precious lineage is
@@ -552,6 +552,27 @@ otherwise:
   writes `REFERENCES libraries(id)` into the derived schema, which is
   [architecture §6](../../docs/architecture.md#6-state-and-the-store-boundary)'s rule at the one
   place it actually bites.
+- **Done at T11, and it cost *five* assertions rather than the four this entry lists.** The fifth is
+  `TestAFirstStartCreatesTheTwoLibraryTables`, asserting `SchemaVersion(Derived) == 0` — written by
+  **T10**, one task before this one, and named only in T10's handover. A list of what a change will
+  break is written against the tree as it was when the list was written, and T10 landed in between.
+  The five did **not** become five spellings of `derivedGeneration`: T10's own finding is that *a
+  correction that restates a literal is not a correction*, so the four call sites that meant *"a
+  start leaves the derived half where this build's schema puts it"* share
+  `theDerivedHalfIsAtItsGeneration`, and a sixth caller costs a line rather than a number.
+- **And one clause did not fail the way it was named for, which is the finding.** *"`foreign_keys(1)`
+  stays on across the drop"* was written as though a derived table referencing `libraries(id)` would
+  make the drop refuse. Measured, it does not: `DROP TABLE` performs an implicit `DELETE` of the
+  **child** rows and deleting a child violates nothing, so such a schema drops and recreates in
+  silence `[measurement: modernc.org/sqlite v1.58.0, Go 1.27.1, 2026-09-05]`. The assertion that does
+  bite reads the constraint — every foreign key the derived schema declares must target a derived
+  object — with *still on* and *still enforcing* beside it so that a rebuild reaching for
+  `PRAGMA foreign_keys = OFF` fails. plan §6.8 carries both the measurement and the replacement.
+- **Seventeen mutations were run; fifteen fail a named test and both survivors are declared
+  controls.** A whitespace-only edit to `derived/library.sql` with the digest updated survives, which
+  is the generation being a number the build states rather than a fingerprint (§6.8's second rejected
+  shape). And dropping in declaration order rather than in reverse survives, which is the same
+  measurement as above seen from the other side: the cascade answers either order.
 - **Spec reference:** §4; ADR-0003; plan §4.2, §4.3, §6.8, §2.
 
 ## T12 — The SQLite half of the two derived ports

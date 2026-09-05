@@ -369,7 +369,7 @@ func stackParts(lib ports.Library, readings []Reading) []filmCandidate {
 	}
 
 	// The candidates are deliberately **not** sorted here. There is one sort in
-	// this feature and it is `sortItems`, on the way out of [Resolve]: two
+	// this feature and it is `SortItems`, on the way out of [Resolve]: two
 	// sorts means one of them is dead, and a dead sort is a determinism
 	// assertion that holds for a reason nobody can find.
 	return candidates

@@ -10,7 +10,12 @@
 // # What lives here so far
 //
 // [Walk], of 003 plan §6.1 — one walk of one library root, over an [fs.FS].
-// The reconciliation, the guards and the batching arrive with their own tasks.
+// [Reconcile], of plan §6.4 — the pure function over two item sets where every
+// removal in this project is decided, taking no store, no filesystem and no
+// clock. The guards of plan §6.5 run on the **reading**, before Reconcile is
+// called, and arrive with the scan that assembles all of this; the third of
+// them is why Reconcile takes whole sets rather than a stream, and that much is
+// already true here.
 package scan
 
 import (

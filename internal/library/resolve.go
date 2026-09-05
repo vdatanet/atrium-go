@@ -186,7 +186,7 @@ func ResolveWithTags(lib ports.Library, readings []Reading, tags TagSource) (Pla
 		plan.Items = append(plan.Items, items...)
 	}
 
-	sortItems(plan.Items)
+	SortItems(plan.Items)
 	return plan, nil
 }
 
@@ -252,14 +252,19 @@ func sortReadings(readings []Reading) []Reading {
 	return out
 }
 
-// sortItems puts a plan's items in the one order every caller sees: root
+// SortItems puts a set of items in the one order every caller sees: root
 // ordinal, then path, then identifier.
 //
 // The identifier is the last key rather than the first because a list ordered
 // by a digest is unreadable in a failure message, and it is there at all
 // because two items can share a path — a library's own row has none, and 003
 // plan §6.3 records that two canonically equal filenames derive one key.
-func sortItems(items []ports.ScannedItem) {
+//
+// It is exported because [Resolve] is not the only producer of a sorted item
+// set: `internal/scan`'s reconciliation orders the batch it hands a store the
+// same way, and an ordering rule spelled twice is two rules that will disagree
+// eventually. *(Exported at 003 T9, which is the second caller.)*
+func SortItems(items []ports.ScannedItem) {
 	sort.SliceStable(items, func(a, b int) bool {
 		if items[a].RootOrdinal != items[b].RootOrdinal {
 			return items[a].RootOrdinal < items[b].RootOrdinal

@@ -5,7 +5,7 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-05
 accepted: 2026-08-26
-amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements. 2026-09-05 again, by the change that wrote tasks.md, in two places that are one finding - section 3.8 states the second guard against a mass delete (a root that reads as holding no candidate file where the last scan saw one is unavailable, not emptied, and an operator can say they meant it) and section 5 gains AC-16 for it in both halves. What forced it: writing a task per criterion made visible that the guard which catches the way an unmounted share actually arrives - readable, and empty - was in the plan and in no criterion, so a list written from section 5 alone would have tested the destructive case that is easy to construct and not the one that happens. 2026-09-05 again, by 003 T4 - section 3.7.2 gains the missing-number case for a `Season`, whose whole sort name is the prefix, and section 3.7.3 gains what its one sentence leaves out. Both are source readings at the pinned tag rather than measurements, and both were forced by having to write the derivation: the code has to answer a case the section does not state, and the honest place to answer it is the section
+amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements. 2026-09-05 again, by the change that wrote tasks.md, in two places that are one finding - section 3.8 states the second guard against a mass delete (a root that reads as holding no candidate file where the last scan saw one is unavailable, not emptied, and an operator can say they meant it) and section 5 gains AC-16 for it in both halves. What forced it: writing a task per criterion made visible that the guard which catches the way an unmounted share actually arrives - readable, and empty - was in the plan and in no criterion, so a list written from section 5 alone would have tested the destructive case that is easy to construct and not the one that happens. 2026-09-05 again, by 003 T4 - section 3.7.2 gains the missing-number case for a `Season`, whose whole sort name is the prefix, and section 3.7.3 gains what its one sentence leaves out. Both are source readings at the pinned tag rather than measurements, and both were forced by having to write the derivation: the code has to answer a case the section does not state, and the honest place to answer it is the section. 2026-09-05 again, by 003 T7 - section 3.6's identity table splits `MusicAlbum` off the row it shared with `Series` and `MusicArtist`, because "the library root plus the normalised name" makes two artists' identically-named albums one item, and section 3.5 already says an album's identity comes from its album artist. Forced by writing the music resolver: the row and section 3.5 contradicted each other and the code had to pick one, and the fixture cannot tell the two apart because its five album names are distinct
 implemented: 2026-08-27
 depends_on: []
 ---
@@ -287,8 +287,19 @@ The stable identity is:
 |---|---|
 | Movie, Episode, Audio | The item's path, relative to its library root |
 | Season | Its series' identity plus its season number |
-| Series, MusicAlbum, MusicArtist | The library root plus the normalised name |
+| MusicAlbum | Its album artist's identity plus the normalised album name |
+| Series, MusicArtist | The library root plus the normalised name |
 | CollectionFolder | The library's configured identity |
+
+*(The `MusicAlbum` row was ~~`Series, MusicAlbum, MusicArtist` — the library root plus the
+normalised name~~ until 2026-09-05, when writing the music resolver made it a merge rather than a
+derivation. Two artists each holding a `Greatest Hits` produce one album row under that reading:
+one identifier, one parent, and half of an album's tracks appearing under an artist that did not
+record them. §3.5 is the section that settles it and already says so — **"an album's identity comes
+from its album artist"** — so the row now reads the way the `Season` row above it already does, as
+a container's identity plus the one thing that distinguishes it inside that container. Nothing in
+this project's fixture tree exercises the merge, because its five album names are distinct, which
+is why the row could have shipped wrong and green.)*
 
 **Normalised** means the same thing for a path and for a name, and it is three steps: separators
 reduced to one form, the text reduced to one Unicode form, and case folded — the last only when the

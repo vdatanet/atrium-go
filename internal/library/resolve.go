@@ -65,9 +65,15 @@ type Plan struct {
 	Items []ports.ScannedItem
 
 	// Unplaceable is a path that became an item whose name says too little to
-	// place it (003 §3.8). Nothing under `movies` produces one — a film's name
-	// never has to say anything — and under `tvshows` there are two ways to
-	// earn one, [ReasonNoEpisodeNumber] and [ReasonNoSeries].
+	// place it (003 §3.8). Under `tvshows` there are two ways to earn one,
+	// [ReasonNoEpisodeNumber] and [ReasonNoSeries].
+	//
+	// **Neither `movies` nor `music` produces one**, and the reason is the
+	// same for both: a film's name and a track's name never have to say
+	// anything for the item to be placed. A track directly under a library
+	// root has no album and no artist, and is still a complete item hanging
+	// from the library's own row — where an episode with no episode number is
+	// a file nothing can say which episode it is.
 	//
 	// **It is not [Plan.Skipped] and the two must not be added together.** A
 	// skipped path is not in the library and an unplaceable one is: it has an
@@ -79,17 +85,6 @@ type Plan struct {
 	// it is normally empty and why it must not be added to the walk's count.
 	Skipped []Note
 }
-
-// ErrCollectionTypeNotResolved is the library whose collection type has no
-// resolver yet.
-//
-// It is deliberately an error and not an empty [Plan]. An empty plan is the
-// answer "this library holds nothing", which a caller would reconcile against
-// what it holds now and take every item away — the most destructive thing this
-// feature can do, from the one code path that has not been written. Principle
-// VI's "no plausible-looking stub", at the layer where the stub would be
-// silent.
-var ErrCollectionTypeNotResolved = errors.New("library: no resolver for this collection type")
 
 // ErrCollectionTypeUnknown is the library whose collection type is not one of
 // 003 §3.1's three names at all.
@@ -122,8 +117,7 @@ var ErrCollectionTypeUnknown = errors.New("library: the collection type is not o
 //
 // A path that will not normalise fails the **whole library** and returns the
 // [PathError] naming it — 003 plan §7's row, and never a partial plan. A
-// collection type with no resolver is [ErrCollectionTypeNotResolved]; one that
-// is not one of the three at all is [ErrCollectionTypeUnknown].
+// collection type that is not one of the three is [ErrCollectionTypeUnknown].
 //
 // A path that is not a candidate under this library's collection type is a
 // [Plan.Skipped] note rather than an error, and it is normally impossible: the
@@ -134,16 +128,32 @@ var ErrCollectionTypeUnknown = errors.New("library: the collection type is not o
 // the **same rule** as the walk's, not a second one, so a scan summary must
 // report the walk's count and not the sum of the two.
 func Resolve(lib ports.Library, readings []Reading) (Plan, error) {
+	return ResolveWithTags(lib, readings, NoTags{})
+}
+
+// ResolveWithTags is [Resolve] with a metadata reader plugged into it, and it
+// is the seam feature 004 fills.
+//
+// 003 §3.5 makes a music file's **embedded tags outrank its path** and says in
+// terms that reading them is 004's, and 003 plan §6.2 settles the ordering of
+// that conversation: the source is consulted **once per file, before
+// grouping**, because the album artist decides which album a track belongs to.
+// [Resolve] is this function with the [NoTags] source, which is what v1 ships
+// — so the fallback path and the tag-driven path are the same code with one
+// different collaborator rather than two behaviours with one tested.
+//
+// The source is consulted only for a `music` library. The other two collection
+// types take everything from the path, which is 003 §3.3's and §3.4's own
+// shape and not an omission here: 004 replaces a *name* on those, and it does
+// so through `ports.ScannedItem.SortTitle` and its own metadata pass rather
+// than through this seam.
+func ResolveWithTags(lib ports.Library, readings []Reading, tags TagSource) (Plan, error) {
 	collection := CollectionType(lib.CollectionType)
 	if !collection.Valid() {
 		return Plan{}, fmt.Errorf("%w: %q", ErrCollectionTypeUnknown, lib.CollectionType)
 	}
-
-	// Music has a resolver of its own and it is not written yet. The refusal
-	// comes before any work, so that no caller can read a partly filled plan
-	// as an answer; see ErrCollectionTypeNotResolved.
-	if collection == Music {
-		return Plan{}, fmt.Errorf("%w: %q", ErrCollectionTypeNotResolved, lib.CollectionType)
+	if tags == nil {
+		tags = NoTags{}
 	}
 
 	sorted := sortReadings(readings)
@@ -167,6 +177,13 @@ func Resolve(lib ports.Library, readings []Reading) (Plan, error) {
 		}
 		plan.Items = append(plan.Items, items...)
 		plan.Unplaceable = unplaceable
+
+	case Music:
+		items, err := resolveMusic(lib, kept, tags, root.ID)
+		if err != nil {
+			return Plan{}, err
+		}
+		plan.Items = append(plan.Items, items...)
 	}
 
 	sortItems(plan.Items)

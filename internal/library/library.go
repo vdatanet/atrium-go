@@ -185,6 +185,26 @@ const (
 	// SkipExtension is the extension not being on the library's own
 	// collection type's list — never on any other type's.
 	SkipExtension
+
+	// SkipIgnoreMarker is the operator's own exclusion: an empty or
+	// whitespace-only `.ignore` marker in this directory or in one between
+	// it and the library root (003 §3.2's 2026-09-05 amendment, U-42). It
+	// refuses a whole subtree, so the path a walk reports it against is the
+	// **directory** and not the files under it.
+	SkipIgnoreMarker
+
+	// SkipZeroBytes is 003 §3.2's incomplete copy. It refuses exactly one
+	// file, and it is a declared difference from the reference rather than a
+	// shared rule: the reference makes an item of a zero-byte film
+	// `[probe: tools/probe_reference_scan.py, Jellyfin 10.11.11,
+	// 2026-09-02]`.
+	SkipZeroBytes
+
+	// SkipNotARegularFile is a directory entry that is neither a directory
+	// nor, once followed, a regular file — a symbolic link to a directory, a
+	// device node, a socket, a named pipe, and a link pointing at nothing.
+	// It refuses exactly one entry.
+	SkipNotARegularFile
 )
 
 // String names the rule, in the terms 003 §3.2 states it in.
@@ -202,6 +222,12 @@ func (s Skip) String() string {
 		return "the file carries an extras suffix"
 	case SkipExtension:
 		return "the extension is not on this collection type's list"
+	case SkipIgnoreMarker:
+		return "an empty .ignore marker excludes this directory or one above it"
+	case SkipZeroBytes:
+		return "the file measures zero bytes"
+	case SkipNotARegularFile:
+		return "the entry is not a regular file"
 	default:
 		return "unknown"
 	}
@@ -213,9 +239,9 @@ func (s Skip) String() string {
 // relPath is root-relative and slash-separated, of the shape [io/fs] yields:
 // no leading separator, no `.` and no `..` elements. It is the *path* rules
 // only. Three of 003 §3.2's exclusions need more than a path and are decided
-// elsewhere: the `.ignore` marker needs the directories above the file, a
-// zero-byte file needs its size, and a file being written needs two readings
-// (003 plan §6.1).
+// elsewhere: the `.ignore` marker needs the directories above the file
+// ([SkipIgnoreMarker]), a zero-byte file needs its size ([SkipZeroBytes]), and
+// a file being written needs two readings (003 plan §6.1).
 //
 // The rules are applied hidden, extras folder, extras filename, extras suffix,
 // extension. The order decides only which reason is reported for a path that

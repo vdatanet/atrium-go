@@ -348,9 +348,24 @@ func TestAHiddenComponentAnywhereRefusesThePath(t *testing.T) {
 
 // TestSkipStringNamesEveryRule keeps the reason a scan reports readable, and
 // keeps a new reason from silently reading as "unknown".
+//
+// The list is the test's own transcription rather than a slice the package
+// exports, so the last assertion is what makes it more than a restatement: the
+// value one past the end must describe itself as "unknown", which is false the
+// moment a constant is added with a String case and not added here. The old
+// guard asked that of Skip(200), where a seventh, eighth or ninth reason is
+// invisible.
 func TestSkipStringNamesEveryRule(t *testing.T) {
+	all := []Skip{
+		NotSkipped, SkipHidden, SkipExtrasFolder, SkipExtrasFilename,
+		SkipExtrasSuffix, SkipExtension, SkipIgnoreMarker, SkipZeroBytes,
+		SkipNotARegularFile,
+	}
 	seen := map[string]Skip{}
-	for _, s := range []Skip{NotSkipped, SkipHidden, SkipExtrasFolder, SkipExtrasFilename, SkipExtrasSuffix, SkipExtension} {
+	for i, s := range all {
+		if int(s) != i {
+			t.Errorf("this test's list is out of order: all[%d] = Skip(%d)", i, s)
+		}
 		got := s.String()
 		if got == "unknown" || got == "" {
 			t.Errorf("Skip(%d).String() = %q", s, got)
@@ -359,6 +374,9 @@ func TestSkipStringNamesEveryRule(t *testing.T) {
 			t.Errorf("Skip(%d) and Skip(%d) both describe themselves as %q", s, other, got)
 		}
 		seen[got] = s
+	}
+	if got := Skip(len(all)).String(); got != "unknown" {
+		t.Errorf("Skip(%d).String() = %q, want %q — a reason was added to the type and not to this test", len(all), got, "unknown")
 	}
 	if got := Skip(200).String(); got != "unknown" {
 		t.Errorf("Skip(200).String() = %q, want %q", got, "unknown")

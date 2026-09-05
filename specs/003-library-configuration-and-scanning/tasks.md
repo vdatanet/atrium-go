@@ -336,7 +336,7 @@ otherwise:
 
 ## T8 — The walk: what it refuses to look at, and the ancestor search that stops at the root
 
-- [ ] **Changes:** `internal/scan` — one walk per root over `fs.FS` from `os.DirFS(root)`, applying
+- [x] **Changes:** `internal/scan` — one walk per root over `fs.FS` from `os.DirFS(root)`, applying
   T2's predicates per file and per directory, the zero-byte rule, and the `.ignore` marker: **empty
   or whitespace-only excludes the subtree; the search runs from a file's directory up to the library
   root and no further; a non-empty marker excludes nothing** (plan §6.1,
@@ -361,6 +361,24 @@ otherwise:
   two passes"* among the ignore rules, and it is a property of a **pair of scans** rather than of a
   file. It is decided at T9 with both readings in hand, and plan §6.1 says why what v1 does is
   narrower and in the direction that costs an operator nothing.
+- **Amended at T8, and the first of the two is this task's own finding.**
+  *(1) The determinism clause cannot be varied the way this line asks for it to be.* *"Two walks over
+  trees whose entries were created in opposite orders"* varies nothing at all: `os.DirFS` implements
+  `fs.ReadDirFS`, its `ReadDir` sorts, and `fs.WalkDir` therefore reads one tree in the same order
+  whichever way round it was built. The assertion would be satisfied by the standard library and
+  would survive the removal of every line this feature owns — which is **T6's finding a second time,
+  in a different package**, and T6's handoff warned this task about exactly it. The order is varied
+  where it can reach the walk instead: an `fs.FS` whose `ReadDir` answers backwards, which
+  `fs.ReadDir` hands straight through without sorting. Both are asserted; the second is the one that
+  kills the mutation.
+  *(2) A directory entry that is not a regular file is a rule the walk has and neither the
+  specification nor plan §6.1 stated.* A symbolic link is the case: the reference follows one, so
+  refusing a linked film would show **fewer** items than the reference, which is the unsafe direction
+  for a scanner. The walk stats through the link; a link to a directory, to a device and to
+  **nothing** are refused, and the last is refused rather than raised because a dangling link — or a
+  file moved between the directory read and the stat — must not cost an operator every item in the
+  library. Plan §6.1 gains the row and the argument, and `library.Skip` gains three reasons
+  (`SkipIgnoreMarker`, `SkipZeroBytes`, `SkipNotARegularFile`) as T2's handoff said it should.
 - **Spec reference:** §3.2; plan §6.1; U-42.
 
 ## T9 — `Reconcile`: the pure function where every removal in this project is decided

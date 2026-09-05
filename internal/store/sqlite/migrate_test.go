@@ -331,3 +331,88 @@ func TestTheShippedPreciousLineageIsWellFormed(t *testing.T) {
 		}
 	}
 }
+
+// filedUnderThePreciousLineage is the assertion 002's T1 wrote for its own
+// migration and 003's T10 needed for a second one: a feature's migration is in
+// the **precious** lineage, and applying it advances the precious version by
+// exactly one while the derived version does not move.
+//
+// It is the one mistake here that no test of the SQL itself would catch. A file
+// that created a feature's tables out of the derived directory would create
+// exactly the same tables, so every other test over them would pass. What it
+// would have changed is the policy: the derived half is the one a rescan is
+// entitled to drop and rebuild (ADR-0003), so 002's accounts would be deleted
+// by a library scan and 003's libraries would take every identifier in the
+// installation with them.
+//
+// It is a helper rather than a third copy of the same body, and the reason is
+// the mistake it fixes. 002's T1 rewrote 001's literals with the note that
+// "the assertion read want [1] and was a literal that every later migration
+// invalidates" — and then wrote `len(precious) != 2`, `[]int{2}` and `want 2`,
+// which is the same literal one number along. 003's `0003_libraries.sql` turned
+// all three red on the day it landed, in a task whose subject is a library and
+// not a runner. The rule underneath them never mentioned a total: it is *this
+// file, in this half, advancing this half by one*. So the helper is given the
+// file's name, finds it, and asserts the rule about that file — which stays
+// true however many migrations are filed after it.
+func filedUnderThePreciousLineage(t *testing.T, filename string) {
+	t.Helper()
+	ctx := context.Background()
+	db := newDatabase(t)
+
+	precious, err := loadLineage(migrationFiles, Precious)
+	if err != nil {
+		t.Fatalf("loading the precious lineage returned %v", err)
+	}
+	index := slices.IndexFunc(precious, func(m migration) bool { return m.name == filename })
+	if index < 0 {
+		var shipped []string
+		for _, m := range precious {
+			shipped = append(shipped, m.name)
+		}
+		t.Fatalf("%s is not in the precious lineage, which holds %v. Filed under the derived "+
+			"directory it would create exactly the same tables, and a rescan would be entitled "+
+			"to drop them", filename, shipped)
+	}
+
+	derived, err := loadLineage(migrationFiles, Derived)
+	if err != nil {
+		t.Fatalf("loading the derived lineage returned %v", err)
+	}
+	if len(derived) != 0 {
+		t.Fatalf("the derived lineage holds %d migrations, want none: nothing before 003 T11 "+
+			"files one, and this assertion is what would notice", len(derived))
+	}
+
+	// The state the release before this migration left behind.
+	if _, err := migrate(ctx, db, Precious, precious[:index]); err != nil {
+		t.Fatalf("applying the lineage up to %s returned %v", filename, err)
+	}
+	before := versions(t, db)
+	if before != (halfVersions{precious: index, derived: 0}) {
+		t.Fatalf("before %s the versions are %+v, want precious %d and derived 0",
+			filename, before, index)
+	}
+
+	// The lineage is truncated after this migration rather than applied whole,
+	// so that "advances by exactly one" stays an assertion about this file and
+	// not about how many features have filed a migration since.
+	applied, err := migrate(ctx, db, Precious, precious[:index+1])
+	if err != nil {
+		t.Fatalf("applying %s returned %v", filename, err)
+	}
+	if !slices.Equal(applied, []int{index + 1}) {
+		t.Errorf("applying the lineage through %s applied %v, want exactly [%d]",
+			filename, applied, index+1)
+	}
+
+	after := versions(t, db)
+	if after.precious != before.precious+1 {
+		t.Errorf("the precious half moved from %d to %d, want an advance of exactly one",
+			before.precious, after.precious)
+	}
+	if after.derived != before.derived {
+		t.Errorf("the derived half moved from %d to %d: %s is filed under the wrong lineage, "+
+			"and a rescan would drop what it creates", before.derived, after.derived, filename)
+	}
+}

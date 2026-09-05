@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part; 2026-09-05 at T6, sections 6.2 and 8.5, with the seven decisions writing the series, season and episode resolver took that section 6.2 constrained and did not take - where each of the three levels comes from and what a candidate under a bare root does for a series name, the season number's three sources in order, a series directory never also being a season directory, a season being named from its number rather than from its directory and taking a path only from a directory whose number is its own, the numbering family being the specification's with the reference's remaining expressions declared absent, the two cases a multi-episode range needs and the guard on its ending number, and Specials being season zero where the reference's own parser accepts Extras as well; and section 8.5 records that the fixture's 24 cannot assert that the filename is matched before the directory, because the season directory agrees with the filename and the flat shape has no season directory at all; 2026-09-05 at T7, sections 5, 6.2 and 8.5 - section 5 gains the TagSource seam and stops claiming the library package declares no interface, section 6.2 gains the six decisions writing the music resolver took (the three levels and a disc directory not being one of them, the disc vocabulary being the reference's album-stacking list and not the film one, the reference's further multi-disc conditions declared absent, an album's name losing its year and nothing else, the compilation rule implemented as its "only if", and a track no directory places not being unplaceable) and records that the refusal a collection type with no resolver answered is itself a stub now that all three are written, and section 8.5 records that the fixture's compilation cannot fail AC-9's own failure and that no tree in this feature can, because the distinction does not exist until something says the artists differ; 2026-09-05 at T8, section 6.1, with the two decisions writing the walk took that the section's table did not - an entry that is not a regular file once followed, where a link to a file is the file it points at and a link to nothing is refused rather than raised because failing a library's whole scan over a dangling link is worse than skipping it, and the .ignore search implemented as a pruned subtree with the library root as its inclusive end - and with the record that the determinism clause the task list asked for cannot be varied by a tree's creation order at all, because os.DirFS sorts every directory it reads
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part; 2026-09-05 at T6, sections 6.2 and 8.5, with the seven decisions writing the series, season and episode resolver took that section 6.2 constrained and did not take - where each of the three levels comes from and what a candidate under a bare root does for a series name, the season number's three sources in order, a series directory never also being a season directory, a season being named from its number rather than from its directory and taking a path only from a directory whose number is its own, the numbering family being the specification's with the reference's remaining expressions declared absent, the two cases a multi-episode range needs and the guard on its ending number, and Specials being season zero where the reference's own parser accepts Extras as well; and section 8.5 records that the fixture's 24 cannot assert that the filename is matched before the directory, because the season directory agrees with the filename and the flat shape has no season directory at all; 2026-09-05 at T7, sections 5, 6.2 and 8.5 - section 5 gains the TagSource seam and stops claiming the library package declares no interface, section 6.2 gains the six decisions writing the music resolver took (the three levels and a disc directory not being one of them, the disc vocabulary being the reference's album-stacking list and not the film one, the reference's further multi-disc conditions declared absent, an album's name losing its year and nothing else, the compilation rule implemented as its "only if", and a track no directory places not being unplaceable) and records that the refusal a collection type with no resolver answered is itself a stub now that all three are written, and section 8.5 records that the fixture's compilation cannot fail AC-9's own failure and that no tree in this feature can, because the distinction does not exist until something says the artists differ; 2026-09-05 at T8, section 6.1, with the two decisions writing the walk took that the section's table did not - an entry that is not a regular file once followed, where a link to a file is the file it points at and a link to nothing is refused rather than raised because failing a library's whole scan over a dangling link is worse than skipping it, and the .ignore search implemented as a pruned subtree with the library root as its inclusive end - and with the record that the determinism clause the task list asked for cannot be varied by a tree's creation order at all, because os.DirFS sorts every directory it reads; 2026-09-05 at T9, sections 5, 6.4 and 6.5 - section 5's Reconcile becomes a record and an error, because a disagreeing identifier is an error section 6.4 already required and the listing had no return value for, because Removed and the third return value were one list under two names, and because Unchanged and Retained are what keep this feature's two most dangerous claims from being claims about an absence; section 5 also gains library.SortItems, exported so that the batch a store is handed is in the one order every item set in this feature is in; section 6.4 gains the two decisions writing the function took that its table did not state - a record that moved is an update even where no file signal could ever move, which is the only way a container is ever rewritten, and a full re-examination applying to an item that has a file, so that the thorough option is never also a different set of deletions - and says how a desired item and a previous row are paired, by identifier with the path carrying the comparison, because pairing by either one alone loses a case-changed name or cannot see the disagreement at all; and section 6.5 records that the removal pass names the containers it kept
 ---
 
 # 003 — Implementation plan
@@ -414,6 +414,7 @@ NoTags struct{}                                               // the one v1 ship
 Resolve(lib Library, readings []Reading) (Plan, error)        // §6.2; pure, and NoTags
 ResolveWithTags(lib Library, readings []Reading, TagSource) (Plan, error)
 Plan   struct { Items []ports.ScannedItem; Unplaceable, Skipped []Note }
+SortItems(items []ports.ScannedItem)          // root ordinal, then path, then identifier
 
 SortKeyBase(name string) string                               // §6.6, spec §3.7.1
 SortKeyFor(item *ports.ScannedItem) string                    // §6.6, spec §3.7.2 and §3.7.3
@@ -451,9 +452,24 @@ and the **part order** of a multi-part film are not, and both reach a body at 00
 ```
 // internal/scan
 
-Changes struct { Added, Updated, Removed []string; Examined, Skipped, Unplaceable int }
+Walk(fsys fs.FS, rootOrdinal int, collection library.CollectionType) (Result, error)   // §6.1
+Result struct { Reading library.Reading; Skipped []library.Note }
 
-Reconcile(previous, desired []ports.ScannedItem, full bool) (Changes, []ports.ScannedItem, []string)
+Reconciliation struct {
+    Write                     []ports.ScannedItem   // added and updated, ancestors before what hangs from them
+    Remove                    []string              // file-backed rows only; see §6.5's closing paragraph
+    Added, Updated, Unchanged []string              // a partition of the desired set
+    Retained                  []string              // the containers the removal pass declined to remove
+}
+
+IdentifierMismatchError struct { Root int; Path, Stored, Derived string }   // §6.4
+
+Reconcile(previous, desired []ports.ScannedItem, full bool) (Reconciliation, error)
+
+Changes struct { Added, Updated, Removed []string; Examined, Skipped, Unplaceable int }
+                                          // spec §3.8's summary, assembled by the scan of §6.9:
+                                          // three of the six fields are a Reconciliation's and the
+                                          // other three are the walk's and the resolver's counts
 ```
 
 **`Reconcile` is a pure function over two item sets and is where every removal in this project is
@@ -461,6 +477,20 @@ decided.** It takes no store, no filesystem and no clock. `full` is spec §3.8's
 which changes only whether an unchanged signal is believed. Its output is the batch to write and the
 identifiers to remove, and the guards of §6.5 run on the reading **before** it is called, so a
 partial reading never reaches it.
+
+*(Amended at T9, which wrote it, and the amendment is one shape rather than three.* ~~`(Changes,
+[]ports.ScannedItem, []string)`~~ *became a record and an error.* **A disagreeing identifier is an
+error**, which §6.4 already required and which the listing had no return value for; a fourth return
+value beside three would have been the point at which a caller stops reading them. `Removed` and the
+third return value were the same list under two names, so the record holds it once. And two lists
+the listing did not have are what keep this feature's two most dangerous assertions from being
+assertions about an **absence**: `Unchanged` says a row was believed rather than merely not written,
+and `Retained` names the container the removal pass looked at and declined to remove — where
+"missing from `Remove`" is also what a build that removed nothing at all produces. `Changes` stays
+where it was, as §3.8's summary, and the comment beside it says who fills which half. *`SortItems`
+is exported in the same change, and for the reason the listing above it exists at all: the batch a
+store is handed is in the order every other item set in this feature is in, and an ordering rule
+spelled in two packages is two rules that will disagree.)*
 
 ## 6. Algorithms
 
@@ -924,7 +954,20 @@ signal.
 | Both unchanged | Believe it, unless the scan is a full re-examination |
 | A previous row with no path in the reading | Remove, subject to §6.5 |
 
-**Three things this table does not say and the code has to.**
+**Five things this table does not say and the code has to**, and two of the five were added at
+T9 by writing the function.
+
+**A record that moved is an update even when the file signal did not.** *(Added at T9, which wrote
+the function; the section had three.)* This is a case the table does not cover rather than an
+optimisation of one it does. A container has no file at all, so a series that was renamed, a season
+whose parent moved, or the library's own row after `atrium library rename` has **no signal that
+could ever move** — a build comparing only §6.4's signal would hold the old name for the life of the
+installation and nothing would report it. It reaches one level down too: an album's parent is
+derived from its album artist across all of its tracks (spec §3.5), so adding one track can change a
+*sibling* album's record while every byte of its own files stands still. Both halves are therefore
+compared, the record and the files, and the record comparison excludes exactly one field —
+`ScannedItem.SortTitle`, the one with no column behind it (§5), which a row read back always carries
+empty and which would otherwise report every item updated on every scan the moment 004 supplies one.
 
 **The stored modification time is a whole tick and the comparison is exact.** `units.Time` rounds to
 a tick (100 nanoseconds) and a filesystem may report a coarser or finer resolution than that. So the
@@ -939,6 +982,26 @@ derivation changed or the library's `case_sensitive` moved, both of which are su
 impossible — which is exactly why it is worth one comparison to find out. A mismatch fails the
 library's scan; it does not rewrite the row, because rewriting it is the silent discard Principle VII
 exists to prevent.
+
+*(T9 had to say how the row is found, because the sentence above names one key and the decision needs
+two.* **A desired item and a previous row are paired by identifier; the path is what the comparison
+above is made over.** *)* Pairing by path alone loses a file whose *name* changed case in a folding
+library — same identifier, different path, and a per-path pairing removes it and adds it back,
+costing the user nothing visible and the store a delete and an insert of the same row. Pairing by
+identifier alone can never see the disagreement at all: an identifier that changed is
+indistinguishable from a rename, which spec §3.8 requires be a delete plus an add. So both indexes
+exist, the pairing is by identifier, and the check is *"this path's stored identifier and this path's
+derived identifier"* — which a rename cannot trigger, because a renamed file's previous row is at a
+path the reading no longer holds.
+
+**A full re-examination applies to an item that has a file.** *(Added at T9.)* Spec §3.8's
+re-examination *"ignores the signal and looks at every file"*, and an item with no file has no signal
+to disbelieve: forcing every artist, series and season to be rewritten would make a full scan report
+a library's whole spine as updated on every run, for nothing. What `full` changes is therefore
+exactly one decision on exactly the rows that have one, and every other row — added, updated,
+removed, retained — is what the default scan would have said. Spec §3.8's *"the default is the fast
+one, the full one is always available"* is untrue in the dangerous direction the moment the thorough
+option is also a different set of deletions.
 
 **A default scan does not notice a poster.** Artwork beside a film is re-read only on a scan that
 reads the directory, and a default scan reads it only when the item's own media file changed. That
@@ -983,7 +1046,9 @@ they run on the **reading**, before `Reconcile` is called.
 A *directory* that mounts empty inside a healthy root has no guard: the root is readable, the
 library is not empty, and the reading is complete. So a series whose episodes all vanished is
 correctly read as a series with no episodes — and the removal pass therefore marks **file-backed
-items** removed and leaves the containers above them alone. Removing the container would be spec
+items** removed and leaves the containers above them alone. *(T9: it says which ones it left, in
+`Reconciliation.Retained`. A container missing from the removals is also what a build that removed
+nothing at all produces, so the kept row is named rather than inferred from an absence.)* Removing the container would be spec
 §3.8's *"this directory is empty, so it is gone for good"* judgement made where nothing is watching.
 The two servers agree here, measured
 `[probe: tools/differential.py --named container-that-lost-every-file, Jellyfin 10.11.11, 2026-09-02]`,

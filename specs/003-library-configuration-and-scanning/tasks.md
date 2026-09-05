@@ -383,7 +383,7 @@ otherwise:
 
 ## T9 — `Reconcile`: the pure function where every removal in this project is decided
 
-- [ ] **Changes:** `internal/scan` — `Reconcile(previous, desired, full)` over two item sets, taking
+- [x] **Changes:** `internal/scan` — `Reconcile(previous, desired, full)` over two item sets, taking
   no store, no filesystem and no clock, returning the batch to write, the identifiers to remove and
   the counts of spec §3.8 ([plan §6.4](plan.md#64-change-detection)).
 - **Depends on:** T3, T8
@@ -402,6 +402,32 @@ otherwise:
   ignored the disagreement produces; and the removal pass marking **file-backed** items removed while
   leaving the containers above them, which is [behaviours §5.2](../../docs/compatibility/behaviours.md#52-a-container-that-has-lost-every-file-is-not-removed)
   and is asserted as a series row that survives its last episode's deletion.
+- **Amended at T9, in three places, and the third is this task's own finding.**
+  *(1) The signature §5 declared could not carry the answer this task's own line requires.*
+  `(Changes, []ports.ScannedItem, []string)` has no return value for an error, and a disagreeing
+  identifier is one; `Changes.Removed` and the third return value were the same list under two
+  names; and the two lists that keep this feature's most dangerous assertions from being assertions
+  about an **absence** were not there at all. It is `(Reconciliation, error)` now, where `Unchanged`
+  says a row was believed rather than merely not written and `Retained` names the container the
+  removal pass looked at and declined to remove.
+  *(2) Two decisions plan §6.4's table does not state, and writing the function had to take both.*
+  A **record** that moved is an update even where no file signal could ever move — which is the only
+  way a container is ever rewritten at all, and without it a renamed library would hold its old name
+  for the life of the installation — and a **full** re-examination applies to an item that has a
+  file, so that the thorough option is never also a different set of deletions. §6.4 has both, and
+  it says how a desired item and a previous row are paired: by identifier, with the path carrying
+  the identifier comparison, because pairing by path alone turns a case-changed filename into a
+  delete and an add and pairing by identifier alone cannot see the disagreement at all.
+  *(3) Twenty-one mutations were run; twenty fail a named test and the survivor is the tick
+  clause's own honest limit.* Comparing two `units.Time` values with `==` instead of
+  `units.Time.Equal` survives the whole suite, and it is not a gap in the tests: `units.At` strips the
+  monotonic reading and sets the location to UTC, so **two Times naming one instant have one
+  representation** and the two operators cannot be told apart by any value this project can build.
+  The comparison stays `Equal` — the equivalence is a property of the constructor rather than of the
+  comparison — and the measurement is written into the function's own comment so the next person
+  does not spend the afternoon reproducing it. The two mutations that *did* survive the first pass
+  were both the multi-part film: nothing varied a **part's path** or the **number of parts**, and
+  both are changes to an item that neither half of the signal can see.
 - **What this does not prove:** that a container with nothing under it is not offered to a client.
   Nothing here can — §8.3's sixth row is 005's entirely, and this task establishes only the half
   that makes it 005's problem: the row is still there.

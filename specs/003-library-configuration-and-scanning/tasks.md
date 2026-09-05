@@ -632,7 +632,7 @@ otherwise:
 
 ## T13 — The scan: the three guards, the batches, and the summary that counts two things apart
 
-- [ ] **Changes:** `internal/scan` and `internal/app` — the act, assembled: claim the library, walk
+- [x] **Changes:** `internal/scan` and `internal/app` — the act, assembled: claim the library, walk
   every root, run the guards on the **reading**, `Resolve`, `Reconcile`, write in batched
   transactions, remove in the final one, release the claim and write the summary
   ([plan §6.5](plan.md#65-the-guard-against-a-mass-delete), §6.9).
@@ -661,6 +661,59 @@ otherwise:
   analogue of the wiring 001's audit found twice: a build whose `Resolve` is right and whose
   `ApplyScanBatch` writes the wrong `parent_id` goes red here, and one whose `Reconcile` is right and
   whose removal is applied to the wrong library goes red here.
+- **Amended at T13, in five places, and the first two are the same finding from opposite sides.**
+  *(1) The claim is taken **after** the reading, not before it.* [plan §6.9](plan.md#69-two-scanners-batching-and-what-a-scan-does-while-the-server-serves)
+  said when a claim is renewed and never when it is taken, and its own defence of `staleAfter` — the
+  claim is renewed on every committed batch, so the value *"only has to exceed the time between two
+  batches"* — is false under the other answer: nothing renews a claim during a walk, so a claim taken
+  first would have to outlive the walk of the largest library an operator has. The visible half is
+  that a guard's refusal now leaves **no claim at all**, which is what lets an operator fix a mount
+  and scan again immediately instead of waiting one out.
+  *(2) §6.5's third guard stops claiming "one transaction".* [plan §5](plan.md#5-contracts) declares
+  `ApplyScanBatch`, `RemoveItems` and `ReleaseScan` as three methods, and three methods are three
+  transactions. What the guard is actually made of is the **ordering** — every failure this feature
+  can reach happens before `RemoveItems` is called — and the one state the single transaction would
+  not have had is written down rather than left to be found.
+  *(3) §6.5's second guard counts **files**, not items.* The section says *"where the previous scan
+  recorded at least one"* and leaves what is counted open. A library's own `CollectionFolder` row
+  backs no file, so an item count would make a library an operator emptied on purpose — having said
+  `--allow-empty-root` once — refuse every scan of that root from then on, with the override as the
+  only way to scan a legitimately empty library.
+  *(4) §5 declares the scanner.* The listing had `Changes` and no producer of one, so `New`,
+  `Scan`, `Options` and the three refusals were this task's to choose. `Options` is a record because
+  a third flag added as a third parameter is a call site every caller has to be found at, and every
+  refusal names the library **and the root's ordinal and path**, because §7's audience is somebody
+  with a shell looking at four libraries.
+  *(5) §6.7 gains `--format json` and `--log-level` on `scan`, at T13 rather than T14.* Three of the
+  criteria above are about what the store holds after an operator ran a scan, so the verb has to
+  exist for them to be assertable at all — and the summary's two counts have to be read out of a
+  document, because a test that parses the human table starts constraining prose. `--log-level` is
+  001's own flag reused, and it is what makes §3.8's *"files skipped **with the reason**"* reachable:
+  the counts are the summary and the per-path reasons are the progress, at debug, since a document
+  holding every skipped path of a large library is not a summary. `library.FoldName` is added for
+  `--name`, because §3.6's rule that two names differing only in case are one name is the domain's
+  and a second lowercaser is a second answer.
+- **Twenty-six mutations were run; twenty-five fail a named test and the one survivor is a
+  measurement.** Adding `library.Plan.Skipped` to the walk's skip count — the exact error T5's and
+  T8's handovers both warn about — **cannot be caught by any test over a real tree**, because the
+  walk hands the resolver only paths it has already accepted and that list is therefore always
+  empty. A corpus that could tell the two apart would have to reach `Resolve` with no walk in front
+  of it, which no scan does. It is the walk's count anyway because the rule is *"report what the walk
+  refused"*, and `Changes.Skipped`'s doc comment carries the measurement.
+- **And the reusable finding is about the two seams, not about the guards.** A seam test needs a
+  corpus in which the wrong answer is not also the right one, and each seam needed a different thing
+  for that. The parent seam is asserted over the fixture's **whole** declared parent-child structure
+  because *"every parent becomes the library's own row"* is invisible wherever a parent happens to be
+  the library's own row — which is most of a `movies` tree. The removal seam needs **two** libraries
+  that both hold items, because with one library a removal landing on "the wrong library" lands on
+  the right one; and it compares the other library's identifiers one for one rather than its count,
+  because a count passes on a build that removed one row and added another. This is T12's *"a corpus
+  that cannot distinguish two orderings is an ordering test that asserts nothing"* for the third time
+  in this feature.
+- **What this does not prove:** that a client asking for a container's children is answered with the
+  items whose `parent_id` this task asserted. [plan §8.3](plan.md#83-what-only-becomes-observable-at-005-and-what-005-must-not-accept-as-proven)
+  row 3, and it is 005's. Nothing here says whether a container with nothing under it is *offered*
+  either — row 6, still established by nobody.
 - **Spec reference:** §3.8, AC-12, AC-16; plan §6.5, §6.9, §7, §8.1.
 
 ## T14 — `atrium library`, which is the operator's only interface and therefore a contract

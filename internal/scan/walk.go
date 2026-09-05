@@ -12,10 +12,16 @@
 // [Walk], of 003 plan §6.1 — one walk of one library root, over an [fs.FS].
 // [Reconcile], of plan §6.4 — the pure function over two item sets where every
 // removal in this project is decided, taking no store, no filesystem and no
-// clock. The guards of plan §6.5 run on the **reading**, before Reconcile is
-// called, and arrive with the scan that assembles all of this; the third of
-// them is why Reconcile takes whole sets rather than a stream, and that much is
-// already true here.
+// clock. ~~The guards of plan §6.5 run on the **reading**, before Reconcile is
+// called, and arrive with the scan that assembles all of this~~ **they are
+// here**: [Scanner.Scan] is the act, and its own comment carries the order the
+// three guards fall out of. The third of them is why Reconcile takes whole sets
+// rather than a stream, and that much was already true before the scan existed.
+//
+// This package is the only one in the project that both opens a file and writes
+// through a port. That is 003 plan §1's *"the most destructive code in the
+// project with nothing above it to notice a mistake"*, and it is why the guards
+// are an ordering rather than three checks somebody could reorder.
 package scan
 
 import (

@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part; 2026-09-05 at T6, sections 6.2 and 8.5, with the seven decisions writing the series, season and episode resolver took that section 6.2 constrained and did not take - where each of the three levels comes from and what a candidate under a bare root does for a series name, the season number's three sources in order, a series directory never also being a season directory, a season being named from its number rather than from its directory and taking a path only from a directory whose number is its own, the numbering family being the specification's with the reference's remaining expressions declared absent, the two cases a multi-episode range needs and the guard on its ending number, and Specials being season zero where the reference's own parser accepts Extras as well; and section 8.5 records that the fixture's 24 cannot assert that the filename is matched before the directory, because the season directory agrees with the filename and the flat shape has no season directory at all; 2026-09-05 at T7, sections 5, 6.2 and 8.5 - section 5 gains the TagSource seam and stops claiming the library package declares no interface, section 6.2 gains the six decisions writing the music resolver took (the three levels and a disc directory not being one of them, the disc vocabulary being the reference's album-stacking list and not the film one, the reference's further multi-disc conditions declared absent, an album's name losing its year and nothing else, the compilation rule implemented as its "only if", and a track no directory places not being unplaceable) and records that the refusal a collection type with no resolver answered is itself a stub now that all three are written, and section 8.5 records that the fixture's compilation cannot fail AC-9's own failure and that no tree in this feature can, because the distinction does not exist until something says the artists differ; 2026-09-05 at T8, section 6.1, with the two decisions writing the walk took that the section's table did not - an entry that is not a regular file once followed, where a link to a file is the file it points at and a link to nothing is refused rather than raised because failing a library's whole scan over a dangling link is worse than skipping it, and the .ignore search implemented as a pruned subtree with the library root as its inclusive end - and with the record that the determinism clause the task list asked for cannot be varied by a tree's creation order at all, because os.DirFS sorts every directory it reads; 2026-09-05 at T9, sections 5, 6.4 and 6.5 - section 5's Reconcile becomes a record and an error, because a disagreeing identifier is an error section 6.4 already required and the listing had no return value for, because Removed and the third return value were one list under two names, and because Unchanged and Retained are what keep this feature's two most dangerous claims from being claims about an absence; section 5 also gains library.SortItems, exported so that the batch a store is handed is in the one order every item set in this feature is in; section 6.4 gains the two decisions writing the function took that its table did not state - a record that moved is an update even where no file signal could ever move, which is the only way a container is ever rewritten, and a full re-examination applying to an item that has a file, so that the thorough option is never also a different set of deletions - and says how a desired item and a previous row are paired, by identifier with the path carrying the comparison, because pairing by either one alone loses a case-changed name or cannot see the disagreement at all; section 6.5 records that the removal pass names the containers it kept; and section 6.1's last row is corrected from a file whose size AND modification time moved to one whose size OR modification time moved, which is what spec 3.8's table and section 6.4's both say and which a conjunction made unsatisfiable, and gains the half the row left implicit - it lands as an update and never as a refusal; 2026-09-05 at T10, sections 4.1 and 5 - section 4.1's library_roots row gains ON DELETE CASCADE, because foreign keys are on and a delete of a library holding roots is refused without it, and the section records that case_sensitive deliberately carries no DEFAULT; section 5 declares ScanBatch, the fourth record type the listing named in a signature and never defined, and argues the ClaimedBy field, because a renewal that did not name the claimant would let a scanner whose claim had gone stale and been taken renew a claim it no longer holds; 2026-09-05 at T12, sections 5, 6.9, 7 and 8.3 - ClaimScan returns the claimant it displaced or lost to beside the boolean, because section 7 asks for two messages naming a claimant and neither name survives the call that overwrote it; section 6.9's one conditional statement becomes one transaction for the same reason, since an upsert's RETURNING answers the row as it now stands, with the write lock taken at BEGIN so the atomicity is unchanged; section 6.9 also records that a claim stamped after the instant offered is a clock that moved backwards and is treated as live, because breaking a claim on a clock adjustment is two scanners writing one library; section 7 gains two rows for refusals this task had to decide rather than transcribe, a batch naming one item twice and a removal naming an identifier no row holds; and section 8.3's second and fourth rows say what the store now asserts underneath them so that neither reads as discharged
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part; 2026-09-05 at T6, sections 6.2 and 8.5, with the seven decisions writing the series, season and episode resolver took that section 6.2 constrained and did not take - where each of the three levels comes from and what a candidate under a bare root does for a series name, the season number's three sources in order, a series directory never also being a season directory, a season being named from its number rather than from its directory and taking a path only from a directory whose number is its own, the numbering family being the specification's with the reference's remaining expressions declared absent, the two cases a multi-episode range needs and the guard on its ending number, and Specials being season zero where the reference's own parser accepts Extras as well; and section 8.5 records that the fixture's 24 cannot assert that the filename is matched before the directory, because the season directory agrees with the filename and the flat shape has no season directory at all; 2026-09-05 at T7, sections 5, 6.2 and 8.5 - section 5 gains the TagSource seam and stops claiming the library package declares no interface, section 6.2 gains the six decisions writing the music resolver took (the three levels and a disc directory not being one of them, the disc vocabulary being the reference's album-stacking list and not the film one, the reference's further multi-disc conditions declared absent, an album's name losing its year and nothing else, the compilation rule implemented as its "only if", and a track no directory places not being unplaceable) and records that the refusal a collection type with no resolver answered is itself a stub now that all three are written, and section 8.5 records that the fixture's compilation cannot fail AC-9's own failure and that no tree in this feature can, because the distinction does not exist until something says the artists differ; 2026-09-05 at T8, section 6.1, with the two decisions writing the walk took that the section's table did not - an entry that is not a regular file once followed, where a link to a file is the file it points at and a link to nothing is refused rather than raised because failing a library's whole scan over a dangling link is worse than skipping it, and the .ignore search implemented as a pruned subtree with the library root as its inclusive end - and with the record that the determinism clause the task list asked for cannot be varied by a tree's creation order at all, because os.DirFS sorts every directory it reads; 2026-09-05 at T9, sections 5, 6.4 and 6.5 - section 5's Reconcile becomes a record and an error, because a disagreeing identifier is an error section 6.4 already required and the listing had no return value for, because Removed and the third return value were one list under two names, and because Unchanged and Retained are what keep this feature's two most dangerous claims from being claims about an absence; section 5 also gains library.SortItems, exported so that the batch a store is handed is in the one order every item set in this feature is in; section 6.4 gains the two decisions writing the function took that its table did not state - a record that moved is an update even where no file signal could ever move, which is the only way a container is ever rewritten, and a full re-examination applying to an item that has a file, so that the thorough option is never also a different set of deletions - and says how a desired item and a previous row are paired, by identifier with the path carrying the comparison, because pairing by either one alone loses a case-changed name or cannot see the disagreement at all; section 6.5 records that the removal pass names the containers it kept; and section 6.1's last row is corrected from a file whose size AND modification time moved to one whose size OR modification time moved, which is what spec 3.8's table and section 6.4's both say and which a conjunction made unsatisfiable, and gains the half the row left implicit - it lands as an update and never as a refusal; 2026-09-05 at T10, sections 4.1 and 5 - section 4.1's library_roots row gains ON DELETE CASCADE, because foreign keys are on and a delete of a library holding roots is refused without it, and the section records that case_sensitive deliberately carries no DEFAULT; section 5 declares ScanBatch, the fourth record type the listing named in a signature and never defined, and argues the ClaimedBy field, because a renewal that did not name the claimant would let a scanner whose claim had gone stale and been taken renew a claim it no longer holds; 2026-09-05 at T12, sections 5, 6.9, 7 and 8.3 - ClaimScan returns the claimant it displaced or lost to beside the boolean, because section 7 asks for two messages naming a claimant and neither name survives the call that overwrote it; section 6.9's one conditional statement becomes one transaction for the same reason, since an upsert's RETURNING answers the row as it now stands, with the write lock taken at BEGIN so the atomicity is unchanged; section 6.9 also records that a claim stamped after the instant offered is a clock that moved backwards and is treated as live, because breaking a claim on a clock adjustment is two scanners writing one library; section 7 gains two rows for refusals this task had to decide rather than transcribe, a batch naming one item twice and a removal naming an identifier no row holds; and section 8.3's second and fourth rows say what the store now asserts underneath them so that neither reads as discharged; 2026-09-05 at T13, sections 5, 6.5, 6.7, 6.9 and 8.1 - section 5 declares the scanner the listing had a summary for and no producer of, with Options as a record rather than two booleans and every refusal naming the library, the root's ordinal and its configured path; section 6.5's second guard counts files and not items, because a library's own row backs no file and an item count would make a library an operator deliberately emptied refuse every scan of that root for ever; section 6.5's third guard stops claiming one transaction, because section 5 declares the removal and the release as two methods and what the guard is made of is the ordering rather than the atomicity; section 6.9 records that the claim is taken after the reading, which the section's own argument for staleAfter forces since nothing renews a claim during a walk, and names the two consequences and the refusal that leaves no claim behind; section 6.7 records that scan, --format json and --log-level land at T13 rather than T14 because three of T13's criteria are about what the store holds after an operator ran a scan, that --name matches on the domain's fold, and that a name no library has is a refusal and not an empty run; and section 8.1 records what a seam test needs to discriminate at all and which two of T13's clauses sit at the scan level because a subcommand building its own store leaves nowhere to stand between two of its transactions
 ---
 
 # 003 — Implementation plan
@@ -504,7 +504,27 @@ Changes struct { Added, Updated, Removed []string; Examined, Skipped, Unplaceabl
                                           // spec §3.8's summary, assembled by the scan of §6.9:
                                           // three of the six fields are a Reconciliation's and the
                                           // other three are the walk's and the resolver's counts
+func (Changes) Document() ([]byte, error) // what ReleaseScan stores and --format json prints
+
+New(Config) (*Scanner, error)             // Items, Clock, ClaimedBy, StaleAfter, BatchSize,
+                                          // Logger, Tags — the last four have defaults
+func (*Scanner) Scan(ctx, ports.Library, Options) (Changes, error)   // §6.5's order, §6.9's batching
+Options struct { Full, AllowEmptyRoot bool }
+
+AlreadyScanningError struct { LibraryID, LibraryName, ClaimedBy string }   // §7, ErrAlreadyScanning
+UnavailableRootError struct { LibraryID, LibraryName string; Root int; Path string; Err error }
+EmptyRootError       struct { LibraryID, LibraryName string; Root int; Path string; PreviousFiles int }
 ```
+
+*(The block below `Changes` was added at T13, which wrote the scan. §5 declared the summary and
+never the thing that produces it, so `Scan`'s signature and the three refusals were this task's to
+choose. Two of them are decisions rather than transcriptions.* **`Options` is a record and not two
+booleans in the signature**, *because §6.7's subcommand grows verbs and a third flag added as a
+third parameter is a call site every caller has to be found and edited at. And* **every error names
+the library**, *which no signature can require and which §7's whole audience — somebody with a
+shell, looking at four libraries — depends on: `UnavailableRootError` and `EmptyRootError` also name
+the root's ordinal and its configured path, because an operator with three roots configured should
+not have to count.)*
 
 **`Reconcile` is a pure function over two item sets and is where every removal in this project is
 decided.** It takes no store, no filesystem and no clock. `full` is spec §3.8's re-examination,
@@ -1083,11 +1103,32 @@ they run on the **reading**, before `Reconcile` is called.
    — writing a task per criterion made visible that the guard catching the way an unmounted share
    actually arrives had no criterion at all, and a behaviour an operator can see is WHAT rather than
    HOW. Only the flag stays here.
-3. **A removal is computed from a complete reading of every root of a library and applied in one
-   transaction with the additions.** So a scan that was cancelled, that hit a failed batch, or whose
-   second root failed while the first succeeded removes nothing at all. This is why `Reconcile` takes
-   whole sets rather than streaming: a streaming reconciliation cannot tell *"not seen yet"* from
-   *"not there"*, and the difference between them is a user's library.
+
+   **Amended at T13, which implemented it: the threshold is counted in *files* and not in items.**
+   The section above says *"where the previous scan recorded at least one"* and leaves what is
+   counted open, and the two answers are not the same. A library's own `CollectionFolder` row backs
+   no file and neither does an inferred container, so a library an operator emptied on purpose —
+   having said `--allow-empty-root` once and had every item under the root removed — still holds a
+   row afterwards. Counting items would read that row as *"the last scan recorded one"* and refuse
+   every scan of that root from then on, with the override as the only way to scan a library that is
+   legitimately empty. Counting files makes the guard's question the same question the reading
+   answers: *this root yields no candidate file and the last scan of it recorded some.*
+3. **A removal is computed from a complete reading of every root of a library and applied ~~in one
+   transaction with the additions~~ after every batch of them.** So a scan that was cancelled, that
+   hit a failed batch, or whose second root failed while the first succeeded removes nothing at all.
+   This is why `Reconcile` takes whole sets rather than streaming: a streaming reconciliation cannot
+   tell *"not seen yet"* from *"not there"*, and the difference between them is a user's library.
+
+   **Amended at T13: one transaction is not available and §5 is why.** The contract declares
+   `ApplyScanBatch`, `RemoveItems` and `ReleaseScan` as three methods, so the removal is its own
+   transaction and the release is another, in that order. What the guard is actually made of is the
+   **ordering** rather than the atomicity: every failure this feature can reach happens before
+   `RemoveItems` is called, so nothing partial is ever removed. What the sequence costs is one state
+   the single transaction would not have had — a scan killed between the removal and the release has
+   removed what it computed and left a claim to go stale, which the next scan corrects and which is
+   why §6.9's staleness rule is load-bearing rather than a nicety. Making it one transaction would
+   mean a port method that took the removals, the summary and the release together, and that method
+   is the over-broad one `RemoveItems`' own comment argues against.
 
 **What none of the three watches is one level down, and that is the whole of
 [behaviours §5.2](../../docs/compatibility/behaviours.md#52-a-container-that-has-lost-every-file-is-not-removed).**
@@ -1182,7 +1223,22 @@ atrium library rename --data-dir DIR --name NAME --to NAME
 atrium library roots  --data-dir DIR --name NAME --root PATH [--root PATH …]
 atrium library remove --data-dir DIR --name NAME
 atrium library scan   --data-dir DIR [--name NAME] [--full] [--allow-empty-root]
+                      [--format table|json] [--log-level LEVEL]
 ```
+
+**`scan` and its two extra flags landed at T13 rather than at T14, and the reason is a criterion.**
+T13's assertions are AC-12, AC-16 and the two seams of §8.1, and every one of them is about *what
+the store holds after an operator ran a scan* — so the verb has to exist for them to be assertable
+at all, and `--format json` has to exist for the summary's two counts to be read out of a document
+rather than out of prose. `--log-level` is 001's own flag and its own environment fallback, reused
+rather than reinvented, and it is what makes spec §3.8's *"files skipped **with the reason**"*
+reachable: the counts are the summary and the per-path reasons are the progress, at debug. A
+document holding every skipped path of a large library is not a summary. **`--name` matches on the
+domain's fold** (`library.FoldName`, added at T13 for this), not on bytes, because §3.6 makes two
+library names differing only in case one name and the store's unique index is enforcing that fold.
+A name no library has is a **refusal** and not an empty run: an operator who mistyped and was told
+*"0 libraries scanned"* would read it as *"nothing changed"*, which is the sentence a successful
+scan of an unchanged tree produces. The other five verbs are T14's.
 
 **What the shape buys**, each of which decided it:
 
@@ -1348,7 +1404,22 @@ refusing to serve until the scan finishes, trades a partial library for no libra
 
 ### 6.9 Two scanners, batching, and what a scan does while the server serves
 
-**A scan claims its library.** `ClaimScan` reads the `scan_state` row and writes
+**A scan claims its library — and it takes the claim *after* the reading, which this paragraph's own
+argument for `staleAfter` is what forces.** *(Placed at T13, which assembled the scan. The section
+said when a claim is renewed and never when it is taken, and the two available answers are not
+interchangeable.)* The claim is renewed on every committed batch and by nothing else, so nothing
+renews it during a walk; a claim taken before the reading would therefore have to outlive the walk
+of the largest library an operator has, which is exactly the guess the paragraph below refuses to
+make. Taking it after the reading and before the first write keeps `staleAfter` a number about a
+batch. Two consequences, both stated rather than discovered: two scanners may walk one library at
+once and only one of them writes, which costs a walk and nothing else; and a reconciliation computed
+against a reading another scanner has since changed is **refused rather than applied**, because
+every identifier in `Remove` came from this store and one that now matches no row fails
+`RemoveItems`' rows-affected check. It also means a refusal by either guard leaves no claim behind
+at all, which is what lets an operator fix a mount and scan again immediately rather than waiting
+out a claim their own failed scan left.
+
+`ClaimScan` reads the `scan_state` row and writes
 `(claimed_at, claimed_by)` on it, and reports whether it won. ~~In one conditional statement~~ — the
 read and the write are **one transaction** instead, and T12 amended this when it wrote them: an
 upsert's `RETURNING` answers the row as it now stands, so the previous claimant the two §7 rows
@@ -1367,10 +1438,14 @@ is why the renewal is part of the batch's transaction rather than a timer beside
 
 **Batches are sized in items, not in time**, and each is one transaction that writes the additions
 and updates it holds, renews the claim, and commits. Removals are **not** batched: they are computed
-once from the complete reading and applied in the final transaction (§6.5's third guard), which is
-also the transaction that releases the claim and writes the summary. So a scan that dies half way
+once from the complete reading and applied ~~in the final transaction (§6.5's third guard), which is
+also the transaction that releases the claim and writes the summary~~ **after the last batch, in
+their own transaction, with the release after that** — §6.5's third guard as amended at T13, where
+the reason the contract cannot make it one transaction is written down. So a scan that dies half way
 has added and updated some items and removed none, which is a state the next scan corrects, and it
-is the *only* partial state this feature can leave behind.
+is the *only* partial state this feature can leave behind. **The batch size is
+`scan.DefaultBatchSize`, five hundred items**, which is two orders of magnitude inside the
+measurement below rather than a round number.
 
 **Readers are not blocked.** ADR-0003 measured it: 57,664 reads completed during one write
 transaction inserting 30,000 rows, worst read latency 393 µs
@@ -1470,6 +1545,30 @@ the removal. **Both are asserted through the subcommand rather than through the 
 `ApplyScanBatch` writes the wrong parent goes red. Every criterion's row in §8.4 says which of the
 two levels its assertion sits at, and the ones that sit at the function level say why no higher one
 exists.
+
+*(Done at T13, and the shape is worth recording because the second seam needed something the first
+did not.* **A seam test needs a corpus in which the wrong answer is not also the right one.** *The
+parent seam is asserted over the fixture's whole declared parent-child structure rather than over
+one chain, because the mutation that matters — every parent becomes the library's own row — is
+invisible wherever a parent happens to **be** the library's own row, which is most of a `movies`
+tree. The removal seam needs **two** libraries that both hold items, because with one library the
+removal landing on "the wrong library" lands on the right one; the assertion is that the other
+library's identifiers are unchanged one for one, not that its count is, because a count passes on a
+build that removed one row and added another. Both mutations were run and both go red
+`[measurement: 003 T13, 26 mutations, 1 declared survivor, 2026-09-05]`.)*
+
+**Two of T13's clauses are asserted at the `scan` level and not through the subcommand, and that is
+a limit rather than a preference.** The batching and *"nothing renews a claim outside a batch"* are
+properties of what the scan **asks** a store to do, and a scan driven through the subcommand builds
+its own SQLite store with nowhere to stand between two of its transactions. So they are asserted
+against a recording store that models exactly the two guarantees T12 already measured of the real
+one — a batch renews the claim and writes its items, or neither — and what that buys is the half no
+store can hold: a build that renewed the claim beside each batch leaves it at the *failed* batch's
+instant rather than at the last committed one, and is red. The real store, the real tree and the
+real refusal are still exercised together at `app` level by the one tree `internal/library` does not
+object to and the store does: two filenames that differ in bytes and derive one identifier (T3's NFC
+singleton finding), where the scan fails, names the library, and removes nothing because the removal
+is after every batch.
 
 ### 8.2 The declared inequality, and the forty-seven
 

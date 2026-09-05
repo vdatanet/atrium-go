@@ -3,9 +3,9 @@ feature: 003-library-configuration-and-scanning
 title: Library configuration and scanning
 status: Implemented
 created: 2026-08-26
-updated: 2026-08-27
+updated: 2026-09-05
 accepted: 2026-08-26
-amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8
+amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements
 implemented: 2026-08-27
 depends_on: []
 ---
@@ -73,10 +73,29 @@ Ignored regardless of extension:
 | Rule | Reason |
 |---|---|
 | Any path component beginning with `.` | Hidden files and macOS resource forks |
-| A directory containing a `.ignore` file | The operator's explicit exclusion |
+| A directory carrying an **empty** `.ignore` marker, or one anywhere between it and the library root | The operator's explicit exclusion; see below |
 | Files matching the trailer, sample and extra suffixes | They are extras, not the work; §3.4 |
 | Zero-byte files | Incomplete copies |
 | Files being written, detected by size change between two passes | Downloads in progress |
+
+**Amended 2026-09-05, while the implementation plan was written: the `.ignore` row named one of
+three rules and read as though it were all of them.** At the reference the marker is searched for
+from a file's own directory **upwards, to the filesystem root**; an **empty** or whitespace-only
+marker excludes everything beneath the directory holding it; and a **non-empty** one is a set of
+`.gitignore`-style patterns of which only the matching paths are excluded, with the fallback that a
+marker whose every pattern fails to parse excludes everything
+`[source: Emby.Server.Implementations/Library/DotIgnoreIgnoreRule.cs:18-30,41-68,95-131 @ v10.11.11]`.
+This is a source reading and no probe here has sent a `.ignore` file of any kind, so it is
+[U-42](../../docs/compatibility/reference-target.md) in the register rather than a measurement.
+
+**What v1 does, stated as the rule it is.** An empty or whitespace-only marker excludes the
+directory holding it and everything beneath it, and the search runs from a file's directory up to
+**the library root and no further** — a marker above the root belongs to somebody else's directory
+tree, and honouring one there would let a stray file in a home directory empty every library beneath
+it. A **non-empty** marker excludes nothing. Both narrowings show *more* than the reference rather
+than less, which is the safe direction for a scanner, and the second is an accepted shortfall: honouring
+patterns is behaviour this project would own outright, for a shape no measurement shows anybody
+using, and getting it subtly wrong hides files an operator expects to see.
 
 **The extensions a collection type admits**, measured against a library of 8,288 items:
 
@@ -129,10 +148,20 @@ and others were truncated mid-word or suffixed with the name of the site that se
 A directory holding **several different titles** is a category rather than a film, and names none
 of them. That is the only part of the rule a single path cannot decide.
 
-**Multi-part files** are grouped into one item when they differ only by a part marker
-(`part1`/`pt1`/`cd1`/`disc1`, and the `-a`/`-b` form). The parts become one item's media sources,
-in order. Getting this wrong doubles a user's library, which is the most visible possible scanning
-bug.
+**Multi-part files** are grouped into one item when they differ only by a part marker. The parts
+become one item's media sources, in order. Getting this wrong doubles a user's library, which is the
+most visible possible scanning bug.
+
+**Amended 2026-09-05, while the implementation plan was written.** ~~The marker was written as
+`part1`/`pt1`/`cd1`/`disc1`, *"and the `-a`/`-b` form"*.~~ The second half of that is not a form the
+reference has. A marker is one of **`cd`, `dvd`, `part`, `pt`, `disc` or `disk`**, separated from the
+title by a space, underscore, dot or hyphen or by a closing bracket, and followed either by **digits**
+or by a **single letter `a`–`d` after that same word**
+`[source: Emby.Naming/Common/NamingOptions.cs:141-145 @ v10.11.11]`. A bare trailing letter is not a
+part marker: `The Film - a.mkv` and `The Film - b.mkv` are two works. The correction matters more
+than the two words it changes, and in the opposite direction to the warning above — reading a bare
+letter as a part marker merges two films into **one** and makes the second disappear. Source read,
+never probed: [U-43](../../docs/compatibility/reference-target.md).
 
 ### 3.4 Series, seasons and episodes
 
@@ -497,7 +526,7 @@ media generated at build time. No copyrighted media, ever.
 | OQ-6 | Whether the §3.7.2 formulas hold for items carrying an explicit sort title, and how many real items do | §3.7.3 | The override rows of `tools/probe_sort_names.py`, read against a larger library |
 | OQ-7 | What the reference does with a character that has no ASCII decomposition — `ø`, `ß`, a non-Latin script | The ordering of those names, and nothing else | Crafted names in `tools/probe_sort_names.py`; the measured set contains none |
 | OQ-8 | Whether a track number, disc number and title should be read from a file's name at all, given the reference reads none of the three from there (§3.5) | Only untagged music: for a tagged file both answer from the tag | How much real music carries no readable tag. **Half of this moved on 2026-08-27**: 004 T7 built the reader, so the question is now measurable against a real library and is no longer waiting on code. What it still needs is a *library* — this suite's music is silence we generated, so measuring the untagged fraction here would measure the fixture. A probe over the reference server's own music library answers it |
-| OQ-9 | What the reference **defaults** `EnableCaseSensitiveItemIds` to | Nothing. §3.6 states Atrium's own default and does not claim to match one | `tools/probe_item_identity.py` against a server that has not changed the setting; the one measured has it **set** |
+| OQ-9 | What the reference **defaults** `EnableCaseSensitiveItemIds` to | Nothing. §3.6 states Atrium's own default and does not claim to match one | `tools/probe_item_identity.py` against a server that has not changed the setting; the one measured has it **set**. **The source says `true`, and the row stays open — 2026-09-05**: it is declared `= true` and is a property of the **server**, not of a library `[source: MediaBrowser.Model/Configuration/ServerConfiguration.cs:89 @ v10.11.11]`, consulted at `[source: Emby.Server.Implementations/Library/LibraryManager.cs:650 @ v10.11.11]`. A source reading is not a measurement and the running server is the tie-breaker, so this stays open; what it changes is that §3.6's case-insensitive default is a **known** difference rather than a possible one — two files differing only in case are one item here and two there, which is an item count and therefore observable. [U-44](../../docs/compatibility/reference-target.md) |
 
 **None of them blocks this feature, and each is open for its own reason.** Each needs a *measurement this
 repository cannot take today*, not a decision somebody has been avoiding. OQ-6 needs a library

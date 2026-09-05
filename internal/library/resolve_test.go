@@ -659,7 +659,7 @@ func TestAPathThatIsNotACandidateIsANoteAndNotAnItem(t *testing.T) {
 // would be silent and destructive: an empty plan is the answer *"this library
 // holds nothing"*, and the caller that believes it removes every item under it.
 func TestACollectionTypeWithNoResolverIsAnErrorAndNotAnEmptyPlan(t *testing.T) {
-	for _, collection := range []CollectionType{Shows, Music} {
+	for _, collection := range []CollectionType{Music} {
 		lib := aMoviesLibrary()
 		lib.CollectionType = string(collection)
 

@@ -251,7 +251,7 @@ otherwise:
 
 ## T6 — `Resolve` for series, seasons and episodes
 
-- [ ] **Changes:** `internal/library` — the three levels of spec §3.4, with the number patterns
+- [x] **Changes:** `internal/library` — the three levels of spec §3.4, with the number patterns
   matched against the **filename first and the parent directory second**, seasons inferred where no
   directory exists, `Specials` as season zero, multi-episode files as one candidate spanning two
   numbers, and extras ignored rather than attached.
@@ -272,6 +272,20 @@ otherwise:
   skipped — spec §3.8 counts the two apart precisely because *"an operator told that both were
   skipped would go looking for something that is not missing"*, and this is the fixture's one file
   that exercises the distinction.
+- **Amended at T6, and it is the third time in this feature.** *(1) The fixture's
+  `24/Season 01/24 - S01E01 - 12-00 AM.mkv` does **not** catch a resolver matching the directory
+  first.* Two rules repair it: the containing directory is `Season 01` and says season 1 as loudly
+  as the filename does, and the flat `24/24 - S01E01 - …` shape has no directory *below the series*
+  to match first, because a series directory is never also a season directory. The order is
+  asserted over a `Season 05` directory holding a file whose name says `S01E01`, where the two
+  sources disagree — and that tree kills a second mutation too, a season taking a path from a
+  directory whose number is not its own. What the fixture path does catch is §3.4's other half,
+  that a series' own title is not read as a number.
+  *(2) One assertion this line does not ask for was needed by the same file:* a spaced ` - `
+  followed by digits is not an episode range. Read loosely, `24 - S01E01 - 12-00 AM` becomes
+  **episodes 1 to 12** — still one item, still season 1, still episode 1, so AC-5's own test, AC-7's
+  own test and the fixture comparison all stay green.
+  [Plan §6.2 and §8.5](plan.md#62-resolution-and-the-three-shapes-that-need-siblings) record both.
 - **What this does not prove:** that a client asking for a season's children gets them. §8.3 row 3.
 - **Spec reference:** §3.4, AC-5, AC-6, AC-7; plan §6.2.
 

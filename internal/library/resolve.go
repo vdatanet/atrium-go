@@ -65,8 +65,14 @@ type Plan struct {
 	Items []ports.ScannedItem
 
 	// Unplaceable is a path that became an item whose name says too little to
-	// place it (003 §3.8). Nothing under `movies` produces one; the shape
-	// belongs to 003 §3.4's stray file in a season directory.
+	// place it (003 §3.8). Nothing under `movies` produces one — a film's name
+	// never has to say anything — and under `tvshows` there are two ways to
+	// earn one, [ReasonNoEpisodeNumber] and [ReasonNoSeries].
+	//
+	// **It is not [Plan.Skipped] and the two must not be added together.** A
+	// skipped path is not in the library and an unplaceable one is: it has an
+	// item, an identifier and a parent, and everything a client can do with an
+	// item it can do with this one.
 	Unplaceable []Note
 
 	// Skipped is a path [Resolve] refused. See [Resolve]'s own comment on why
@@ -133,10 +139,10 @@ func Resolve(lib ports.Library, readings []Reading) (Plan, error) {
 		return Plan{}, fmt.Errorf("%w: %q", ErrCollectionTypeUnknown, lib.CollectionType)
 	}
 
-	// Shows and Music have resolvers of their own and neither is written yet.
-	// The refusal comes before any work, so that no caller can read a partly
-	// filled plan as an answer; see ErrCollectionTypeNotResolved.
-	if collection != Movies {
+	// Music has a resolver of its own and it is not written yet. The refusal
+	// comes before any work, so that no caller can read a partly filled plan
+	// as an answer; see ErrCollectionTypeNotResolved.
+	if collection == Music {
 		return Plan{}, fmt.Errorf("%w: %q", ErrCollectionTypeNotResolved, lib.CollectionType)
 	}
 
@@ -146,11 +152,22 @@ func Resolve(lib ports.Library, readings []Reading) (Plan, error) {
 	root := libraryRootItem(lib)
 	plan := Plan{Items: []ports.ScannedItem{root}, Skipped: skipped}
 
-	items, err := resolveMovies(lib, kept, root.ID)
-	if err != nil {
-		return Plan{}, err
+	switch collection {
+	case Movies:
+		items, err := resolveMovies(lib, kept, root.ID)
+		if err != nil {
+			return Plan{}, err
+		}
+		plan.Items = append(plan.Items, items...)
+
+	case Shows:
+		items, unplaceable, err := resolveShows(lib, kept, root.ID)
+		if err != nil {
+			return Plan{}, err
+		}
+		plan.Items = append(plan.Items, items...)
+		plan.Unplaceable = unplaceable
 	}
-	plan.Items = append(plan.Items, items...)
 
 	sortItems(plan.Items)
 	return plan, nil

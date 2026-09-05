@@ -5,7 +5,7 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-05
 accepted: 2026-08-26
-amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements. 2026-09-05 again, by the change that wrote tasks.md, in two places that are one finding - section 3.8 states the second guard against a mass delete (a root that reads as holding no candidate file where the last scan saw one is unavailable, not emptied, and an operator can say they meant it) and section 5 gains AC-16 for it in both halves. What forced it: writing a task per criterion made visible that the guard which catches the way an unmounted share actually arrives - readable, and empty - was in the plan and in no criterion, so a list written from section 5 alone would have tested the destructive case that is easy to construct and not the one that happens
+amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements. 2026-09-05 again, by the change that wrote tasks.md, in two places that are one finding - section 3.8 states the second guard against a mass delete (a root that reads as holding no candidate file where the last scan saw one is unavailable, not emptied, and an operator can say they meant it) and section 5 gains AC-16 for it in both halves. What forced it: writing a task per criterion made visible that the guard which catches the way an unmounted share actually arrives - readable, and empty - was in the plan and in no criterion, so a list written from section 5 alone would have tested the destructive case that is easy to construct and not the one that happens. 2026-09-05 again, by 003 T4 - section 3.7.2 gains the missing-number case for a `Season`, whose whole sort name is the prefix, and section 3.7.3 gains what its one sentence leaves out. Both are source readings at the pinned tag rather than measurements, and both were forced by having to write the derivation: the code has to answer a case the section does not state, and the honest place to answer it is the section
 implemented: 2026-08-27
 depends_on: []
 ---
@@ -415,6 +415,14 @@ The asymmetry is real and not a transcription error: an episode's **season** is 
 its **episode number** is four. A missing number contributes no prefix segment at all rather than a
 run of zeros.
 
+**A `Season` with no number keeps its raw name**, because a season's whole sort name is the prefix
+and dropping the segment would leave nothing. This is not a measurement — nothing sent the reference
+an unnumbered season — but the source is unambiguous
+`[source: MediaBrowser.Controller/Entities/TV/Season.cs:151 @ v10.11.11]`, and the case arises here:
+§3.4 infers a season where no directory exists, and the reference's recorded reading of the fixture
+tree contains a `Season Unknown`. The alternative reading — the empty string — sorts every
+unnumbered season ahead of every numbered one in every series at once.
+
 **Consequence worth stating plainly:** a track called `The Song` sorts under `T`, not under `S`.
 Applying §3.7.1 to audio — which is the natural thing to do when a codebase has one sort-name
 function — reorders every album in the library.
@@ -423,6 +431,19 @@ function — reorders every album in the library.
 
 Metadata (004) may carry an explicit sort title. It replaces the derivation entirely, for every
 type, and is lowercased and digit-padded but not article-stripped.
+
+**That sentence is exhaustive rather than illustrative**, and the source agrees with it: an explicit
+sort title is digit-padded and diacritic-folded and then lowercased, and it is **not** trimmed, not
+article-stripped, and neither configured character list is applied to it
+`[source: MediaBrowser.Controller/Entities/BaseItem.cs:535-536 @ v10.11.11]`. So of §3.7.1's six
+steps it uses two, not five. A title an operator or a tag wrote is taken as written, which is what
+writing one is for.
+
+This is a source reading and not a measurement, and it neighbours OQ-6 rather than closing it: the
+library measured contained almost no item carrying an explicit sort title, so nothing here was
+observed running. OQ-6 asks whether §3.7.2's formulas survive such a title; the source says they do
+not, for any type, which is what this section states — and the row stays open, because a running
+server is the tie-breaker.
 
 ### 3.8 Scanning and change detection
 

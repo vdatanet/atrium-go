@@ -791,23 +791,49 @@ otherwise:
 
 ## T15 — AC-2, AC-3 and AC-10: the three criteria that are about scanning more than once
 
-- [ ] **Changes:** tests in `internal/app` over a real data directory and a built tree, and whatever
-  they find. No new production behaviour is expected; if one is needed, it is a finding.
+- [x] **Changes:** tests in `internal/app` over a real data directory and a built tree, and whatever
+  they find. No new production behaviour is expected; if one is needed, it is a finding. **None was
+  needed**: all three criteria hold on the build T14 left, and what the task found is two corrections
+  to its own *Verified by* line, struck below.
 - **Depends on:** T14
 - **Verified by:** **AC-2** — scan, scan again: byte-identical identifiers and a summary reporting
   zero added, zero updated and zero removed. **AC-3** — scan, rebuild the derived half through T11,
   scan again, compare identifiers: this is AC-2's criterion **with the store's memory removed**, and
-  the mutation that separates them is a derivation that reuses a previous row's identifier when it
-  finds one, which passes AC-2 and every unit test in T3 and fails only here. **AC-10** — scan, move
-  the whole tree to a second temporary directory, `library roots` it, scan again: **every**
-  identifier unchanged, and the mutation is putting the root's path into the key, which passes AC-2,
-  AC-3 and T3's table and fails only this. The three are one task because they are one property
+  the mutation that separates them is ~~a derivation that reuses a previous row's identifier when it
+  finds one, which passes AC-2 and every unit test in T3 and fails only here~~ **that reuse over an
+  identifier that is *allocated* rather than derived**. **AC-10** — scan, move the whole tree to a
+  second temporary directory, `library roots` it, scan again: **every** identifier unchanged, and the
+  mutation is putting the root's path into the key, which passes AC-2, AC-3 and T3's table and fails
+  only this — **and only in its narrow form**. The three are one task because they are one property
   measured three ways and because writing them apart is how one of them ends up asserting a subset of
   another; they are asserted at `app` and not at `library` because the criterion is about what the
   store ends up holding and a function cannot be asked that.
+- **Amended 2026-09-05, at this task, in the two places struck above. Both were found by running the
+  mutations rather than by writing them down**, and both are the same shape: a mutation named in the
+  abstract turned out to be one this repository cannot fail. Five were run, one at a time, each
+  against all three criteria, against T14's moved-root test and against the whole of
+  `internal/library` `[measurement: 003 T15, 5 mutations, 2026-09-05]`.
+  - **Reuse on its own is a no-op and nothing in this project can see it.** Against a correct
+    derivation the adopted string and the derived string are the same string, so that build is green
+    everywhere — AC-3 included. What AC-3 catches is the reuse **hiding an identifier that is not
+    derived at all**: allocated for an item with no previous row, adopted for one that has a row. It
+    is stable across a rescan, stable across a remount, right in every table in `internal/library`,
+    and different on every installation — which is exactly the *"derived from the item's stable
+    identity, never allocated"* of §3.6, and it is red only under AC-3.
+  - **The root path in the key has a broad form and a narrow one, and only the narrow one is AC-10's
+    own.** The broad form moves every `Movie`, `Episode` and `Audio` identifier and T14's moved-root
+    test is red on it too. The narrow form puts the root's path in the key of the two kinds whose
+    §3.6 row literally says *"the library root plus the normalised name"* — `Series` and
+    `MusicArtist` — and it is green on T14's test, green on `internal/library`'s own moved-root test,
+    and red only here. **This is the corpus finding, and it is why AC-10 moves the whole fixture and
+    not a tree of films**: both moved-root assertions that existed before this task ask about one row
+    of §3.6's five — T14's about a `Movie`, `internal/library`'s about the `CollectionFolder` of an
+    empty library. Fifteenth time in this feature that an assertion could not produce the failure it
+    was named for.
 - **What this does not prove:** that the identifier a client receives is the one that was stored.
   §8.3 row 1, and it is the cheapest debt in the project to discharge — one `/Items` listing at 005
-  covers it together with rows 2, 3 and 4.
+  covers it together with rows 2, 3 and 4. **Left visible rather than discharged**: nothing here
+  reads a body, and no test in this change pretends to.
 - **Spec reference:** AC-2, AC-3, AC-10; plan §8.4.
 
 ## T16 — AC-11 and AC-14: what changes on disk, and the user data that outlives an item

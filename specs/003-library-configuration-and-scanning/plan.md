@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library; 2026-09-05 at T4, sections 5 and 6.6, in three places - the record listing gains SortTitle, the field section 8.4 called a seam and the listing had none of, and the library package's comment stops claiming it names no port when the same block declares two signatures over one; section 6.6 gains the Season missing-number case and the two of six steps an explicit sort title actually uses, both source readings the code had to answer and the specification did not state; and section 6.6 records that the pad-width check the plan asked for does not pin the pad width, because the ordering it names survives 9, 10 and 11 alike; 2026-09-05 at T5, sections 6.2 and 8.5, with the six decisions writing the film resolver took that section 6.2 constrained and did not take - the year rule read at the pinned tag and the order it runs in, the release-tag vocabulary transcribed as data where the expressions are not transcribed at all, a library root never naming a film, the four rules a stack needs, and an item's path being the one the walk read rather than the folded key its identifier came from - plus the refusal a collection type with no resolver answers instead of an empty plan; and section 8.5 records that the fixture's own multi-part film cannot assert where its name came from, because the directory rule and the year rule each repair a name taken from the first part
 ---
 
 # 003 — Implementation plan
@@ -592,6 +592,57 @@ own tests exercise the path fallback and 004's exercise precedence. Two conseque
   spec's OQ-8). It is implemented as the spec writes it, including the tie-break that reads an
   ambiguous name as saying **less**: a leading digit is a track number only when a separator follows
   it, so `24K Magic.flac` is a song called `24K Magic`.
+
+**Amended 2026-09-05 at T5, which wrote the film resolver.** Six decisions the specification
+constrains and does not take, each forced by writing the code and each recorded here rather than in
+`spec.md`, because every one of them is a *how*:
+
+- **The title and the year are one rule and the year runs first.** Reading the reference at the
+  pinned tag, the year is taken out and **everything after it is discarded with it**, the **last**
+  year in the name wins, the year must be preceded by a separator and by at least one character of
+  title, it must not touch another digit, and it must not be a date's leading year
+  `[source: Emby.Naming/Common/NamingOptions.cs:147-151, Emby.Naming/Video/VideoResolver.cs:88-96 @ v10.11.11]`.
+  Two of those are worth a sentence each. *Everything after it* is what makes
+  `The.Film.2019.1080p.BluRay.x264` a 2019 film called `The.Film`. *The last one* is what makes
+  `Blade Runner 2049 (2017)` a 2017 film called `Blade Runner 2049` rather than a 2049 film called
+  `Blade Runner`. And the date guard is what keeps spec §3.4's `The Daily Show - 2024-01-31` from
+  acquiring a production year.
+- **The order matters and is asserted as a pair.** Tags before the year answers `Some Film` with
+  **no year** for `Some Film DVDRip 1999`, because the year is behind the tag. `The.Film.2019.…`
+  cannot see that, and it was the corpus row this project first wrote for it.
+- **The release-tag vocabulary is transcribed as data; the expressions are not transcribed at all**
+  `[source: Emby.Naming/Common/NamingOptions.cs:153 @ v10.11.11]`. That is the same treatment
+  §6.1's extras folder names and extras suffixes already get, and Principle IV's line is between a
+  list of facts and a program. Of the reference's six clean-string expressions this implements the
+  three spec §3.3 names — a delimited tag, a trailing release-group bracket, a leading one — and
+  the other three have owners: an episode range and a trailing number are §3.4's, and the extras
+  suffixes are §3.2's and shipped at T2. A token containing a separator (`blu-ray`, `read.nfo`) is
+  matched **literally** where the expression's `.` matches any character, which refuses a name the
+  reference would have cleaned rather than cleaning one it would have left alone.
+- **A library root never names a film.** Spec §3.3's rule is *"where a film sits in its own
+  directory"*, and a library holding exactly one film directly under its root satisfies a naive
+  reading of it. The root is the library — §4.2 gives the library's own row no path because a
+  library may have several roots — so the rule is asked of the **immediate containing directory**
+  and never of the root, which is the same shape §6.1's extras rule already takes. The year comes
+  out of the directory's name with the title when the directory names the film.
+- **Stacking needs three guards and a floor**, all the reference's
+  `[source: Emby.Naming/Video/StackResolver.cs:76-127 @ v10.11.11]`: files stack only within one
+  directory; the **first** file establishes the marker word and whether the stack is numeric or
+  alphabetic, and a later file disagreeing with either stands alone; a repeated part number joins
+  nothing; and **a stack of one is not a stack**. The floor is the one that is easy to leave out and
+  it changes a name: a lone `The Film - cd1.mkv` keeps its whole stem, which the release-tag rule
+  then cleans, because `cd[1-9]` is in that vocabulary and `part1` is not.
+- **An item's `Path` is the path the walk read and not the key its identifier came from.** They
+  differ exactly when the library is case-insensitive, and a stored path that had been folded cannot
+  be opened on a case-sensitive filesystem. `ports.ScannedItem.Path`'s own comment said the wrong
+  one of the two and is corrected in the same change.
+
+**And one thing `Resolve` refuses rather than answers.** A collection type whose resolver is not
+written yet is an **error**, never an empty plan. An empty plan is the answer *"this library holds
+nothing"*, and §6.5's guards run on the reading rather than on the plan, so a caller would reconcile
+it against what the library holds now and take every item away — Principle VI's *"no
+plausible-looking stub"*, at the one place in this feature where the stub would be silent and
+destructive.
 
 ### 6.3 Identity, and the normalisation the whole feature rests on
 
@@ -1253,6 +1304,22 @@ rather than this section's.** The reference's reading names the series item back
 `Shows/The Series` **`tvshow`** — a name no path-derived rule produces from that directory, and one
 this feature will not reproduce. The tree carries no `.nfo` sidecar to explain it, and inventing one
 to make the name come out would be the drift this amendment exists to refuse.
+
+**Amended 2026-09-05, at T5: the fixture's multi-part film cannot assert where its name came
+from, and the task list asked it to.** [T5](tasks.md#t5--resolve-for-films-the-marker-vocabulary-and-the-directory-that-names-the-film)'s
+Verified-by line makes the name of `The Long Film (1998)/… - part1.mkv` *"the assertion that catches
+a build which stacked the parts and then took the first file's name"*. Over that tree it catches
+nothing, and it takes two independent repairs to see why: the directory holds exactly one film and
+names it, so the file's stem is never consulted; and with that rule removed the **year** rule
+discards everything after `(1998)`, `- part1` included. The mutation that names the item after
+`Files[0]` passes every assertion the fixture's shape can carry.
+
+So the assertion is made on a tree the fixture does not hold and does not need to: two parts
+directly under a library root, with no year in the name, where `The Long Film - part1` is the only
+thing a build reaching for the first file can say. **The general shape is 001's, 002's and T4's
+again — when a document says an assertion exists to catch a particular failure, produce that failure
+and check the assertion actually moves** — and it is the third time in this feature that the answer
+was *"it does not, and something else was quietly repairing it"*.
 
 ## 9. Risks
 

@@ -205,7 +205,7 @@ otherwise:
 
 ## T5 — `Resolve` for films: the marker vocabulary, and the directory that names the film
 
-- [ ] **Changes:** `internal/library` — the classify and group passes of
+- [x] **Changes:** `internal/library` — the classify and group passes of
   [plan §6.2](plan.md#62-resolution-and-the-three-shapes-that-need-siblings) for `movies`: title and
   year extraction, release-tag removal, multi-part stacking, and the rule that a directory holding
   exactly one video candidate names it. `Resolve` takes every root's reading at once, sorts it, and
@@ -229,6 +229,22 @@ otherwise:
   whose directory entries were created in opposite orders produce the **identical** plan, including
   part order — Principle VII at the layer where insertion order can still get in, and the one thing a
   per-path resolver could not have.
+  *(Amended when the task was written, in two places, and the first is this feature's third
+  criterion proven a level too low.* **(1) The name of the fixture's own multi-part film catches
+  nothing.** *Over `The Long Film (1998)/… - part1.mkv` two rules independently repair a name taken
+  from the first file: the directory holds exactly one film and names it, and — with that rule
+  removed — the year extraction discards everything after `(1998)`, `- part1` included. The
+  mutation that names the item after its first part passes every assertion this tree can carry. So
+  the assertion is made where nothing can repair it, on two parts directly under a root with no
+  year in the name, and the fixture's tree keeps the count, the part order and the path.
+  [Plan §8.5](plan.md#85-the-fixture-and-why-it-is-generated-rather-than-checked-in) records it.*
+  **(2) The reference does not name it `The Long Film (1998)` for the same reason Atrium names it
+  `The Long Film`.** *Both servers name that item after its **directory** and neither after a file,
+  which is the agreement this line is really about; they differ by the year, because §3.3 takes it
+  out of a name and the reference keeps the directory whole. That is a **declared** difference
+  already counted in [plan §8.2](plan.md#82-the-declared-inequality-and-the-forty-seven) — two rows,
+  this film and `The Matrix (1999)` — so the test asserts the reference's own name run through
+  Atrium's year rule equals Atrium's, which fails if either half moves.)*
 - **What this does not prove:** that a client sees one item with two media sources. §8.3 row 5;
   T12 stores the two rows and 008 answers `MediaSources`.
 - **Spec reference:** §3.3, AC-4; plan §6.2; U-43.

@@ -5,7 +5,7 @@ status: Accepted
 created: 2026-09-05
 updated: 2026-09-05
 spec_status_required: Accepted
-amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has
+amended: 2026-09-05 by the change that wrote tasks.md, in four places - section 6.5's count of how many guards the specification states, section 6.8's count of 001's assertions the runner change costs, section 8.2's home for the forty-seven declarations and who owns twenty-five of them, and section 8.4's criterion table, which gains AC-16; 2026-09-05 at T1, section 8.5, with the rule for what the fixture may hold beyond the paths the reference's reading names and why the case-only-differing name conformance L2 lists is not one of them; 2026-09-05 at T2, section 6.1, because the extras row's "per file and per directory" was two decisions the row did not take - the folder name matches the immediate containing directory and no ancestor, so the walk descends into an extras directory rather than pruning it, and the rules apply under movies and tvshows and not under music, which is the reference's media-type gate expressed as the one term this feature has; 2026-09-05 at T3, section 6.3, with the four decisions writing Normalise and DeriveID took that the section had left open - the NFC implementation and the dependency ADR-0002 defers to the plan that needs it, the fold being Unicode's simple lowercase rather than this package's ASCII one or a full case fold, what the separator step reduces beyond the separator character, and an interior parent element being a normalisation where one that leaves the root is the error - plus the singleton mapping that makes a Kelvin sign and a K one key in a case-sensitive library
 ---
 
 # 003 — Implementation plan
@@ -616,6 +616,36 @@ folding before normalising the form gives a different answer for a decomposed ca
 travels: it fails the library's scan under §6.5's third guard rather than skipping one file, because
 a caller holding a path it believes is relative and is not has computed the wrong root, not the
 wrong file.
+
+**Amended 2026-09-05 at T3, because writing the function took four decisions this row had left
+open.**
+
+- **NFC comes from `golang.org/x/text/unicode/norm`, and that is a dependency this plan argues.**
+  [ADR-0002](../../docs/decisions/0002-go-and-the-runtime-stack.md#standard-library-first-and-chi-is-the-only-dependency-this-record-adds)
+  says *"a further dependency is argued where it is needed, in the plan that needs it"*, and this is
+  the place: the standard library has no normaliser, the tables are Unicode's own and not something
+  to hand-roll, the package is pure Go and adds nothing to a `CGO_ENABLED=0` build, and it is the
+  same repository `golang.org/x/crypto` already comes from.
+- **The fold is `strings.ToLower` and not this package's `foldASCIICase`, which is T2's finding
+  applied in the opposite direction.** The ASCII fold exists because the reference compares
+  *extensions* ordinally; here `AMÉLIE` and `amélie` are one directory, and an ASCII fold would give
+  them two identifiers — the exact loss spec §3.6's case rule exists to prevent. It is not a *full*
+  case fold either: full folding maps `ß` to `ss`, and `Straße` and `Strasse` are two directories.
+- **The first step reduces more than the separator character.** Runs of separators collapse, `.`
+  elements disappear and a trailing separator is dropped, because each is a second spelling of one
+  path and would otherwise be a second identifier. The absolute test is hand-rolled rather than
+  `filepath.IsAbs`, which answers differently depending on the platform the binary was built for —
+  `C:\Movies` must be absolute on every one of them.
+- **`a/../b` is `b`, and only a `..` that leaves the root is the error.** That keeps
+  `ErrPathClimbsAboveRoot`'s name true rather than approximate; the reduction is lexical, and the
+  walk produces neither element anyway.
+
+One consequence is worth writing down before a scan surprises somebody: **NFC is a canonical
+equivalence with singleton mappings**, so U+212A KELVIN SIGN becomes `K` and a file named with one
+is the same key as a file named with a plain `K` — *even in a case-sensitive library*. That is
+correct, and a filesystem can still hold both files, in which case two files derive one identifier.
+Nothing in §6.3 can notice it; the scan's own handling of a repeated identifier (§6.9's batch) is
+where it would surface.
 
 **Case-insensitive by default is a divergence from the reference's own default, and it is now known
 to be one.** `EnableCaseSensitiveItemIds` defaults to `true`

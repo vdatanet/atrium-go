@@ -12,8 +12,9 @@
 // The collection types of 003 §3.1, the measured extension lists of §3.2, and
 // the three exclusions that can be decided from one path: a hidden component,
 // an extras folder name and an extras suffix (003 plan §6.1). Normalisation and
-// identity, the resolvers and the sort-name derivations arrive with their own
-// tasks.
+// identity are in identity.go — [Normalise] and [DeriveID], of §3.6 and plan
+// §6.3, which every item this feature produces derives its identifier through.
+// The resolvers and the sort-name derivations arrive with their own tasks.
 package library
 
 import (

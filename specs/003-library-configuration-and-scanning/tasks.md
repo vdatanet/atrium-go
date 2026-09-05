@@ -838,7 +838,14 @@ otherwise:
 
 ## T16 — AC-11 and AC-14: what changes on disk, and the user data that outlives an item
 
-- [ ] **Changes:** tests in `internal/app`, plus the store method the middle clause needs.
+- [x] **Changes:** tests in `internal/app`, plus the store method the middle clause needs — ~~plus~~
+  **and the precious table that method writes into**, which this entry did not say and which the
+  clause cannot do without. `0004_item_user_data.sql` holds the two nouns of §3.8's own sentence,
+  *favourites* and *resume position*, and nothing of 007's other four; [plan §4.1](plan.md#41-the-precious-half--migration-0003_librariessql)
+  carries the argument for its being 003's and the rule that 007 **extends** it rather than
+  replacing it. The two methods are on the store and deliberately not on a `ports` interface: 003
+  declares no domain that reads or writes user data, so a port method here would be a contract with
+  no caller above it and would fix the shape of a method 007 has to design.
 - **Depends on:** T14
 - **Verified by:** **AC-14**, as four mutations of the fixture between two scans, one per row of
   §3.8's change table that the criterion names: a modified file is re-inspected and keeps its
@@ -855,7 +862,34 @@ otherwise:
   orphan sweep in this feature, so a later feature that "tidies up" user data whose item is gone
   breaks AC-11 and **nothing else in the suite would notice** — this test is the thing that notices,
   and its comment says so.
-- **Spec reference:** §3.8, AC-11, AC-14; plan §6.5, §8.4.
+- **Seven mutations were run, six fail a named test, and the survivor is a mutation that was wrong
+  as written rather than a gap** `[measurement: 003 T16, 7 mutations, 2026-09-05]`. Each was applied
+  to a scratch copy one at a time and run against all five tests and against the whole of
+  `go test ./...`. The table is in the header of `internal/app/library_change_test.go`.
+  - **The sweep is caught here and nowhere else, and that is now a measurement rather than an
+    argument.** Adding *"delete every `item_user_data` row naming a removed identifier"* to
+    `RemoveItems` fails `TestADeletedFilesUserDataOutlivesItAndTheAssociationComesBack` and **not
+    one other test in the repository**. It is the only row of the mutation table with nothing in its
+    last column, which is what makes this criterion's test the thing plan §6.5's closing risk was
+    missing. §6.5's prediction is struck in place with the measurement beside it.
+  - **The rename mutation was wrong as written, in T15's exact shape, and running it is what said
+    so.** *"Adopt a previous row whose file signal matches"* adopts **nothing**: plan §6.4's signal
+    compares the file's **path** as well as its size and its time — a multi-part film's parts are
+    one item's files (§3.3) — and a renamed file's path is the one thing that moved. That build is
+    green everywhere including here. The build the criterion can fail adopts over the size and the
+    modification time **alone**, reports one update where §3.8 requires one removal and one
+    addition, and is red on this task's rename test and on T9's own
+    `TestARenameIsARemovalAndAnAdditionAndNotAnIdentifierMismatch`. **Sixteenth time in this feature
+    that an assertion, or the mutation named beside one, could not produce the failure it was named
+    for**, and the second time the *mutation* rather than the assertion was the thing at fault.
+  - **The two halves of the signal are separated by exactly the two mutations plan §8.4 names**, and
+    each test begins by failing if the half it is holding still did not stand still — `os.Chtimes`
+    typed one line up is a test that quietly varies both.
+- **What this does not prove:** that any client is ever told about a favourite or a resume position.
+  003 registers no route and produces no `UserData` object; what is asserted is the **row**, and
+  every rule about what these values mean, when they change and how they aggregate is 007's. The
+  test says so in its own closing section rather than leaving a green here to be read as more.
+- **Spec reference:** §3.8, AC-11, AC-14; plan §4.1, §4.3, §6.5, §8.4.
 
 ## T17 — The forty-seven declared differences, which this project holds the reading of and not the reasons
 

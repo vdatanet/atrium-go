@@ -207,6 +207,120 @@ func TestARouterThatServesNothingFailsTheRegistrationCheck(t *testing.T) {
 	}
 }
 
+// --- no new rows: 003's half of this check -------------------------------------
+
+// theElevenRowsOf001And002 is what this router registered before 003, written
+// out as a literal.
+//
+// 003 registers **no route at all** — plan §3 says *"internal/httpapi is
+// untouched, and that is the sentence a reader should check first"*, and plan
+// §10 refuses `POST /Library/Refresh` on the ground that a route added to make a
+// test possible is a delta added to make a test possible. A feature that adds
+// nothing has to be able to prove it, and the check above cannot: it derives
+// what is expected from surface.yaml, so a route added **together with a row**
+// satisfies it by construction.
+//
+// So this is the literal the reviewer of such a change has to edit. It is the
+// registration half of the pair; conformance/library_configuration_test.go holds
+// the reachability half, with its own literal, read through different code — the
+// same trade plan §8.5 makes for surface.yaml itself.
+//
+// That the derived check is silent about it was measured rather than argued:
+// registering a POST /Library/Refresh and declaring it in both copies of the
+// surface document leaves TestTheRouterServesExactlyTheImplementedRowsOfThe
+// SurfaceDocument green and turns this one red
+// `[measurement: 003 T18, 18 mutations, 2026-09-05]`.
+var theElevenRowsOf001And002 = []route{
+	{method: http.MethodGet, pattern: "/System/Info"},
+	{method: http.MethodGet, pattern: "/System/Info/Public"},
+	{method: http.MethodGet, pattern: "/System/Ping"},
+	{method: http.MethodPost, pattern: "/System/Ping"},
+	{method: http.MethodGet, pattern: "/Sessions"},
+	{method: http.MethodPost, pattern: "/Sessions/Capabilities/Full"},
+	{method: http.MethodPost, pattern: "/Users/AuthenticateByName"},
+	{method: http.MethodGet, pattern: "/Users/Me"},
+	{method: http.MethodGet, pattern: "/Users/Public"},
+	{method: http.MethodPost, pattern: "/Users/Configuration"},
+	{method: http.MethodGet, pattern: "/Users/{userId}"},
+}
+
+// checkNoNewRows compares what the router registered against that literal, in
+// both directions, and is a function for checkRegistration's reason: a check
+// that has only ever seen a correct router has proved nothing.
+func checkNoNewRows(registered, allowed []route) []string {
+	inAllowed := map[route]bool{}
+	for _, r := range allowed {
+		inAllowed[r] = true
+	}
+	inRegistered := map[route]bool{}
+	for _, r := range registered {
+		inRegistered[r] = true
+	}
+
+	var findings []string
+	for _, r := range registered {
+		if !inAllowed[r] {
+			findings = append(findings, fmt.Sprintf(
+				"the router registers %s, which is not one of the eleven rows 001 and 002 registered", r))
+		}
+	}
+	for _, r := range allowed {
+		if !inRegistered[r] {
+			findings = append(findings, fmt.Sprintf(
+				"%s is one of the eleven rows 001 and 002 registered and the router does not register it", r))
+		}
+	}
+	slices.Sort(findings)
+	return findings
+}
+
+// TestTheRouterRegistersExactlyTheElevenRowsOf001And002 is 003's own assertion
+// about this package: that it did not touch it.
+func TestTheRouterRegistersExactlyTheElevenRowsOf001And002(t *testing.T) {
+	t.Parallel()
+
+	registered := walkRouter(t, buildRouter(t, surface.V1(), everyHandler(t)))
+	if findings := checkNoNewRows(registered, theElevenRowsOf001And002); len(findings) != 0 {
+		t.Errorf("the router does not register exactly the eleven rows of 001 and 002:\n%s",
+			strings.Join(findings, "\n"))
+	}
+}
+
+// TestATwelfthRouteFailsTheNoNewRowsCheck is half of the failure proof, and it
+// is the half the derived check above cannot make: this route has a row in
+// surface.yaml, so checkRegistration passes on it.
+func TestATwelfthRouteFailsTheNoNewRowsCheck(t *testing.T) {
+	t.Parallel()
+
+	grown := append(slices.Clone(theElevenRowsOf001And002),
+		route{method: http.MethodGet, pattern: "/Items"})
+
+	findings := checkNoNewRows(grown, theElevenRowsOf001And002)
+	if len(findings) != 1 {
+		t.Fatalf("a twelfth route produced %d findings, want 1:\n%s",
+			len(findings), strings.Join(findings, "\n"))
+	}
+	if !strings.Contains(findings[0], "/Items") {
+		t.Errorf("the finding is %q and does not name the route that was added", findings[0])
+	}
+}
+
+// TestARouteThatWentAwayFailsTheNoNewRowsCheck is the other half. Without it a
+// router serving nothing satisfies "no new rows".
+func TestARouteThatWentAwayFailsTheNoNewRowsCheck(t *testing.T) {
+	t.Parallel()
+
+	dropped := theElevenRowsOf001And002[0]
+	findings := checkNoNewRows(theElevenRowsOf001And002[1:], theElevenRowsOf001And002)
+	if len(findings) != 1 {
+		t.Fatalf("a missing route produced %d findings, want 1:\n%s",
+			len(findings), strings.Join(findings, "\n"))
+	}
+	if !strings.Contains(findings[0], dropped.pattern) {
+		t.Errorf("the finding is %q and does not name %s, the route that went away", findings[0], dropped)
+	}
+}
+
 // everyHandler is one of each handler a server can be built with — the value
 // cmd/atrium's wiring passes to Routes, with fakes where a real dependency
 // would need a store.

@@ -5,7 +5,7 @@ status: Implemented
 created: 2026-08-26
 updated: 2026-09-05
 accepted: 2026-08-26
-amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements. 2026-09-05 again, by the change that wrote tasks.md, in two places that are one finding - section 3.8 states the second guard against a mass delete (a root that reads as holding no candidate file where the last scan saw one is unavailable, not emptied, and an operator can say they meant it) and section 5 gains AC-16 for it in both halves. What forced it: writing a task per criterion made visible that the guard which catches the way an unmounted share actually arrives - readable, and empty - was in the plan and in no criterion, so a list written from section 5 alone would have tested the destructive case that is easy to construct and not the one that happens. 2026-09-05 again, by 003 T4 - section 3.7.2 gains the missing-number case for a `Season`, whose whole sort name is the prefix, and section 3.7.3 gains what its one sentence leaves out. Both are source readings at the pinned tag rather than measurements, and both were forced by having to write the derivation: the code has to answer a case the section does not state, and the honest place to answer it is the section. 2026-09-05 again, by 003 T7 - section 3.6's identity table splits `MusicAlbum` off the row it shared with `Series` and `MusicArtist`, because "the library root plus the normalised name" makes two artists' identically-named albums one item, and section 3.5 already says an album's identity comes from its album artist. Forced by writing the music resolver: the row and section 3.5 contradicted each other and the code had to pick one, and the fixture cannot tell the two apart because its five album names are distinct
+amended: 2026-08-27 by T1 - sections 3.2, 3.5 and the open questions; by T4 - section 3.7; by T5 - section 3.6; by T7 - sections 3.1 and 3.6 and OQ-2; by T11 - section 3.3 and OQ-4; by T12 - section 3.4; by T18 - section 3.8; by T19 - section 3.6 and OQ-2's limit; by T20 - sections 3.8 and 7; by 004's T7 - OQ-8. 2026-09-05 by the change that wrote plan.md - section 3.2's `.ignore` rule, section 3.3's multi-part marker vocabulary and OQ-9, each forced by a source reading at the pinned tag that the plan had to decide against; registered as U-42 to U-44 rather than treated as measurements. 2026-09-05 again, by the change that wrote tasks.md, in two places that are one finding - section 3.8 states the second guard against a mass delete (a root that reads as holding no candidate file where the last scan saw one is unavailable, not emptied, and an operator can say they meant it) and section 5 gains AC-16 for it in both halves. What forced it: writing a task per criterion made visible that the guard which catches the way an unmounted share actually arrives - readable, and empty - was in the plan and in no criterion, so a list written from section 5 alone would have tested the destructive case that is easy to construct and not the one that happens. 2026-09-05 again, by 003 T4 - section 3.7.2 gains the missing-number case for a `Season`, whose whole sort name is the prefix, and section 3.7.3 gains what its one sentence leaves out. Both are source readings at the pinned tag rather than measurements, and both were forced by having to write the derivation: the code has to answer a case the section does not state, and the honest place to answer it is the section. 2026-09-05 again, by 003 T7 - section 3.6's identity table splits `MusicAlbum` off the row it shared with `Series` and `MusicArtist`, because "the library root plus the normalised name" makes two artists' identically-named albums one item, and section 3.5 already says an album's identity comes from its album artist. Forced by writing the music resolver: the row and section 3.5 contradicted each other and the code had to pick one, and the fixture cannot tell the two apart because its five album names are distinct. 2026-09-05 at this feature's closing audit (T20), in three places, and two of them are a sentence the implementation had already falsified: section 3.2's "v1 keeps the conservative union for anything outside the table" is struck, because the only reading it has is the union the paragraph two below it measures the reference NOT applying, and what v1 does is admit exactly the measured table per collection type and refuse everything else; section 6 now says what L2 reaches in a feature with no route and, in terms, that the six claims whose first observable consequence is on somebody else's route reach no level here at all, so a later feature cannot read "L2 everywhere" as covering them. The third is a note on AC-13 recording where the criterion is proven rather than changing it: the audit found it discharged entirely against the derivation, with a build that stored each item's plain name as its sort name green over the whole repository, and it is now also asserted over a scan of the fixture against keys written down rather than derived
 implemented: 2026-08-27
 depends_on: []
 ---
@@ -109,9 +109,18 @@ using, and getting it subtly wrong hides files an operator expects to see.
 
 This is a **measured lower bound, not the reference's configured list.** It is what one real
 library contained; an extension nobody has a file of was not measured, and its absence here is not
-evidence of refusal. v1 keeps the conservative union for anything outside the table, and the
+evidence of refusal. ~~v1 keeps the conservative union for anything outside the table~~, and the
 measurement is repeatable, so a library holding a new extension reports it rather than being
 guessed at.
+
+**Struck 2026-09-05 at this feature's closing audit, because the only reading that sentence has is
+the one the paragraph below it refuses.** *"The conservative union"* can only mean the union of the
+three lists, and applying a union to anything is the exact behaviour the next paragraph measures the
+reference **not** having — 89 `.mp3` files under video roots became no item of any type. **What v1
+does is admit exactly the table above, per collection type, and refuse everything else**: an
+extension outside the table is not a candidate under any type, so a new one reports itself as a file
+nobody scanned rather than as an item somebody guessed at. That is the conservative half of the
+struck sentence and it survives; the union does not.
 
 **The lists do not fall back to one another, and that is the observable part.** Under `movies` and
 `tvshows` roots the same measurement found 89 `.mp3` files and 3 `.mka` files, and **not one of
@@ -540,6 +549,13 @@ looking for something that is not missing.
     restores the association.
 12. A root that cannot be read fails the scan for that library and removes nothing.
 13. Sort ordering matches the table in §3.7 for the fixture's awkward names.
+    *(The criterion is unchanged and the note is about where it is proven. At this feature's
+    closing audit, 2026-09-05, it was discharged entirely against the **derivation** — the
+    table-driven test of the function, and a store test whose expected keys that test computes by
+    calling the same function. Nothing said that a scan of the fixture leaves §3.7's bytes where the
+    ordering comes from, and a build that recorded each item's plain name instead was green over the
+    whole repository. The criterion says "for the fixture's awkward names", so it is now also
+    asserted over a scan of the fixture, against keys written down rather than derived.)*
 14. An incremental rescan notices exactly what changed: a modified file — size or time of
     change — is re-inspected and keeps its identity and its user data; a file that appears is
     added; a renamed file is a delete plus an add, because identity is path-derived (§3.8).
@@ -568,6 +584,21 @@ library, and its results reach L3 through feature 005.
 | Sort normalisation | **L2** | Table-driven, plus L3 through `/Items` ordering |
 | Change detection | **L2** | Fixture mutated between scans |
 | Destructive-failure safety | **L2** | Scan with a root made unreadable (AC-12) |
+
+**What "L2" reaches here, stated rather than ticked — added at this feature's closing audit,
+2026-09-05.** L2 asks whether the *values* are right for a known library, and this feature's known
+library is the fixture. All five rows are met over it. What no row of this table can say, because
+this feature has no route, is that a **client** receives any of those values: an item's identifier,
+the order of a list, an item's parent and the four numeric fields are decided here and first
+observable on somebody else's route, and none of them reaches an L-level in this feature at all.
+That is not an unmet row of this table — it is a set of claims the table has no row for, and the
+feature's own plan enumerates them. A later feature reading "L2 everywhere" off this table must not
+read it as covering them.
+
+The `Sort normalisation` row's *"plus L3 through `/Items` ordering"* is a statement about 005 and
+not a claim of this feature's. Its L2 half is met twice: over the derivation, and — since the
+closing audit — over the sort name a scan of the fixture actually records, which is the half that
+decides an ordering.
 
 The fixture library is checked in as **metadata only** — directory trees, sidecars, and synthetic
 media generated at build time. No copyrighted media, ever.

@@ -18,6 +18,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -46,6 +47,13 @@ var (
 // produces, because the column exists to hold that derivation and a test that
 // wrote its own would be asserting the store against a second implementation of
 // 003 §3.7.
+//
+// **That is right for this file and is exactly why it proves nothing about a
+// scan.** A build whose scanner stores something other than the derivation
+// leaves `SortKeyFor` correct, so every expected value here moves with it. 003
+// T20's closing audit found that gap and closed it one layer up, in
+// `internal/app/library_sortkey_table_test.go`, where the expected keys are
+// literals and a guard fails if that file ever names this derivation.
 func anItem(id, libraryID, kind, name, path string) ports.ScannedItem {
 	item := ports.ScannedItem{
 		ID:        id,
@@ -317,6 +325,21 @@ func TestABatchNamingOneItemTwiceIsRefused(t *testing.T) {
 // reason — but see filesForLibrary's comment: on this table the primary key
 // answers the ordering whether or not the query asks, so this establishes the
 // property without being able to fail when the clause is removed.
+//
+// # What 003 T20's closing audit changed here, and why the order of the
+// assertions is now load-bearing
+//
+// The two row counts used to sit **after** the scramble, which empties
+// `item_files` and re-inserts both parts from the resolver's answer in memory.
+// So they counted this test's own two inserts and said nothing about what
+// `ApplyScanBatch` had written: a store that kept only the first file of an
+// item was green here `[measurement: 003 T20, mutation of
+// internal/store/sqlite.applyItem, Go 1.27.1, 2026-09-05]`, and the mutation
+// was caught only incidentally, by a transaction test one file along and by
+// three of AC-14's in `internal/app`. AC-4's *"one item with two media
+// sources"* is one `items` row and two `item_files` rows (003 plan §8.3), so
+// the counts are asserted **before** anything rewrites them, and the read
+// assertions keep the scramble they need.
 func TestAMultiPartFilmRoundTripsAsOneItemWithItsPartsInOrdinalOrder(t *testing.T) {
 	ctx := context.Background()
 	store := openForTest(t)
@@ -337,6 +360,21 @@ func TestAMultiPartFilmRoundTripsAsOneItemWithItsPartsInOrdinalOrder(t *testing.
 	claimed(t, store, testFilmLibraryID, twoScanners[0])
 	applied(t, store, testFilmLibraryID, twoScanners[0], aMinuteLater, plan.Items...)
 
+	// One item row for the film and two file rows beneath it, asserted on what
+	// the batch wrote and before anything here rewrites them. AC-4 is this
+	// pair of numbers and nothing else at this layer.
+	if n := countIn(t, store, `SELECT count(*) FROM items WHERE type = ?`, string(library.KindMovie)); n != 1 {
+		t.Fatalf("the two parts became %d Movie rows, want 1", n)
+	}
+	if n := countIn(t, store, `SELECT count(*) FROM item_files`); n != 2 {
+		t.Fatalf("the batch wrote %d file rows for the film, want 2 — a store that keeps one "+
+			"file per item answers 008's MediaSources with half a film", n)
+	}
+	if written := filePathsInRowOrder(t, store); len(written) != 2 ||
+		!slices.Contains(written, partOne) || !slices.Contains(written, partTwo) {
+		t.Fatalf("the batch wrote the file rows %v, want both parts", written)
+	}
+
 	// The two parts, written in the order their ordinals do not name.
 	if _, err := store.writer.ExecContext(ctx, `DELETE FROM item_files`); err != nil {
 		t.Fatalf("emptying item_files returned %v", err)
@@ -354,14 +392,6 @@ func TestAMultiPartFilmRoundTripsAsOneItemWithItsPartsInOrdinalOrder(t *testing.
 	if rowOrder := filePathsInRowOrder(t, store); len(rowOrder) != 2 || rowOrder[0] != partTwo {
 		t.Fatalf("a read with no ORDER BY answers %v, want the second part first: the scramble "+
 			"did not take", rowOrder)
-	}
-
-	// One item row for the film, and two file rows beneath it.
-	if n := countIn(t, store, `SELECT count(*) FROM items WHERE type = ?`, string(library.KindMovie)); n != 1 {
-		t.Fatalf("the two parts became %d Movie rows, want 1", n)
-	}
-	if n := countIn(t, store, `SELECT count(*) FROM item_files`); n != 2 {
-		t.Fatalf("the film has %d file rows, want 2", n)
 	}
 
 	items, err := store.ItemsForLibrary(ctx, testFilmLibraryID)

@@ -682,6 +682,90 @@ func TestTheSummaryCountsSkippedFilesAndUnplaceableItemsApart(t *testing.T) {
 	}
 }
 
+// TestARefusedPathAndAnUnplaceableItemAreReportedWithTheReason is the half of
+// 003 §3.8's closing paragraph that 003 T20's pass (b) found untested.
+//
+// The paragraph reads *"items added, updated, removed, files examined, **files
+// skipped with the reason**, and files that were scanned but whose names said
+// too little to place the item they produced"*. Every count in that sentence is
+// asserted three ways over this fixture; the **reason** was asserted nowhere.
+// Deleting the loop that emits it left `internal/scan`, `internal/app` and
+// `conformance` green `[measurement: 003 T20, mutation of
+// internal/scan.Scanner.read, Go 1.27.1, 2026-09-05]`, and a count with no
+// reason beside it tells an operator that a file went missing without telling
+// them which rule took it.
+//
+// The reason is per-path and the summary document is not the place for it —
+// plan §6.9 puts it in the log, at debug, for exactly the argument that a
+// document holding every skipped path in a real library is not a summary. So
+// this asserts the log, and it asserts the **rule's own words** rather than the
+// presence of a field: a build that logged an empty reason for every path is
+// the failure, and it satisfies "a reason key exists".
+//
+// Two controls. The scan is run at `debug`, because a fixture pinned to the
+// default level cannot fail on a Debug line — 002's closing audit paid for that
+// one — and the same run is asserted to be **silent** at the default level, so
+// the assertion is about what the level asks for and not about a log that
+// always prints.
+func TestARefusedPathAndAnUnplaceableItemAreReportedWithTheReason(t *testing.T) {
+	data := t.TempDir()
+	trees := t.TempDir()
+	if err := libraryfixture.Build(trees); err != nil {
+		t.Fatalf("building the fixture tree: %v", err)
+	}
+	declareLibrary(t, data, ports.Library{
+		ID:             "aaaaaaaabbbbbbbbccccccccdddddddd",
+		Name:           "Shows",
+		CollectionType: "tvshows",
+		Roots:          []string{filepath.Join(trees, "Shows")},
+	})
+
+	log := scanLog(t, data, "--"+flagLogLevel, "debug")
+
+	// The one path this library refuses, and the rule that refused it.
+	for _, want := range []string{
+		"Not An Episode.mka",
+		library.SkipExtension.String(),
+	} {
+		if !strings.Contains(log, want) {
+			t.Errorf("the log of a scan at debug does not contain %q.\n%s", want, log)
+		}
+	}
+	// The one file that was scanned and could not be placed, and its own
+	// reason — a different vocabulary from the one above, deliberately (T6).
+	for _, want := range []string{
+		"blob.mkv",
+		library.ReasonNoEpisodeNumber,
+	} {
+		if !strings.Contains(log, want) {
+			t.Errorf("the log of a scan at debug does not contain %q.\n%s", want, log)
+		}
+	}
+
+	// The control: at the default level none of it is printed, so the test
+	// above is about the level rather than about a line that always appears.
+	quiet := scanLog(t, data, "--"+flagFormat, formatJSON)
+	for _, unwanted := range []string{"Not An Episode.mka", library.ReasonNoEpisodeNumber} {
+		if strings.Contains(quiet, unwanted) {
+			t.Errorf("a scan at the default level printed %q, so the assertion above would "+
+				"pass whatever `--%s` was asked for", unwanted, flagLogLevel)
+		}
+	}
+}
+
+// scanLog runs one scan and returns what it wrote to standard error, which is
+// where `RunLibrary` puts the log (library.go).
+func scanLog(t *testing.T, dataDirectory string, args ...string) string {
+	t.Helper()
+
+	stderr := &strings.Builder{}
+	all := append([]string{"scan", "--" + flagDataDirectory, dataDirectory}, args...)
+	if err := RunLibrary(context.Background(), all, noEnvironment, io.Discard, stderr); err != nil {
+		t.Fatalf("atrium library scan %s: %v", strings.Join(args, " "), err)
+	}
+	return stderr.String()
+}
+
 func TestTheSummaryIsWrittenAsATableUnlessJSONWasAsked(t *testing.T) {
 	data := t.TempDir()
 	trees := t.TempDir()
